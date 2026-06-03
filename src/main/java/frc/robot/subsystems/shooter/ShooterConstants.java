@@ -1,0 +1,92 @@
+package frc.robot.subsystems.shooter;
+
+import com.revrobotics.spark.ClosedLoopSlot;
+import com.revrobotics.spark.config.SparkBaseConfig.IdleMode;
+
+import edu.wpi.first.math.util.Units;
+import frc.lib.subsystems.MotorSubsystemConfig;
+import frc.lib.subsystems.MotorSubsystemWithFollowersConfig;
+import frc.lib.subsystems.MotorSubsystemWithFollowersConfig.FollowerConfig;
+import frc.robot.Constants;
+
+public class ShooterConstants {
+
+  public static final SimpleFFConstants MAIN_WHEEL_FF_CONSTANTS =
+      switch (Constants.currentMode) {
+        case REAL -> new SimpleFFConstants(0.0, 0.1535*28.0/28.0, 0.53556);
+        case SIM -> new SimpleFFConstants(0.0, 0.0, 0.0);
+        default -> new SimpleFFConstants(0.0, 0.0, 0.0);
+      };
+
+  // public static final SimpleFFConstants HOOD_WHEEL_FF_CONSTANTS =
+  //     switch (Constants.currentMode) {
+  //       case REAL -> new SimpleFFConstants(0.13343, 0.13258, 0.038279);
+  //       case SIM -> new SimpleFFConstants(0.0, 0.0, 0.0);
+  //       default -> new SimpleFFConstants(0.0, 0.0, 0.0);
+  //     };
+
+  private static final PidGains MAIN_PID =
+      switch (Constants.currentMode) {
+        case REAL -> new PidGains(0.002005, 0.0, 0.1); 
+        case SIM -> new PidGains(0.1, 0.0, 0.0);
+        default -> new PidGains(0.1, 0.0, 0.0);
+      };
+
+  private static final PidGains HOOD_PID =
+      // switch (Constants.currentMode) {
+      switch (Constants.currentMode) {
+        case REAL -> new PidGains(0.001, 0.0, 0.05);
+        case SIM -> new PidGains(0.1, 0.0, 0.0);
+        default -> new PidGains(0.1, 0.0, 0.0);
+      };
+
+  public static final MotorSubsystemWithFollowersConfig MAIN_WHEEL_MOTOR_CONFIG = new MotorSubsystemWithFollowersConfig();
+
+  public static final FollowerConfig HOOD_WHEEL_MOTOR_CONFIG = new FollowerConfig();
+
+  public static final double MAIN_WHEEL_DIAMETER = Units.inchesToMeters(3); // meter
+  public static final double HOOD_WHEEL_DIAMETER = Units.inchesToMeters(2); // meter
+
+  // public static final double COMPENSATION_FACTOR = 1.35;
+  public static final double COMPENSATION_FACTOR = 1.0;
+  public static final double BACKSPIN_FACTOR = 1.0; // shouldn't need to change these, they work well
+  // public static final double BACKSPIN_FACTOR = 1.25; // shouldn't need to change these, they work well
+
+  static {
+    MAIN_WHEEL_MOTOR_CONFIG.name = "ShooterMainWheel";
+    HOOD_WHEEL_MOTOR_CONFIG.config.name = "ShooterHoodWheel";
+    MAIN_WHEEL_MOTOR_CONFIG.id = 56; 
+    HOOD_WHEEL_MOTOR_CONFIG.config.id = 57;
+
+    MAIN_WHEEL_MOTOR_CONFIG
+        .sparkConfig
+        .idleMode(IdleMode.kCoast)
+        .smartCurrentLimit(40)
+        .inverted(true)
+        .secondaryCurrentLimit(80)
+        .closedLoop
+        .pidf(
+            MAIN_PID.kP, MAIN_PID.kI, MAIN_PID.kD, 0, ClosedLoopSlot.kSlot0)
+        .maxMotion
+        .cruiseVelocity(5000)
+        .maxAcceleration(10000); // keep velocity ff 0
+
+    HOOD_WHEEL_MOTOR_CONFIG.config.sparkConfig.apply(MAIN_WHEEL_MOTOR_CONFIG.sparkConfig);
+    HOOD_WHEEL_MOTOR_CONFIG.config.sparkConfig.follow(56);
+
+    MAIN_WHEEL_MOTOR_CONFIG.unitToRotorRatio = 1.0 / 60.0; // TODO: set ratio
+    HOOD_WHEEL_MOTOR_CONFIG.config.unitToRotorRatio = 1.0 / 60.0;
+
+    MAIN_WHEEL_MOTOR_CONFIG.usingAbsoluteEncoder = false;
+    HOOD_WHEEL_MOTOR_CONFIG.config.usingAbsoluteEncoder = false;
+
+    MAIN_WHEEL_MOTOR_CONFIG.momentOfInertia = 0.1; // TODO: set MOI
+    HOOD_WHEEL_MOTOR_CONFIG.config.momentOfInertia = 0.1;
+    // HOOD_WHEEL_MOTOR_CONFIG.inverted = true;
+    MAIN_WHEEL_MOTOR_CONFIG.followerConfigs = new FollowerConfig[]{HOOD_WHEEL_MOTOR_CONFIG};
+  }
+
+  public record SimpleFFConstants(double kS, double kV, double kA) {}
+
+  public record PidGains(double kP, double kI, double kD) {}
+}
