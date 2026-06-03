@@ -13,68 +13,23 @@
 
 package frc.robot;
 
-import com.pathplanner.lib.auto.AutoBuilder;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
-import edu.wpi.first.math.geometry.Transform3d;
-import edu.wpi.first.math.geometry.Translation3d;
-import edu.wpi.first.wpilibj.GenericHID;
-import edu.wpi.first.wpilibj.XboxController;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import edu.wpi.first.wpilibj2.command.Commands;
-import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine.Direction;
-import frc.lib.subsystems.DummyMotorIO;
-import frc.lib.subsystems.MotorInputsAutoLogged;
-import frc.lib.subsystems.SimSparkMaxIO;
-import frc.lib.subsystems.SparkMaxIO;
 import frc.lib.util.AllianceFlipping;
-import frc.lib.util.NestedInterpolatingTreeMap;
 import frc.lib.util.TableLoader;
-import frc.robot.SuperStructure.StructureIntakeStates;
-import frc.robot.SuperStructure.SuperStructureStates;
-import frc.robot.autonomous.AutoTest;
-import frc.robot.autonomous.CloseHumanPlayerAuto;
-import frc.robot.autonomous.HumanPlayerAuto;
-import frc.robot.autonomous.RightMiddleFuelAuto;
-import frc.robot.autonomous.TestClimbAuto;
 import frc.robot.controllers.ControllerInterface;
 import frc.robot.controllers.DummyController;
 import frc.robot.controllers.SimulationController;
-import frc.robot.controllers.SingleXboxController;
-import frc.robot.controllers.TwoControllers;
 import frc.robot.generated.TunerConstants;
-import frc.robot.subsystems.beltDrive.BeltDrive;
-import frc.robot.subsystems.beltDrive.BeltDriveConstants;
-import frc.robot.subsystems.climber.Climber;
-import frc.robot.subsystems.climber.ClimberConstants;
 import frc.robot.subsystems.drive.Drive;
-import frc.robot.subsystems.drive.DriveConstants;
 import frc.robot.subsystems.drive.GyroIO;
 import frc.robot.subsystems.drive.GyroIONavX;
-import frc.robot.subsystems.drive.GyroIOSim;
 import frc.robot.subsystems.drive.ModuleIO;
-import frc.robot.subsystems.drive.ModuleIOSim;
 import frc.robot.subsystems.drive.ModuleIOTalonFX;
-import frc.robot.subsystems.hood.Hood;
-import frc.robot.subsystems.hood.HoodConstants;
-import frc.robot.subsystems.hopper.Hopper;
-import frc.robot.subsystems.hopper.HopperConstants;
-import frc.robot.subsystems.intake.Intake;
-import frc.robot.subsystems.intake.Intake.IntakeStates;
-import frc.robot.subsystems.intake.IntakeConstants.IntakeDeployConstants;
-import frc.robot.subsystems.intake.IntakeConstants.IntakeRollerConstants;
-import frc.robot.subsystems.leds.Leds;
-import frc.robot.subsystems.shooter.Shooter;
-import frc.robot.subsystems.shooter.ShooterConstants;
-import frc.robot.subsystems.vision.*;
-import org.ironmaple.simulation.SimulatedArena;
-import org.ironmaple.simulation.drivesims.SwerveDriveSimulation;
-import org.ironmaple.simulation.seasonspecific.rebuilt2026.Arena2026Rebuilt;
-import org.littletonrobotics.junction.Logger;
-import org.littletonrobotics.junction.networktables.LoggedDashboardChooser;
-import static frc.robot.Constants.*;
 /**
  * This class is where the bulk of the robot should be declared. Since Command-based is a
  * "declarative" paradigm, very little robot logic should actually be handled in the {@link Robot}
