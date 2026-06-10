@@ -7,6 +7,8 @@ import edu.wpi.first.math.util.Units;
 import frc.lib.subsystems.MotorSubsystemConfig;
 import frc.lib.subsystems.MotorSubsystemWithFollowersConfig;
 import frc.lib.subsystems.MotorSubsystemWithFollowersConfig.FollowerConfig;
+import frc.lib.util.ControlGains.PidGains;
+import frc.lib.util.ControlGains.SimpleFFConstants;
 import frc.robot.Constants;
 
 public class ShooterConstants {
@@ -102,8 +104,4 @@ public class ShooterConstants {
     MAIN_WHEEL_MOTOR_CONFIG.followerConfigs = new FollowerConfig[]{MAIN_WHEEL_MOTOR_FOLLOWER_CONFIG};
     HOOD_WHEEL_MOTOR_CONFIG.followerConfigs = new FollowerConfig[]{HOOD_WHEEL_MOTOR_FOLLOWER_CONFIG};
   }
-
-  public record SimpleFFConstants(double kS, double kV, double kA) {}
-
-  public record PidGains(double kP, double kI, double kD) {}
 }

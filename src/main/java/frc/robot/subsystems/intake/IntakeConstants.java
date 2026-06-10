@@ -5,16 +5,12 @@ import com.revrobotics.spark.FeedbackSensor;
 import com.revrobotics.spark.config.SparkBaseConfig.IdleMode;
 import edu.wpi.first.math.util.Units;
 import frc.lib.subsystems.MotorSubsystemConfig;
+import frc.lib.util.ControlGains.FFConstants;
+import frc.lib.util.ControlGains.PidGains;
+import frc.lib.util.ControlGains.SimpleFFConstants;
 import frc.robot.Constants;
 
 public class IntakeConstants {
-
-  public record SimpleFFConstants( // TODO: you should move these to util
-      double kS, double kV, double kA) {}
-
-  public record FFConstants(double kS, double kV, double kA, double kg) {}
-
-  public record PidGains(double kP, double kI, double kD) {}
 
   public static final class IntakeRollerConstants {
 
