@@ -18,12 +18,12 @@ public class ShooterConstants {
         default -> new SimpleFFConstants(0.0, 0.0, 0.0);
       };
 
-  // public static final SimpleFFConstants HOOD_WHEEL_FF_CONSTANTS =
-  //     switch (Constants.currentMode) {
-  //       case REAL -> new SimpleFFConstants(0.13343, 0.13258, 0.038279);
-  //       case SIM -> new SimpleFFConstants(0.0, 0.0, 0.0);
-  //       default -> new SimpleFFConstants(0.0, 0.0, 0.0);
-  //     };
+  public static final SimpleFFConstants HOOD_WHEEL_FF_CONSTANTS =
+      switch (Constants.currentMode) {
+        case REAL -> new SimpleFFConstants(0.13343, 0.13258, 0.038279);
+        case SIM -> new SimpleFFConstants(0.0, 0.0, 0.0);
+        default -> new SimpleFFConstants(0.0, 0.0, 0.0);
+      };
 
   private static final PidGains MAIN_PID =
       switch (Constants.currentMode) {
@@ -33,7 +33,6 @@ public class ShooterConstants {
       };
 
   private static final PidGains HOOD_PID =
-      // switch (Constants.currentMode) {
       switch (Constants.currentMode) {
         case REAL -> new PidGains(0.001, 0.0, 0.05);
         case SIM -> new PidGains(0.1, 0.0, 0.0);
@@ -41,9 +40,9 @@ public class ShooterConstants {
       };
 
   public static final MotorSubsystemWithFollowersConfig MAIN_WHEEL_MOTOR_CONFIG = new MotorSubsystemWithFollowersConfig();
+  public static final MotorSubsystemWithFollowersConfig HOOD_WHEEL_MOTOR_CONFIG = new MotorSubsystemWithFollowersConfig();
 
   public static final FollowerConfig MAIN_WHEEL_MOTOR_FOLLOWER_CONFIG = new FollowerConfig();
-  public static final FollowerConfig HOOD_WHEEL_MOTOR_CONFIG = new FollowerConfig();
   public static final FollowerConfig HOOD_WHEEL_MOTOR_FOLLOWER_CONFIG = new FollowerConfig();
 
   public static final double MAIN_WHEEL_DIAMETER = Units.inchesToMeters(3); // meter
@@ -55,11 +54,11 @@ public class ShooterConstants {
   static {
     MAIN_WHEEL_MOTOR_CONFIG.name = "ShooterMainWheel";
     MAIN_WHEEL_MOTOR_FOLLOWER_CONFIG.config.name = "ShooterMainWheelFollower";
-    HOOD_WHEEL_MOTOR_CONFIG.config.name = "ShooterHoodWheel";
+    HOOD_WHEEL_MOTOR_CONFIG.name = "ShooterHoodWheel";
     HOOD_WHEEL_MOTOR_FOLLOWER_CONFIG.config.name = "ShooterHoodWheelFollower";
     MAIN_WHEEL_MOTOR_CONFIG.id = 56;
     MAIN_WHEEL_MOTOR_FOLLOWER_CONFIG.config.id = 57;
-    HOOD_WHEEL_MOTOR_CONFIG.config.id = 58;
+    HOOD_WHEEL_MOTOR_CONFIG.id = 58;
     HOOD_WHEEL_MOTOR_FOLLOWER_CONFIG.config.id = 59;
 
     MAIN_WHEEL_MOTOR_CONFIG
@@ -75,20 +74,33 @@ public class ShooterConstants {
         .cruiseVelocity(5000)
         .maxAcceleration(10000); // keep velocity ff 0
 
+    HOOD_WHEEL_MOTOR_CONFIG
+        .sparkConfig
+        .idleMode(IdleMode.kCoast)
+        .smartCurrentLimit(40)
+        .inverted(true)
+        .secondaryCurrentLimit(80)
+        .closedLoop
+        .pidf(
+            HOOD_PID.kP, HOOD_PID.kI, HOOD_PID.kD, 0, ClosedLoopSlot.kSlot0)
+        .maxMotion
+        .cruiseVelocity(5000)
+        .maxAcceleration(10000); // keep velocity ff 0
+
     MAIN_WHEEL_MOTOR_FOLLOWER_CONFIG.config.sparkConfig.apply(MAIN_WHEEL_MOTOR_CONFIG.sparkConfig).follow(56);
-    HOOD_WHEEL_MOTOR_CONFIG.config.sparkConfig.apply(MAIN_WHEEL_MOTOR_CONFIG.sparkConfig);//.follow(57);
-    HOOD_WHEEL_MOTOR_FOLLOWER_CONFIG.config.sparkConfig.apply(MAIN_WHEEL_MOTOR_CONFIG.sparkConfig).follow(58);
+    HOOD_WHEEL_MOTOR_FOLLOWER_CONFIG.config.sparkConfig.apply(HOOD_WHEEL_MOTOR_CONFIG.sparkConfig).follow(58);
 
     MAIN_WHEEL_MOTOR_CONFIG.unitToRotorRatio = 1.0 / 60.0; // TODO: set ratio
-    HOOD_WHEEL_MOTOR_CONFIG.config.unitToRotorRatio = 1.0 / 60.0;
+    HOOD_WHEEL_MOTOR_CONFIG.unitToRotorRatio = 1.0 / 60.0;
 
     MAIN_WHEEL_MOTOR_CONFIG.usingAbsoluteEncoder = false;
-    HOOD_WHEEL_MOTOR_CONFIG.config.usingAbsoluteEncoder = false;
+    HOOD_WHEEL_MOTOR_CONFIG.usingAbsoluteEncoder = false;
 
     MAIN_WHEEL_MOTOR_CONFIG.momentOfInertia = 0.1; // TODO: set MOI
-    HOOD_WHEEL_MOTOR_CONFIG.config.momentOfInertia = 0.1;
+    HOOD_WHEEL_MOTOR_CONFIG.momentOfInertia = 0.1;
     // HOOD_WHEEL_MOTOR_CONFIG.inverted = true;
-    MAIN_WHEEL_MOTOR_CONFIG.followerConfigs = new FollowerConfig[]{HOOD_WHEEL_MOTOR_CONFIG, HOOD_WHEEL_MOTOR_FOLLOWER_CONFIG, MAIN_WHEEL_MOTOR_FOLLOWER_CONFIG};
+    MAIN_WHEEL_MOTOR_CONFIG.followerConfigs = new FollowerConfig[]{MAIN_WHEEL_MOTOR_FOLLOWER_CONFIG};
+    HOOD_WHEEL_MOTOR_CONFIG.followerConfigs = new FollowerConfig[]{HOOD_WHEEL_MOTOR_FOLLOWER_CONFIG};
   }
 
   public record SimpleFFConstants(double kS, double kV, double kA) {}

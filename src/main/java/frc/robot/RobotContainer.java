@@ -19,6 +19,9 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import edu.wpi.first.wpilibj2.command.Commands;
+import frc.lib.subsystems.MotorIO;
+import frc.lib.subsystems.SimSparkMaxIO;
+import frc.lib.subsystems.SparkMaxIO;
 import frc.lib.util.AllianceFlipping;
 import frc.lib.util.TableLoader;
 import frc.robot.controllers.ControllerInterface;
@@ -30,6 +33,8 @@ import frc.robot.subsystems.drive.GyroIO;
 import frc.robot.subsystems.drive.GyroIONavX;
 import frc.robot.subsystems.drive.ModuleIO;
 import frc.robot.subsystems.drive.ModuleIOTalonFX;
+import frc.robot.subsystems.shooter.Shooter;
+import frc.robot.subsystems.shooter.ShooterConstants;
 /**
  * This class is where the bulk of the robot should be declared. Since Command-based is a
  * "declarative" paradigm, very little robot logic should actually be handled in the {@link Robot}
@@ -47,7 +52,7 @@ public class RobotContainer {
   // private final Hopper hopper;
   // private final Intake intake;
   // private final Leds leds;
-  // private final Shooter shooter;
+  private final Shooter shooter;
   // private final Vision vision;
   // private SwerveDriveSimulation driveSimulation = null;
 
@@ -107,13 +112,13 @@ public class RobotContainer {
         //         new DummyMotorIO(IntakeDeployConstants.INTAKE_DEPLOY_CONFIG));
         //         // new SparkMaxIO(IntakeDeployConstants.INTAKE_DEPLOY_CONFIG));
         // leds = new Leds();
-        // shooter =
-        //     new Shooter(
-        //         ShooterConstants.MAIN_WHEEL_MOTOR_CONFIG,
-        //         // new MotorInputsAutoLogged(),
-        //         new SparkMaxIO(ShooterConstants.MAIN_WHEEL_MOTOR_CONFIG),
-        //         // ShooterConstants.HOOD_WHEEL_MOTOR_CONFIG,
-        //         new SparkMaxIO(ShooterConstants.HOOD_WHEEL_MOTOR_CONFIG.config));
+        shooter =
+          new Shooter(
+            ShooterConstants.MAIN_WHEEL_MOTOR_CONFIG, 
+            ShooterConstants.HOOD_WHEEL_MOTOR_CONFIG, 
+            new MotorIO[] {new SparkMaxIO(ShooterConstants.MAIN_WHEEL_MOTOR_CONFIG)}, 
+            new MotorIO[] {new SparkMaxIO(ShooterConstants.HOOD_WHEEL_MOTOR_CONFIG)}
+            );
         // vision =
         //     new Vision(
         //         robotState::addVisionObservation,
@@ -169,12 +174,13 @@ public class RobotContainer {
         //         IntakeDeployConstants.INTAKE_DEPLOY_CONFIG,
         //         new SimSparkMaxIO(IntakeDeployConstants.INTAKE_DEPLOY_CONFIG));
         // leds = new Leds();
-        // shooter =
-        //     new Shooter(
-        //         ShooterConstants.MAIN_WHEEL_MOTOR_CONFIG,
-        //         new SimSparkMaxIO(ShooterConstants.MAIN_WHEEL_MOTOR_CONFIG),
-        //         // ShooterConstants.HOOD_WHEEL_MOTOR_CONFIG,
-        //         new SimSparkMaxIO(ShooterConstants.HOOD_WHEEL_MOTOR_CONFIG.config));
+        shooter =
+          new Shooter(
+            ShooterConstants.MAIN_WHEEL_MOTOR_CONFIG, 
+            ShooterConstants.HOOD_WHEEL_MOTOR_CONFIG, 
+            new MotorIO[] {new SimSparkMaxIO(ShooterConstants.MAIN_WHEEL_MOTOR_CONFIG)}, 
+            new MotorIO[] {new SimSparkMaxIO(ShooterConstants.HOOD_WHEEL_MOTOR_CONFIG)}
+            );
         // vision =
         //     new Vision(
         //         robotState::addVisionObservation,
@@ -222,12 +228,13 @@ public class RobotContainer {
         //         IntakeDeployConstants.INTAKE_DEPLOY_CONFIG,
         //         new SimSparkMaxIO(IntakeDeployConstants.INTAKE_DEPLOY_CONFIG));
         // leds = new Leds();
-        // shooter =
-        //     new Shooter(
-        //         ShooterConstants.MAIN_WHEEL_MOTOR_CONFIG,
-        //         new SimSparkMaxIO(ShooterConstants.MAIN_WHEEL_MOTOR_CONFIG),
-        //         // ShooterConstants.HOOD_WHEEL_MOTOR_CONFIG,
-        //         new SimSparkMaxIO(ShooterConstants.HOOD_WHEEL_MOTOR_CONFIG.config));
+        shooter =
+          new Shooter(
+            ShooterConstants.MAIN_WHEEL_MOTOR_CONFIG, 
+            ShooterConstants.HOOD_WHEEL_MOTOR_CONFIG, 
+            new MotorIO[] {new SimSparkMaxIO(ShooterConstants.MAIN_WHEEL_MOTOR_CONFIG)}, 
+            new MotorIO[] {new SimSparkMaxIO(ShooterConstants.HOOD_WHEEL_MOTOR_CONFIG)}
+            );
         // vision = new Vision(robotState::addVisionObservation, new VisionIO[] {});
         break;
     }

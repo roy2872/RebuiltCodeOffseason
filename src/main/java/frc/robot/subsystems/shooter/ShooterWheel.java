@@ -6,11 +6,14 @@ import frc.lib.subsystems.MotorIO;
 import frc.lib.subsystems.MotorInputsAutoLogged;
 import frc.lib.subsystems.MotorSubsystem;
 import frc.lib.subsystems.MotorSubsystemConfig;
+import frc.lib.subsystems.MotorSubsystemWithFollowers;
+import frc.lib.subsystems.MotorSubsystemWithFollowersConfig;
+import frc.lib.subsystems.MotorSubsystemWithFollowersConfig.FollowerConfig;
 
 import java.util.function.DoubleSupplier;
 import org.littletonrobotics.junction.Logger;
 
-public class ShooterWheel extends MotorSubsystem<MotorInputsAutoLogged, MotorIO> {
+public class ShooterWheel extends MotorSubsystemWithFollowers<MotorInputsAutoLogged, MotorIO> {
 
   public enum WheelStates {
     IDLE,
@@ -22,11 +25,22 @@ public class ShooterWheel extends MotorSubsystem<MotorInputsAutoLogged, MotorIO>
   private final SimpleMotorFeedforward ffController;
   private DoubleSupplier velocitySetpointSupplier;
 
-  private final CircularBuffer<Double> kfBuffer = new CircularBuffer<>(10);
+  // private final CircularBuffer<Double> kfBuffer = new CircularBuffer<>(10);
 
   public ShooterWheel(
-      SimpleMotorFeedforward ffController, String name, MotorSubsystemConfig config, MotorIO io) {
-    super(new MotorInputsAutoLogged(), io, config);
+      SimpleMotorFeedforward ffController, 
+      String name, 
+      MotorSubsystemWithFollowersConfig mainConfig, 
+      MotorIO mainIO,
+      MotorIO followerIO) {
+        //config input io input io
+    super(
+      mainConfig,
+      new MotorInputsAutoLogged(), 
+      mainIO,
+      new MotorInputsAutoLogged[]{new MotorInputsAutoLogged()}, new MotorIO[]{followerIO}
+    );
+
     super.setName(name);
     this.ffController = ffController;
     velocitySetpointSupplier = () -> 0;
@@ -35,7 +49,6 @@ public class ShooterWheel extends MotorSubsystem<MotorInputsAutoLogged, MotorIO>
   public void realPeriodic() {
     super.periodic();
     stateMachine();
-    // super.setVoltageOutput(12.0);
 
     Logger.recordOutput(getName() + "/currentState", currentState);
     Logger.recordOutput(getName() + "/requestedVelocity", velocitySetpointSupplier.getAsDouble());
@@ -117,7 +130,7 @@ public class ShooterWheel extends MotorSubsystem<MotorInputsAutoLogged, MotorIO>
     return Math.abs(currentVelocity - targetVelocity) <= tolerance;
   }
 
-  private void resetHold() {
-    kfBuffer.clear();
-  }
+  // private void resetHold() {
+  //   kfBuffer.clear();
+  // }
 }
