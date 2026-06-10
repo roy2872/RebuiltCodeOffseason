@@ -12,6 +12,15 @@ public class ControlGains {
             this.kI = kI;
             this.kD = kD;
         }
+        public double kP() {
+            return kP;
+        }
+        public double kI() {
+            return kI;
+        }
+        public double kD() {
+            return kD;
+        }
     }
 
     public static class SimpleFFConstants {
@@ -22,6 +31,15 @@ public class ControlGains {
             this.kS = kS;
             this.kV = kV;
             this.kA = kA;
+        }
+        public double kS() {
+            return kS;
+        }
+        public double kV() {
+            return kV;
+        }
+        public double kA() {
+            return kA;
         }
     }
 
@@ -35,6 +53,18 @@ public class ControlGains {
             this.kV = kV;
             this.kA = kA;
             this.kg = kg;
+        }
+        public double kS() {
+            return kS;
+        }
+        public double kV() {
+            return kV;
+        }
+        public double kA() {
+            return kA;
+        }
+        public double kg() {
+            return kg;
         }
     }
 
@@ -50,6 +80,21 @@ public class ControlGains {
             this.kD = kD;
             this.maxVelocity = maxVelocity;
             this.maxAcceleration = maxAcceleration;
+        }
+        public double kP() {
+            return kP;
+        }
+        public double kI() {
+            return kI;
+        }
+        public double kD() {
+            return kD;
+        }
+        public double maxVelocity() {
+            return maxVelocity;
+        }
+        public double maxAcceleration() {
+            return maxAcceleration;
         }
     }
 }
