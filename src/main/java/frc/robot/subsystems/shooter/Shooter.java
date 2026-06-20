@@ -70,8 +70,8 @@ public class Shooter extends SubsystemBase {
             ShooterConstants.HOOD_WHEEL_FF_CONSTANTS.kA(),
             Constants.CYCLE_TIME);
 
-    mainWheel = new ShooterWheel(mainWheelFFController, "MainWheel", mainWheelConfig, mainMotorIOs[0], mainMotorIOs[1]);
-    hoodWheel = new ShooterWheel(hoodWheelFFController, "HoodWheel", hoodWheelConfig, hoodMotorIOs[0], hoodMotorIOs[1]);
+    mainWheel = new ShooterWheel(mainWheelFFController, "MainWheel", mainWheelConfig, mainMotorIOs[0], mainMotorIOs[0]);
+    hoodWheel = new ShooterWheel(hoodWheelFFController, "HoodWheel", hoodWheelConfig, hoodMotorIOs[0], hoodMotorIOs[0]);
 
     mainWheelVelocity = () -> 0;
     hoodWheelVelocity = () -> 0;

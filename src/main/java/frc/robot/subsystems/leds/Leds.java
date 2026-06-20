@@ -6,6 +6,7 @@ import edu.wpi.first.units.measure.Time;
 import edu.wpi.first.wpilibj.AddressableLED;
 import edu.wpi.first.wpilibj.AddressableLEDBuffer;
 import edu.wpi.first.wpilibj.LEDPattern;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj.util.Color;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import org.littletonrobotics.junction.AutoLogOutput;
@@ -49,6 +50,10 @@ public class Leds extends SubsystemBase {
 
   @Override
   public void periodic() {
+    stateMachine();
+  }
+
+  private void stateMachine() {
     switch (currentState) {
       case OFF -> ledsStates.OFF.pattern().applyTo(ledBuffer);
       case WHITE -> ledsStates.WHITE.pattern().applyTo(ledBuffer);

@@ -15,7 +15,7 @@ import org.ironmaple.simulation.drivesims.configs.SwerveModuleSimulationConfig;
 
 public class DriveConstants {
 
-  public static final double robotMassKg = 43.0; // Mass of the robot in kg
+  public static final double robotMassKg = 53.0; // Mass of the robot in kg
   public static final double robotMOI = 6.883; // TODO: calculate MOI
   public static final double wheelCOF = 1.0;
 
