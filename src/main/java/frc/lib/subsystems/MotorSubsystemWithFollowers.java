@@ -36,4 +36,11 @@ public class MotorSubsystemWithFollowers<T extends MotorInputsAutoLogged, U exte
       Logger.processInputs(getName() + "/" + followerConfigs[i].config.name, followerInputs[i]);
     }
   }
+
+  @Override
+  public void setPID(double kp, double ki, double kd) {
+    for (MotorIO io : followerIOs) {
+      io.setPID(kp, ki, kd);
+    }
+  }
 }

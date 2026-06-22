@@ -13,12 +13,16 @@
 
 package frc.robot;
 
+import org.ironmaple.simulation.SimulatedArena;
+import org.ironmaple.simulation.drivesims.SwerveDriveSimulation;
+
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import edu.wpi.first.wpilibj2.command.Commands;
+import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine.Direction;
 import frc.lib.subsystems.MotorIO;
 import frc.lib.subsystems.SimSparkMaxIO;
 import frc.lib.subsystems.SparkMaxIO;
@@ -28,13 +32,29 @@ import frc.robot.controllers.ControllerInterface;
 import frc.robot.controllers.DummyController;
 import frc.robot.controllers.SimulationController;
 import frc.robot.generated.TunerConstants;
+import frc.robot.subsystems.beltDrive.BeltDrive;
+import frc.robot.subsystems.beltDrive.BeltDriveConstants;
 import frc.robot.subsystems.drive.Drive;
+import frc.robot.subsystems.drive.DriveConstants;
 import frc.robot.subsystems.drive.GyroIO;
 import frc.robot.subsystems.drive.GyroIONavX;
+import frc.robot.subsystems.drive.GyroIOSim;
 import frc.robot.subsystems.drive.ModuleIO;
+import frc.robot.subsystems.drive.ModuleIOSim;
 import frc.robot.subsystems.drive.ModuleIOTalonFX;
+import frc.robot.subsystems.hood.Hood;
+import frc.robot.subsystems.hood.HoodConstants;
+import frc.robot.subsystems.intake.Intake;
+import frc.robot.subsystems.intake.IntakeConstants.IntakeDeployConstants;
+import frc.robot.subsystems.intake.IntakeConstants.IntakeRollerConstants;
+import frc.robot.subsystems.leds.Leds;
 import frc.robot.subsystems.shooter.Shooter;
 import frc.robot.subsystems.shooter.ShooterConstants;
+import frc.robot.subsystems.vision.Vision;
+import frc.robot.subsystems.vision.VisionConstants;
+import frc.robot.subsystems.vision.VisionIO;
+import frc.robot.subsystems.vision.VisionIOPhoton;
+import frc.robot.subsystems.vision.VisionIOPhotonSim;
 /**
  * This class is where the bulk of the robot should be declared. Since Command-based is a
  * "declarative" paradigm, very little robot logic should actually be handled in the {@link Robot}
@@ -45,18 +65,17 @@ public class RobotContainer {
 
   private final RobotState robotState;
   // // Subsystems
-  // private final BeltDrive beltDrive;
-  // private final Climber climber;
+  private final BeltDrive beltDrive;
   private final Drive drive;
-  // private final Hood hood;
+  private final Hood hood;
   // private final Hopper hopper;
-  // private final Intake intake;
-  // private final Leds leds;
+  private final Intake intake;
+  private final Leds leds;
   private final Shooter shooter;
-  // private final Vision vision;
-  // private SwerveDriveSimulation driveSimulation = null;
+  private final Vision vision;
+  private SwerveDriveSimulation driveSimulation = null;
 
-  // private final SuperStructure structure;
+  private final SuperStructure structure;
 
   // Controller
   private final ControllerInterface controller;
@@ -86,16 +105,13 @@ public class RobotContainer {
                 controller::yVelocityAnalog,
                 controller::rotationVelocityAnalog);
 
-        // beltDrive =
-        //     new BeltDrive(
-        //         BeltDriveConstants.BELT_DRIVE_CONFIG,
-        //         new SparkMaxIO(BeltDriveConstants.BELT_DRIVE_CONFIG),
-        //         new SparkMaxIO(BeltDriveConstants.BELT_FOLLOWER_CONFIG.config));
-        // climber =
-        //     new Climber(
-        //         ClimberConstants.CLIMBER_CONFIG, new SparkMaxIO(ClimberConstants.CLIMBER_CONFIG));
-
-        // hood = new Hood(HoodConstants.HOOD_CONFIG, new SparkMaxIO(HoodConstants.HOOD_CONFIG));
+        beltDrive =
+            new BeltDrive(
+                BeltDriveConstants.BELT_DRIVE_CONFIG,
+                new SparkMaxIO(BeltDriveConstants.BELT_DRIVE_CONFIG),
+                new SparkMaxIO(BeltDriveConstants.BELT_FOLLOWER_CONFIG.config),
+                new SparkMaxIO(BeltDriveConstants.BELT_FOLLOWER_CONFIG_LEFT.config));
+        hood = new Hood(HoodConstants.HOOD_CONFIG, new SparkMaxIO(HoodConstants.HOOD_CONFIG));
         // hopper =
         //     new Hopper(
         //         HopperConstants.HOPPER_CONFIG, 
@@ -103,98 +119,92 @@ public class RobotContainer {
         //         // new SparkMaxIO(HopperConstants.HOPPER_CONFIG), 
         //         controller.purgeIntakeButton()
         //       );
-        // intake =
-        //     new Intake(
-        //         IntakeRollerConstants.INTAKE_ROLLER_CONFIG,
-        //         new DummyMotorIO(IntakeRollerConstants.INTAKE_ROLLER_CONFIG),
-        //         // new SparkMaxIO(IntakeRollerConstants.INTAKE_ROLLER_CONFIG),
-        //         IntakeDeployConstants.INTAKE_DEPLOY_CONFIG,
-        //         new DummyMotorIO(IntakeDeployConstants.INTAKE_DEPLOY_CONFIG));
-        //         // new SparkMaxIO(IntakeDeployConstants.INTAKE_DEPLOY_CONFIG));
-        // leds = new Leds();
+        intake =
+            new Intake(
+                IntakeRollerConstants.INTAKE_ROLLER_CONFIG,
+                new SparkMaxIO(IntakeRollerConstants.INTAKE_ROLLER_CONFIG),
+                IntakeDeployConstants.INTAKE_DEPLOY_CONFIG,
+                new SparkMaxIO(IntakeDeployConstants.INTAKE_DEPLOY_CONFIG));
+        leds = new Leds();
         shooter =
           new Shooter(
             ShooterConstants.MAIN_WHEEL_MOTOR_CONFIG, 
             ShooterConstants.HOOD_WHEEL_MOTOR_CONFIG, 
-            new MotorIO[] {new SparkMaxIO(ShooterConstants.MAIN_WHEEL_MOTOR_CONFIG)}, 
-            new MotorIO[] {new SparkMaxIO(ShooterConstants.HOOD_WHEEL_MOTOR_CONFIG)}
+            new MotorIO[] {new SparkMaxIO(ShooterConstants.MAIN_WHEEL_MOTOR_CONFIG), new SparkMaxIO(ShooterConstants.MAIN_WHEEL_MOTOR_FOLLOWER_CONFIG.config)}, 
+            new MotorIO[] {new SparkMaxIO(ShooterConstants.HOOD_WHEEL_MOTOR_CONFIG), new SparkMaxIO(ShooterConstants.HOOD_WHEEL_MOTOR_FOLLOWER_CONFIG.config)}
             );
-        // vision =
-        //     new Vision(
-        //         robotState::addVisionObservation,
-        //         new VisionIO[] {new VisionIOPhoton("BLcamera", VisionConstants.robotToBLcamera)
+        vision =
+            new Vision(
+                robotState::addVisionObservation,
+                new VisionIO[] {new VisionIOPhoton("BLcamera", VisionConstants.robotToBLcamera)
                   
-        //           ,
-        //           new VisionIOPhoton("BRcamera", VisionConstants.robotToBRcamera),
-        //           /*new VisionIOLimelight("limelight-tsachi", RobotState.getInstance()::getYaw)*/
-        //         });
+                  ,
+                  new VisionIOPhoton("BRcamera", VisionConstants.robotToBRcamera),
+                  /*new VisionIOLimelight("limelight-tsachi", RobotState.getInstance()::getYaw)*/
+                });
         break;
 
       case SIM:
         // Sim robot, instantiate physics sim IO implementations
 
-        // driveSimulation =
-        //     new SwerveDriveSimulation(
-        //         DriveConstants.mapleSimConfig, new Pose2d(3, 3, new Rotation2d()));
+        driveSimulation =
+            new SwerveDriveSimulation(
+                DriveConstants.mapleSimConfig, new Pose2d(3, 3, new Rotation2d()));
 
-        // SimulatedArena.getInstance().addDriveTrainSimulation(driveSimulation);
+        SimulatedArena.getInstance().addDriveTrainSimulation(driveSimulation);
         controller = new SimulationController();
 
         drive =
-            // new Drive(
-            //     new GyroIOSim(driveSimulation.getGyroSimulation()),
-            //     new ModuleIOSim(driveSimulation.getModules()[0]),
-            //     new ModuleIOSim(driveSimulation.getModules()[1]),
-            //     new ModuleIOSim(driveSimulation.getModules()[2]),
-            //     new ModuleIOSim(driveSimulation.getModules()[3]),
-            //     (robotPose) -> driveSimulation.getSimulatedDriveTrainPose(),
-            //     controller::xVelocityAnalog,
-            //     controller::yVelocityAnalog,
-            //     controller::rotationVelocityAnalog);
-            null;
+            new Drive(
+                new GyroIOSim(driveSimulation.getGyroSimulation()),
+                new ModuleIOSim(driveSimulation.getModules()[0]),
+                new ModuleIOSim(driveSimulation.getModules()[1]),
+                new ModuleIOSim(driveSimulation.getModules()[2]),
+                new ModuleIOSim(driveSimulation.getModules()[3]),
+                (robotPose) -> driveSimulation.getSimulatedDriveTrainPose(),
+                controller::xVelocityAnalog,
+                controller::yVelocityAnalog,
+                controller::rotationVelocityAnalog);;
 
-        // beltDrive =
-        //     new BeltDrive(
-        //   BeltDriveConstants.BELT_DRIVE_CONFIG, 
-        //   new SimSparkMaxIO(BeltDriveConstants.BELT_DRIVE_CONFIG),
-        //   new SimSparkMaxIO(BeltDriveConstants.BELT_FOLLOWER_CONFIG.config));
-        // climber =
-        //     new Climber(
-        //         ClimberConstants.CLIMBER_CONFIG,
-        //         new SimSparkMaxIO(ClimberConstants.CLIMBER_CONFIG));
+        beltDrive =
+            new BeltDrive(
+          BeltDriveConstants.BELT_DRIVE_CONFIG, 
+          new SimSparkMaxIO(BeltDriveConstants.BELT_DRIVE_CONFIG),
+          new SimSparkMaxIO(BeltDriveConstants.BELT_FOLLOWER_CONFIG.config),
+          new SimSparkMaxIO(BeltDriveConstants.BELT_FOLLOWER_CONFIG_LEFT.config));
 
-        // hood = new Hood(HoodConstants.HOOD_CONFIG, new SimSparkMaxIO(HoodConstants.HOOD_CONFIG));
+        hood = new Hood(HoodConstants.HOOD_CONFIG, new SimSparkMaxIO(HoodConstants.HOOD_CONFIG));
         // hopper =
         //     new Hopper(
         //         HopperConstants.HOPPER_CONFIG, new SimSparkMaxIO(HopperConstants.HOPPER_CONFIG), controller.purgeIntakeButton());
-        // intake =
-        //     new Intake(
-        //         IntakeRollerConstants.INTAKE_ROLLER_CONFIG,
-        //         new SimSparkMaxIO(IntakeRollerConstants.INTAKE_ROLLER_CONFIG),
-        //         IntakeDeployConstants.INTAKE_DEPLOY_CONFIG,
-        //         new SimSparkMaxIO(IntakeDeployConstants.INTAKE_DEPLOY_CONFIG));
-        // leds = new Leds();
+        intake =
+            new Intake(
+                IntakeRollerConstants.INTAKE_ROLLER_CONFIG,
+                new SimSparkMaxIO(IntakeRollerConstants.INTAKE_ROLLER_CONFIG),
+                IntakeDeployConstants.INTAKE_DEPLOY_CONFIG,
+                new SimSparkMaxIO(IntakeDeployConstants.INTAKE_DEPLOY_CONFIG));
+        leds = new Leds();
         shooter =
           new Shooter(
             ShooterConstants.MAIN_WHEEL_MOTOR_CONFIG, 
             ShooterConstants.HOOD_WHEEL_MOTOR_CONFIG, 
-            new MotorIO[] {new SimSparkMaxIO(ShooterConstants.MAIN_WHEEL_MOTOR_CONFIG)}, 
-            new MotorIO[] {new SimSparkMaxIO(ShooterConstants.HOOD_WHEEL_MOTOR_CONFIG)}
+            new MotorIO[] {new SimSparkMaxIO(ShooterConstants.MAIN_WHEEL_MOTOR_CONFIG), new SimSparkMaxIO(ShooterConstants.MAIN_WHEEL_MOTOR_FOLLOWER_CONFIG.config)}, 
+            new MotorIO[] {new SimSparkMaxIO(ShooterConstants.HOOD_WHEEL_MOTOR_CONFIG), new SimSparkMaxIO(ShooterConstants.HOOD_WHEEL_MOTOR_FOLLOWER_CONFIG.config)}
             );
-        // vision =
-        //     new Vision(
-        //         robotState::addVisionObservation,
-        //         new VisionIO[] {
-        //           new VisionIOPhotonSim(
-        //               "BLcamera",
-        //               VisionConstants.robotToBLcamera,
-        //               driveSimulation::getSimulatedDriveTrainPose),
-        //           new VisionIOPhotonSim(
-        //               "BRcamera",
-        //               VisionConstants.robotToBRcamera,
-        //               driveSimulation::getSimulatedDriveTrainPose)
-        //           // new VisionIOTest()
-        //         });
+        vision =
+            new Vision(
+                robotState::addVisionObservation,
+                new VisionIO[] {
+                  new VisionIOPhotonSim(
+                      "BLcamera",
+                      VisionConstants.robotToBLcamera,
+                      driveSimulation::getSimulatedDriveTrainPose),
+                  new VisionIOPhotonSim(
+                      "BRcamera",
+                      VisionConstants.robotToBRcamera,
+                      driveSimulation::getSimulatedDriveTrainPose)
+                  // new VisionIOTest()
+                });
         break;
 
       default:
@@ -211,45 +221,42 @@ public class RobotContainer {
                 controller::xVelocityAnalog,
                 controller::yVelocityAnalog,
                 controller::rotationVelocityAnalog);
-        // beltDrive = new BeltDrive(BeltDriveConstants.BELT_DRIVE_CONFIG, new SimSparkMaxIO(BeltDriveConstants.BELT_DRIVE_CONFIG), new SimSparkMaxIO(BeltDriveConstants.BELT_FOLLOWER_CONFIG.config));
-        // climber =
-        //     new Climber(
-        //         ClimberConstants.CLIMBER_CONFIG,
-        //         new SimSparkMaxIO(ClimberConstants.CLIMBER_CONFIG));
+        beltDrive = new BeltDrive(
+          BeltDriveConstants.BELT_DRIVE_CONFIG, 
+          new SimSparkMaxIO(BeltDriveConstants.BELT_DRIVE_CONFIG), 
+          new SimSparkMaxIO(BeltDriveConstants.BELT_FOLLOWER_CONFIG.config),
+          new SimSparkMaxIO(BeltDriveConstants.BELT_FOLLOWER_CONFIG_LEFT.config));
 
-        // hood = new Hood(HoodConstants.HOOD_CONFIG, new SimSparkMaxIO(HoodConstants.HOOD_CONFIG));
+        hood = new Hood(HoodConstants.HOOD_CONFIG, new SimSparkMaxIO(HoodConstants.HOOD_CONFIG));
         // hopper =
         //     new Hopper(
         //         HopperConstants.HOPPER_CONFIG, new SimSparkMaxIO(HopperConstants.HOPPER_CONFIG), controller.purgeIntakeButton());
-        // intake =
-        //     new Intake(
-        //         IntakeRollerConstants.INTAKE_ROLLER_CONFIG,
-        //         new SimSparkMaxIO(IntakeRollerConstants.INTAKE_ROLLER_CONFIG),
-        //         IntakeDeployConstants.INTAKE_DEPLOY_CONFIG,
-        //         new SimSparkMaxIO(IntakeDeployConstants.INTAKE_DEPLOY_CONFIG));
-        // leds = new Leds();
+        intake =
+            new Intake(
+                IntakeRollerConstants.INTAKE_ROLLER_CONFIG,
+                new SimSparkMaxIO(IntakeRollerConstants.INTAKE_ROLLER_CONFIG),
+                IntakeDeployConstants.INTAKE_DEPLOY_CONFIG,
+                new SimSparkMaxIO(IntakeDeployConstants.INTAKE_DEPLOY_CONFIG));
+        leds = new Leds();
         shooter =
           new Shooter(
             ShooterConstants.MAIN_WHEEL_MOTOR_CONFIG, 
             ShooterConstants.HOOD_WHEEL_MOTOR_CONFIG, 
-            new MotorIO[] {new SimSparkMaxIO(ShooterConstants.MAIN_WHEEL_MOTOR_CONFIG)}, 
-            new MotorIO[] {new SimSparkMaxIO(ShooterConstants.HOOD_WHEEL_MOTOR_CONFIG)}
+            new MotorIO[] {new SimSparkMaxIO(ShooterConstants.MAIN_WHEEL_MOTOR_CONFIG), new SimSparkMaxIO(ShooterConstants.MAIN_WHEEL_MOTOR_FOLLOWER_CONFIG.config)}, 
+            new MotorIO[] {new SimSparkMaxIO(ShooterConstants.HOOD_WHEEL_MOTOR_CONFIG), new SimSparkMaxIO(ShooterConstants.HOOD_WHEEL_MOTOR_FOLLOWER_CONFIG.config)}
             );
-        // vision = new Vision(robotState::addVisionObservation, new VisionIO[] {});
+        vision = new Vision(robotState::addVisionObservation, new VisionIO[] {});
         break;
     }
 
-    // structure =
-    //     new SuperStructure(
-    //         beltDrive, climber, drive, hood, hopper, intake, leds, shooter, vision);
+    structure =
+        new SuperStructure(
+            beltDrive, drive, hood, intake, leds, shooter, vision);
 
     // Set up auto routines
     // autoChooser = new LoggedDashboardChooser<>("Auto Choices");
-    // autoChooser.addDefaultOption("Human Player Auto", new HumanPlayerAuto(beltDrive, climber, drive, hood, hopper, intake, leds, shooter));
-    // autoChooser.addOption("Right Middle Fuel Auto", new RightMiddleFuelAuto(beltDrive, climber, drive, hood, hopper, intake, leds, shooter, false));
-    // autoChooser.addOption("Left Middle Fuel Auto", new RightMiddleFuelAuto(beltDrive, climber, drive, hood, hopper, intake, leds, shooter, true));
-    // autoChooser.addOption("Shoot Close HP Auto", new CloseHumanPlayerAuto(beltDrive, climber, drive, hood, hopper, intake, leds, shooter));
-    // autoChooser.addOption("Test Climb Auto", new TestClimbAuto(beltDrive, climber, drive, hood, hopper, intake, leds, shooter));
+    // autoChooser.addDefaultOption("Human Player Auto", new HumanPlayerAuto(beltDrive, drive, hood, hopper, intake, leds, shooter));
+    // autoChooser.addOption("Right Middle Fuel Auto", new RightMiddleFuelAuto(beltDrive, drive, hood, hopper, intake, leds, shooter, false));
 
     // Configure the button bindings
     configureButtonBindings();
@@ -258,7 +265,7 @@ public class RobotContainer {
   private void configureButtonBindings() {
     final Runnable resetGyro =
         Constants.currentMode == Constants.Mode.SIM
-            ? () -> {} //RobotState.getInstance().resetPose(driveSimulation.getSimulatedDriveTrainPose())
+            ? () -> RobotState.getInstance().resetPose(driveSimulation.getSimulatedDriveTrainPose())
             : () ->
                 RobotState.getInstance()
                     .resetPose(
@@ -269,7 +276,11 @@ public class RobotContainer {
     controller.resetGyroButton().onTrue(Commands.runOnce(resetGyro).ignoringDisable(true).alongWith(
     Commands.print("reset gyro")
     ));
-    // controller.shootCloseButton().onTrue(structure.shootCloseButtonCommand());
+    // controller.shootCloseButton().onTrue(structure.shootCloseButtonCommand().alongWith(Commands.print("Shooting close...")));
+    controller.shootCloseButton().onTrue(shooter.shooterMainSysidRoutine(true, Direction.kForward));
+    controller.shootButton().onTrue(shooter.shooterMainSysidRoutine(true, Direction.kReverse));
+    controller.intakeButton().onTrue(shooter.shooterMainSysidRoutine(false, Direction.kForward));
+    controller.openClimbButton().onTrue(shooter.shooterMainSysidRoutine(false, Direction.kReverse));
     // controller.shootButton().onTrue(structure.shootOnTheMoveButtonCommand());
     // controller.intakeButton().whileTrue(structure.setIntakeStateCommand(StructureIntakeStates.INTAKING));
     // controller.intakeButton().whileFalse(structure.setIntakeStateCommand(StructureIntakeStates.CLOSED));
@@ -306,7 +317,6 @@ public class RobotContainer {
   }
 
   public void periodic() {
-    SmartDashboard.putData("sub-drive", drive);
     SmartDashboard.putData("Command Scheduler", CommandScheduler.getInstance());
     // SmartDashboard.putData(
     //     "rgtrh",

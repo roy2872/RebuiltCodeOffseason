@@ -21,6 +21,13 @@ public class ShooterWheel extends MotorSubsystemWithFollowers<MotorInputsAutoLog
     HOLD
   };
 
+  private static final String DASHBOARD_PREFIX = "Shooter/Override/";
+  private static final String MODE_CHOOSER_KEY = DASHBOARD_PREFIX + "Mode";
+  private static final String VOLTAGE_KEY = DASHBOARD_PREFIX + "Voltage";
+  private static final String VELOCITY_KEY = DASHBOARD_PREFIX + "Velocity";
+
+
+
   private WheelStates currentState = WheelStates.IDLE;
   private final SimpleMotorFeedforward ffController;
   private DoubleSupplier velocitySetpointSupplier;

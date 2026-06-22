@@ -10,14 +10,11 @@ import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.InstantCommand;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
-import frc.robot.autonomous.HumanPlayerAuto;
 import frc.robot.commands.ShootCloseCommand;
 import frc.robot.commands.ShootInPlaceCommand;
 import frc.robot.commands.ShootOnTheMoveCommand;
 import frc.robot.subsystems.beltDrive.BeltDrive;
 import frc.robot.subsystems.beltDrive.BeltDrive.BeltDriveStates;
-import frc.robot.subsystems.climber.Climber;
-import frc.robot.subsystems.climber.Climber.ClimberStates;
 import frc.robot.subsystems.drive.Drive;
 import frc.robot.subsystems.drive.Drive.DriveStates;
 import frc.robot.subsystems.hood.Hood;
@@ -68,10 +65,9 @@ public class SuperStructure extends SubsystemBase {
   public Command currentCommand = null;
 
   private final BeltDrive beltDrive;
-  private final Climber climber;
   private final Drive drive;
   private final Hood hood;
-  private final Hopper hopper;
+  // private final Hopper hopper;
   private final Intake intake;
   private final Leds leds;
   private final Shooter shooter;
@@ -81,19 +77,17 @@ public class SuperStructure extends SubsystemBase {
 
   public SuperStructure(
       BeltDrive beltDrive,
-      Climber climber,
       Drive drive,
       Hood hood,
-      Hopper hopper,
+      // Hopper hopper,
       Intake intake,
       Leds leds,
       Shooter shooter,
       Vision vision) {
     this.beltDrive = beltDrive;
-    this.climber = climber;
     this.drive = drive;
     this.hood = hood;
-    this.hopper = hopper;
+    // this.hopper = hopper;
     this.intake = intake;
     this.leds = leds;
     this.shooter = shooter;
@@ -217,7 +211,6 @@ public class SuperStructure extends SubsystemBase {
   private void auto() {
     if (currentState != previousState) {
       // if (currentCommand != null) currentCommand.cancel();
-      // currentCommand = new HumanPlayerAuto(climber, drive, hood, hopper, intake, leds, shooter);
       // currentCommand.schedule();
     }
   }
@@ -226,11 +219,10 @@ public class SuperStructure extends SubsystemBase {
     if (currentState != previousState) {
       if (currentCommand != null) currentCommand.cancel();
     }
-    climber.setState(ClimberStates.OPEN_NO_CLIMB);
     drive.setState(DriveStates.FIELD_DRIVE);
     hood.setState(HoodStates.IDLE);
     beltDrive.setState(BeltDriveStates.IDLE);
-    hopper.setState(HopperStates.IDLE);
+    // hopper.setState(HopperStates.IDLE);
     shooter.setState(ShooterStates.IDLE);
     leds.setState(ledsStates.OFF);
     // intake function
@@ -240,29 +232,26 @@ public class SuperStructure extends SubsystemBase {
     if (currentState != previousState) {
       if (currentCommand != null) currentCommand.cancel();
       currentCommand = 
-          new ShootInPlaceCommand(beltDrive, drive, hood, hopper, leds, shooter);
+          new ShootInPlaceCommand(beltDrive, drive, hood, leds, shooter);
       currentCommand.schedule();
     }
-    climber.setState(ClimberStates.OPEN_NO_CLIMB);
   }
 
   private void shootClose() {
     if (currentState != previousState) {
       if (currentCommand != null) currentCommand.cancel();
-        currentCommand = new ShootCloseCommand(beltDrive, drive, hood, hopper, leds, shooter);
+        currentCommand = new ShootCloseCommand(beltDrive, drive, hood, leds, shooter);
         currentCommand.schedule();
     }
-    climber.setState(ClimberStates.OPEN_NO_CLIMB);
   }
 
   private void shootOnTheMove() {
     if (currentState != previousState) {
       if (currentCommand != null) currentCommand.cancel();
       currentCommand = 
-          new ShootOnTheMoveCommand(beltDrive, drive, hood, hopper, leds, shooter);
+          new ShootOnTheMoveCommand(beltDrive, drive, hood, leds, shooter);
       currentCommand.schedule();
     }
-    climber.setState(ClimberStates.OPEN_NO_CLIMB);
   }
 
   private void fetch() {
@@ -272,9 +261,8 @@ public class SuperStructure extends SubsystemBase {
     intake.setState(IntakeStates.PURGE);
     hood.setState(HoodStates.IDLE);
     beltDrive.setState(BeltDriveStates.IDLE);
-    hopper.setState(HopperStates.PURGE);
+    // hopper.setState(HopperStates.PURGE);
     shooter.setState(ShooterStates.IDLE);
-    climber.setState(ClimberStates.OPEN_NO_CLIMB);
     drive.setState(DriveStates.FIELD_DRIVE);
   }
 
@@ -282,12 +270,10 @@ public class SuperStructure extends SubsystemBase {
     if (currentState != previousState) {
       if (currentCommand != null) currentCommand.cancel();
     }
-    if(climber.getCurrentState() == ClimberStates.CLOSE_CLIMB) climber.setState(ClimberStates.OPEN_UNCLIMB);
-    else climber.setState(ClimberStates.OPEN_NO_CLIMB);
     drive.setState(DriveStates.FIELD_DRIVE); // could add here align command
     hood.setState(HoodStates.IDLE);
     beltDrive.setState(BeltDriveStates.IDLE);
-    hopper.setState(HopperStates.IDLE);
+    // hopper.setState(HopperStates.IDLE);
     shooter.setState(ShooterStates.IDLE);
     leds.setState(ledsStates.PURPLE);
   }
@@ -296,11 +282,10 @@ public class SuperStructure extends SubsystemBase {
     if (currentState != previousState) {
       if (currentCommand != null) currentCommand.cancel();
     }
-    climber.setState(ClimberStates.CLOSE_CLIMB);
     drive.setState(DriveStates.FIELD_DRIVE); // could automate or drive slow
     hood.setState(HoodStates.IDLE);
     beltDrive.setState(BeltDriveStates.IDLE);
-    hopper.setState(HopperStates.IDLE);
+    // hopper.setState(HopperStates.IDLE);
     shooter.setState(ShooterStates.IDLE);
     leds.setState(ledsStates.FINISH_SCORE);
   }
@@ -311,7 +296,6 @@ public class SuperStructure extends SubsystemBase {
 
   public void teleopInit() {
     if (currentCommand != null) currentCommand.cancel();
-    if(climber.getCurrentState() == ClimberStates.CLOSE_CLIMB || climber.getCurrentState() == ClimberStates.OPEN_NO_CLIMB) setWantedState(SuperStructureStates.CLIMB_OPEN);
     else wantedState = SuperStructureStates.TRAVEL;
   }
 

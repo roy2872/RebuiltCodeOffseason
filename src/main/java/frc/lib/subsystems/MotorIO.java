@@ -40,4 +40,6 @@ public interface MotorIO {
   void setEnableSoftLimit(boolean fwd, boolean rev);
 
   void setEnableHardLimit(boolean fwd, boolean rev);
+
+  void setPID(double kP, double kI, double kD);
 }

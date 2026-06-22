@@ -23,7 +23,7 @@ import frc.robot.subsystems.shooter.Shooter.ShooterStates;
 public class ShootCloseCommand extends SequentialCommandGroup {
 
   public ShootCloseCommand(
-      BeltDrive beltDrive, Drive drive, Hood hood, Hopper hopper, Leds leds, Shooter shooter) {
+      BeltDrive beltDrive, Drive drive, Hood hood, Leds leds, Shooter shooter) {
     // addRequirements(getRequirements());
     addCommands(
       Commands.parallel(
@@ -32,8 +32,10 @@ public class ShootCloseCommand extends SequentialCommandGroup {
         Commands.runOnce(() -> hood.setTargetAngle(() -> Constants.SHOOT_CLOSE_ANGLE), hood)),
         Commands.waitUntil(() -> shooter.atVelocity() && hood.atSetpoint()) // TODO: can calculate needed accuracy for drive
           .andThen(Commands.runOnce(() -> beltDrive.setState(BeltDriveStates.ACTIVE), beltDrive)
-          .alongWith(Commands.runOnce(() -> hopper.setState(HopperStates.ACTIVE), hopper)
-          .alongWith(Commands.runOnce(() -> leds.setState(ledsStates.PURPLE), leds))
+          .alongWith(
+            // Commands.runOnce(() -> hopper.setState(HopperStates.ACTIVE), hopper).alongWith(
+              Commands.runOnce(() -> leds.setState(ledsStates.PURPLE), leds)
+              // )
           )
       )
     );

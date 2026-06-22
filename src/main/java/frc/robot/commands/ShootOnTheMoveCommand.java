@@ -21,7 +21,7 @@ import frc.robot.subsystems.shooter.Shooter;
 public class ShootOnTheMoveCommand extends SequentialCommandGroup {
 
   public ShootOnTheMoveCommand(
-      BeltDrive beltDrive, Drive drive, Hood hood, Hopper hopper, Leds leds, Shooter shooter) {
+      BeltDrive beltDrive, Drive drive, Hood hood, Leds leds, Shooter shooter) {
     addRequirements(getRequirements());
     addCommands(
       Commands.parallel(
@@ -30,8 +30,10 @@ public class ShootOnTheMoveCommand extends SequentialCommandGroup {
         Commands.run(() -> hood.setTargetAngle(() -> RobotState.getInstance().getShootOnTheMoveScoringInfo().get(0)), hood),
         Commands.waitUntil(() -> shooter.atVelocity() && hood.atSetpoint() && drive.isAtShootOnTheMoveSetpoint(1.0)) // TODO: can calculate needed accuracy for drive
           .andThen(Commands.runOnce(() -> beltDrive.setState(BeltDriveStates.ACTIVE), beltDrive)
-          .alongWith(Commands.runOnce(() -> hopper.setState(HopperStates.ACTIVE), hopper)
-          .alongWith(Commands.runOnce(() -> leds.setState(ledsStates.PURPLE), leds)))
+          .alongWith(
+          // Commands.runOnce(() -> hopper.setState(HopperStates.ACTIVE), hopper).alongWith(
+            Commands.runOnce(() -> leds.setState(ledsStates.PURPLE), leds))
+            // )
       )
     ));
   }
