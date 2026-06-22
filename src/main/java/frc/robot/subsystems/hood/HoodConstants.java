@@ -4,6 +4,8 @@ import static frc.robot.subsystems.hood.HoodConstants.HOOD_STARTING_ANGLE;
 
 import com.revrobotics.spark.ClosedLoopSlot;
 import com.revrobotics.spark.config.SparkBaseConfig.IdleMode;
+
+import edu.wpi.first.math.controller.ArmFeedforward;
 import edu.wpi.first.math.util.Units;
 import frc.lib.subsystems.MotorSubsystemConfig;
 import frc.lib.util.ControlGains.PidGains;
@@ -18,18 +20,18 @@ public class HoodConstants {
   public static final double BOOT_SEQUENCE_TIME = 2.0;
   public static final double BOOT_SEQUENCE_VOLTAGE = 1.0; // [V]
   
-  public static final double HOOD_ANGLE_TOLERANCE = 0.5; // [deg]
+  public static final double HOOD_ANGLE_TOLERANCE = 0.3; // [deg]
 
-  public static final SimpleFFConstants HOOD_FF =
+  public static final ArmFeedforward HOOD_FF =
       switch (Constants.currentMode) {
-        case REAL -> new SimpleFFConstants(0.0, 0.0, 0.0);
-        case SIM -> new SimpleFFConstants(0.0, 0.0, 0.0);
-        default -> new SimpleFFConstants(0.0, 0.0, 0.0);
+        case REAL -> new ArmFeedforward(0.0, 0.0, 0.0);
+        case SIM -> new ArmFeedforward(0.0, 0.0, 0.0);
+        default -> new ArmFeedforward(0.0, 0.0, 0.0);
       };
 
   protected static final PidGains HOOD_PID =
       switch (Constants.currentMode) {
-        case REAL -> new PidGains(2.5, 0.0, 0.0);
+        case REAL -> new PidGains(1.5, 0.0, 0.2);
         case SIM -> new PidGains(0.1, 0.0, 0.0);
         default -> new PidGains(0.1, 0.0, 0.0);
       };
@@ -43,9 +45,9 @@ public class HoodConstants {
     HOOD_CONFIG
         .sparkConfig
         .idleMode(IdleMode.kCoast)
-        .smartCurrentLimit(20) 
+        .smartCurrentLimit(10) 
         .inverted(false)
-        .secondaryCurrentLimit(30)
+        .secondaryCurrentLimit(20)
         .closedLoop
         .pidf(HOOD_PID.kP, HOOD_PID.kI, HOOD_PID.kD, 0, ClosedLoopSlot.kSlot0)
         .maxOutput(1)
