@@ -3,6 +3,8 @@ package frc.lib.subsystems;
 import edu.wpi.first.wpilibj.RobotController;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
+import frc.lib.util.ControlGains.PidGains;
+
 import org.littletonrobotics.junction.Logger;
 
 public class MotorSubsystem<T extends MotorInputsAutoLogged, U extends MotorIO>
@@ -15,12 +17,21 @@ public class MotorSubsystem<T extends MotorInputsAutoLogged, U extends MotorIO>
 
   protected MotorSubsystemConfig config;
 
+  private String PID_PREFIX;
+  private String KP_KEY;
+  private String KI_KEY;
+  private String KD_KEY;
+  private String PID_CONFIRM_KEY;
+
+  private PidGains pidGains;
+
   public MotorSubsystem(T inputs, U io, MotorSubsystemConfig config) {
     this.inputs = inputs;
     this.io = io;
     this.config = config;
 
     this.usingAbsoluteEncoder = config.usingAbsoluteEncoder;
+    setupPID();
   }
 
   @Override
@@ -30,6 +41,21 @@ public class MotorSubsystem<T extends MotorInputsAutoLogged, U extends MotorIO>
     Logger.processInputs(getName(), inputs);
     Logger.recordOutput(
         getName() + "/latencyPeriodicSeconds", RobotController.getFPGATime() * 1e-6 - timestamp);
+
+    if (SmartDashboard.getBoolean(PID_CONFIRM_KEY, false)) {
+      double kp, ki, kd;
+      kp = SmartDashboard.getNumber(KP_KEY, pidGains.kP);
+      ki = SmartDashboard.getNumber(KI_KEY, pidGains.kI);
+      kd = SmartDashboard.getNumber(KD_KEY, pidGains.kD);
+      io.setPID(
+        kp, ki, kd
+      );
+      this.pidGains = new PidGains(kp, ki, kd);
+      SmartDashboard.putBoolean(PID_CONFIRM_KEY, false);
+    }
+    Logger.recordOutput(PID_PREFIX + "Active/kP", pidGains.kP);
+    Logger.recordOutput(PID_PREFIX + "Active/kI", pidGains.kI);
+    Logger.recordOutput(PID_PREFIX + "Active/kD", pidGains.kD);
   }
 
   /**
@@ -91,5 +117,19 @@ public class MotorSubsystem<T extends MotorInputsAutoLogged, U extends MotorIO>
 
   public void setPID(double kp, double ki, double kd) {
     io.setPID(kp, ki, kd);
+  }
+
+  private void setupPID() {
+    PID_PREFIX = getName() + "/PID/";
+    KP_KEY = PID_PREFIX + "Kp";
+    KI_KEY = PID_PREFIX + "Ki";
+    KD_KEY = PID_PREFIX + "Kd";
+    PID_CONFIRM_KEY = PID_PREFIX + "Confirm";
+
+    pidGains = io.getPID();
+    SmartDashboard.putNumber(KP_KEY, pidGains.kP);
+    SmartDashboard.putNumber(KI_KEY, pidGains.kI);
+    SmartDashboard.putNumber(KD_KEY, pidGains.kD);
+    SmartDashboard.putBoolean(PID_CONFIRM_KEY, false);
   }
 }

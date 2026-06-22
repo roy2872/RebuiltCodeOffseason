@@ -13,10 +13,13 @@ import com.revrobotics.spark.SparkClosedLoopController;
 import com.revrobotics.spark.SparkClosedLoopController.ArbFFUnits;
 import com.revrobotics.spark.SparkLowLevel.MotorType;
 import com.revrobotics.spark.SparkMax;
+import com.revrobotics.spark.config.ClosedLoopConfigAccessor;
+import com.revrobotics.spark.config.SparkMaxConfigAccessor;
 import com.revrobotics.spark.config.SparkBaseConfig.IdleMode;
 import edu.wpi.first.math.filter.Debouncer;
 import edu.wpi.first.units.measure.Angle;
 import frc.lib.util.SparkUtil;
+import frc.lib.util.ControlGains.PidGains;
 import frc.robot.Robot;
 
 public class SparkMaxIO implements MotorIO {
@@ -214,6 +217,12 @@ public class SparkMaxIO implements MotorIO {
                 ResetMode.kResetSafeParameters,
                 PersistMode.kPersistParameters));
       
+  }
+
+  @Override
+  public PidGains getPID() {
+      ClosedLoopConfigAccessor accessor = motor.configAccessor.closedLoop;
+      return new PidGains(accessor.getP(), accessor.getI(), accessor.getD());
   }
 
   private boolean absoluteEncoderConnected() {

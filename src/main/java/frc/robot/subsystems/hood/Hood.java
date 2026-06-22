@@ -38,11 +38,11 @@ public class Hood extends MotorSubsystem<MotorInputsAutoLogged, MotorIO> {
   private static final String VOLTAGE_KEY = DASHBOARD_PREFIX + "Voltage";
   private static final String POSITION_KEY = DASHBOARD_PREFIX + "Position";
 
-  private static final String PID_PREFIX = "Hood/PID/";
-  private static final String KP_KEY = PID_PREFIX + "Kp";
-  private static final String KI_KEY = PID_PREFIX + "Ki";
-  private static final String KD_KEY = PID_PREFIX + "Kd";
-  private static final String PID_CONFIRM_KEY = PID_PREFIX + "Confirm";
+  // private static final String PID_PREFIX = "Hood/PID/";
+  // private static final String KP_KEY = PID_PREFIX + "Kp";
+  // private static final String KI_KEY = PID_PREFIX + "Ki";
+  // private static final String KD_KEY = PID_PREFIX + "Kd";
+  // private static final String PID_CONFIRM_KEY = PID_PREFIX + "Confirm";
 
   public enum HoodStates {
     TRACKING,
@@ -93,10 +93,10 @@ public class Hood extends MotorSubsystem<MotorInputsAutoLogged, MotorIO> {
     SmartDashboard.putNumber(VOLTAGE_KEY, 0.0);
     SmartDashboard.putNumber(POSITION_KEY, HOOD_STARTING_ANGLE);
 
-    SmartDashboard.putNumber(KP_KEY, HOOD_PID.kP);
-    SmartDashboard.putNumber(KI_KEY, HOOD_PID.kI);
-    SmartDashboard.putNumber(KD_KEY, HOOD_PID.kD);
-    SmartDashboard.putBoolean(PID_CONFIRM_KEY, false);
+    // SmartDashboard.putNumber(KP_KEY, HOOD_PID.kP);
+    // SmartDashboard.putNumber(KI_KEY, HOOD_PID.kI);
+    // SmartDashboard.putNumber(KD_KEY, HOOD_PID.kD);
+    // SmartDashboard.putBoolean(PID_CONFIRM_KEY, false);
     super.setCurrentPosition(HoodConstants.HOOD_STARTING_ANGLE);
     bootSequenceTimer = new Timer();
   }
@@ -107,13 +107,13 @@ public class Hood extends MotorSubsystem<MotorInputsAutoLogged, MotorIO> {
     if(SmartDashboard.getBoolean("Hood/ResetButton", false))
       setState(HoodStates.BOOT_SEQUENCE);
       
-    if (SmartDashboard.getBoolean(PID_CONFIRM_KEY, false)) {
-      io.setPID(
-        SmartDashboard.getNumber(KP_KEY, HOOD_PID.kP),
-        SmartDashboard.getNumber(KI_KEY, HOOD_PID.kI),
-        SmartDashboard.getNumber(KD_KEY, HOOD_PID.kD)
-      );
-    }
+    // if (SmartDashboard.getBoolean(PID_CONFIRM_KEY, false)) {
+    //   io.setPID(
+    //     SmartDashboard.getNumber(KP_KEY, HOOD_PID.kP),
+    //     SmartDashboard.getNumber(KI_KEY, HOOD_PID.kI),
+    //     SmartDashboard.getNumber(KD_KEY, HOOD_PID.kD)
+    //   );
+    // }
     if (!runDashboardOverride()) {
       stateMachine();
     }
@@ -185,7 +185,7 @@ public class Hood extends MotorSubsystem<MotorInputsAutoLogged, MotorIO> {
   public void startBootSequence() {
     bootSequenceTimer.reset();
     bootSequenceTimer.start();
-    setState(HoodStates.BOOT_SEQUENCE);
+    // setState(HoodStates.BOOT_SEQUENCE);
   }
 
   public void stopBootSequence() {
