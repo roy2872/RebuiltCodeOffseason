@@ -104,8 +104,9 @@ public class Hood extends MotorSubsystem<MotorInputsAutoLogged, MotorIO> {
   @Override
   public void periodic() {
     super.periodic();
-    if(SmartDashboard.getBoolean("Hood/ResetButton", false)) {
+    if(SmartDashboard.getBoolean("Hood/ResetButton", false))
       setState(HoodStates.BOOT_SEQUENCE);
+      
     if (SmartDashboard.getBoolean(PID_CONFIRM_KEY, false)) {
       io.setPID(
         SmartDashboard.getNumber(KP_KEY, HOOD_PID.kP),
