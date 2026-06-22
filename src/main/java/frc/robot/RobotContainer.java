@@ -329,14 +329,20 @@ public class RobotContainer {
   }
 
   public void autonomousInit() {
-    // structure.setWantedState(SuperStructureStates.AUTO);
+    if(!hood.wasHoodReset()) 
+      hood.startBootSequence();
     if (Constants.currentMode != Constants.Mode.SIM) return;
 
     // Reset the simulation to the initial pose
     // driveSimulation.setSimulationWorldPose(RobotState.getInstance().getEstimatedPose());
   }
+
+  public void disabledInit() {
+    hood.stopBootSequence();
+  }
   
   public void teleopInit() {
-    // structure.teleopInit();
+    if(!hood.wasHoodReset()) 
+      hood.startBootSequence();
   }
 }
