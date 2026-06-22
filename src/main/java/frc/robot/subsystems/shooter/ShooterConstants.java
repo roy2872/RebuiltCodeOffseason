@@ -15,21 +15,21 @@ public class ShooterConstants {
 
   public static final SimpleFFConstants MAIN_WHEEL_FF_CONSTANTS =
       switch (Constants.currentMode) {
-        case REAL -> new SimpleFFConstants(0.0, 0.1535*28.0/28.0, 0.53556);
+        case REAL -> new SimpleFFConstants(0.0, 0.13, 3.0);
         case SIM -> new SimpleFFConstants(0.0, 0.0, 0.0);
         default -> new SimpleFFConstants(0.0, 0.0, 0.0);
       };
 
   public static final SimpleFFConstants HOOD_WHEEL_FF_CONSTANTS =
       switch (Constants.currentMode) {
-        case REAL -> new SimpleFFConstants(0.13343, 0.13258, 0.038279);
+        case REAL -> new SimpleFFConstants(0.0, 0.13, 1.68);
         case SIM -> new SimpleFFConstants(0.0, 0.0, 0.0);
         default -> new SimpleFFConstants(0.0, 0.0, 0.0);
       };
 
   protected static final PidGains MAIN_PID =
       switch (Constants.currentMode) {
-        case REAL -> new PidGains(0.002005, 0.0, 0.1); 
+        case REAL -> new PidGains(0.001205, 0.0, 0.1); 
         case SIM -> new PidGains(0.1, 0.0, 0.0);
         default -> new PidGains(0.1, 0.0, 0.0);
       };
@@ -47,7 +47,7 @@ public class ShooterConstants {
   public static final FollowerConfig MAIN_WHEEL_MOTOR_FOLLOWER_CONFIG = new FollowerConfig();
   public static final FollowerConfig HOOD_WHEEL_MOTOR_FOLLOWER_CONFIG = new FollowerConfig();
 
-  public static final double MAIN_WHEEL_DIAMETER = Units.inchesToMeters(3); // meter
+  public static final double MAIN_WHEEL_DIAMETER = Units.inchesToMeters(4); // meter
   public static final double HOOD_WHEEL_DIAMETER = Units.inchesToMeters(2); // meter
 
   public static final double COMPENSATION_FACTOR = 1.0;
@@ -67,7 +67,7 @@ public class ShooterConstants {
         .sparkConfig
         .idleMode(IdleMode.kCoast)
         .smartCurrentLimit(40)
-        .inverted(true)
+        .inverted(false)
         .secondaryCurrentLimit(80)
         .closedLoop
         .pidf(
@@ -80,7 +80,7 @@ public class ShooterConstants {
         .sparkConfig
         .idleMode(IdleMode.kCoast)
         .smartCurrentLimit(40)
-        .inverted(true)
+        .inverted(false)
         .secondaryCurrentLimit(80)
         .closedLoop
         .pidf(
@@ -90,7 +90,7 @@ public class ShooterConstants {
         .maxAcceleration(10000); // keep velocity ff 0
 
     MAIN_WHEEL_MOTOR_FOLLOWER_CONFIG.config.sparkConfig.apply(MAIN_WHEEL_MOTOR_CONFIG.sparkConfig).follow(56, true);
-    // MAIN_WHEEL_MOTOR_FOLLOWER_CONFIG.inverted = true;
+    // MAIN_WHEEL_MOTOR_FOLLOWER_CONFIG.inverted = true;`````
     HOOD_WHEEL_MOTOR_FOLLOWER_CONFIG.config.sparkConfig.apply(HOOD_WHEEL_MOTOR_CONFIG.sparkConfig).follow(58);
     HOOD_WHEEL_MOTOR_FOLLOWER_CONFIG.inverted = true;
 

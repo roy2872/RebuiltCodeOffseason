@@ -208,6 +208,7 @@ public class Hood extends MotorSubsystem<MotorInputsAutoLogged, MotorIO> {
   public boolean atSetpoint() {
     if(currentState == HoodStates.BOOT_SEQUENCE) 
       return false;
+    else if (runDashboardOverride()) return true;
     return Math.abs(super.inputs.unitPosition - targetAngle.getAsDouble()) <= 0.5;
   }
 }

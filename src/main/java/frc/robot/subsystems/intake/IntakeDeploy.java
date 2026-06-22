@@ -31,9 +31,7 @@ public class IntakeDeploy extends MotorSubsystem<MotorInputsAutoLogged, MotorIO>
 
   public void realPeriodic() {
     super.periodic();
-    // super.setVoltageOutput(2.0);
-    // important- positiion should be at 0.410
-    stateMachine(); // TODO: dont forget to uncomment when intake works
+    stateMachine();
     Logger.recordOutput("Intake/IntakeDeploy/requestedAngle", positionSetpoint);
   }
 

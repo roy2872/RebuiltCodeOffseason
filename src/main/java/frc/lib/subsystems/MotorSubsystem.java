@@ -119,7 +119,7 @@ public class MotorSubsystem<T extends MotorInputsAutoLogged, U extends MotorIO>
     io.setPID(kp, ki, kd);
   }
 
-  private void setupPID() {
+  public void setupPID() {
     PID_PREFIX = getName() + "/PID/";
     KP_KEY = PID_PREFIX + "Kp";
     KI_KEY = PID_PREFIX + "Ki";
