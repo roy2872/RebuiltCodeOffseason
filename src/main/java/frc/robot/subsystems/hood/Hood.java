@@ -6,6 +6,7 @@ import static frc.robot.subsystems.hood.HoodConstants.*;
 
 import java.util.function.DoubleSupplier;
 
+import edu.wpi.first.math.controller.ArmFeedforward;
 import edu.wpi.first.math.controller.SimpleMotorFeedforward;
 import edu.wpi.first.wpilibj.RobotBase;
 import edu.wpi.first.wpilibj.RobotController;
@@ -55,7 +56,7 @@ public class Hood extends MotorSubsystem<MotorInputsAutoLogged, MotorIO> {
   @AutoLogOutput(key = "Hood/targetAngle")
   private DoubleSupplier targetAngle = ()->0.0;
 
-  private final SimpleMotorFeedforward MOTOR_FF;
+  private final ArmFeedforward MOTOR_FF;
   private final SendableChooser<HoodOverrideMode> overrideModeChooser = new SendableChooser<>();
 
   private SysIdRoutine hoodRoutine;
@@ -63,8 +64,8 @@ public class Hood extends MotorSubsystem<MotorInputsAutoLogged, MotorIO> {
   public Hood(MotorSubsystemConfig config, MotorIO io) {
     super(new MotorInputsAutoLogged(), io, config);
     MOTOR_FF =
-        new SimpleMotorFeedforward( // kg is negligable
-            HOOD_FF.kS(), HOOD_FF.kV(), HOOD_FF.kA());
+        new ArmFeedforward( // kg is negligable
+            HOOD_FF.getKs(), HOOD_FF.getKg(), HOOD_FF.getKv());
 
     hoodRoutine = new SysIdRoutine(
       new SysIdRoutine.Config(
@@ -127,7 +128,7 @@ public class Hood extends MotorSubsystem<MotorInputsAutoLogged, MotorIO> {
       case POSITION -> {
         double positionSetpoint = SmartDashboard.getNumber(POSITION_KEY, HOOD_STARTING_ANGLE);
         super.setMaxMotionSetpointPosition(
-            positionSetpoint, MOTOR_FF.calculate(super.inputs.velocityUnitsPerSecond));
+            positionSetpoint, MOTOR_FF.calculate(super.inputs.unitPosition, super.inputs.velocityUnitsPerSecond));
         return true;
       }
     }
@@ -139,7 +140,7 @@ public class Hood extends MotorSubsystem<MotorInputsAutoLogged, MotorIO> {
     switch (currentState) {
       case IDLE -> super.setVoltageOutput(0);
       case TRACKING -> super.setMaxMotionSetpointPosition(
-          targetAngle.getAsDouble(), MOTOR_FF.calculate(super.inputs.velocityUnitsPerSecond));
+          targetAngle.getAsDouble(), MOTOR_FF.calculate(super.inputs.unitPosition, super.inputs.velocityUnitsPerSecond));
       case CLOSED -> super.setMaxMotionSetpointPosition(HOOD_MAX_ANGLE, HOOD_ANGLE_TOLERANCE);
     }
   }
