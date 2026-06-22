@@ -37,12 +37,12 @@ public class DummyController implements ControllerInterface {
 
   @Override
   public Trigger intakeButton() {
-    return new Trigger(() -> false);
+    return new Trigger(() -> controller.getRawButton(3));
   }
 
   @Override
   public Trigger openClimbButton() {
-    return new Trigger(() -> false);
+    return new Trigger(() -> controller.getRawButton(4));
   }
 
   @Override
@@ -52,12 +52,12 @@ public class DummyController implements ControllerInterface {
 
   @Override
   public Trigger shootButton() {
-    return new Trigger(() -> false);
+    return new Trigger(() -> controller.getRawButton(2));
   }
 
   @Override
   public Trigger shootCloseButton() {
-    return new Trigger(() -> false);
+    return new Trigger(() -> controller.getRawButton(1));
   }
 
   @Override

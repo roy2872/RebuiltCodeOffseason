@@ -25,7 +25,7 @@ public class HoodConstants {
         default -> new SimpleFFConstants(0.0, 0.0, 0.0);
       };
 
-  private static final PidGains HOOD_PID =
+  protected static final PidGains HOOD_PID =
       switch (Constants.currentMode) {
         case REAL -> new PidGains(2.5, 0.0, 0.0);
         case SIM -> new PidGains(0.1, 0.0, 0.0);

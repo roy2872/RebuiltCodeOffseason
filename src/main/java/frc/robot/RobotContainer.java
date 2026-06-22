@@ -22,6 +22,7 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import edu.wpi.first.wpilibj2.command.Commands;
+import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine.Direction;
 import frc.lib.subsystems.MotorIO;
 import frc.lib.subsystems.SimSparkMaxIO;
 import frc.lib.subsystems.SparkMaxIO;
@@ -108,7 +109,8 @@ public class RobotContainer {
             new BeltDrive(
                 BeltDriveConstants.BELT_DRIVE_CONFIG,
                 new SparkMaxIO(BeltDriveConstants.BELT_DRIVE_CONFIG),
-                new SparkMaxIO(BeltDriveConstants.BELT_FOLLOWER_CONFIG.config));
+                new SparkMaxIO(BeltDriveConstants.BELT_FOLLOWER_CONFIG.config),
+                new SparkMaxIO(BeltDriveConstants.BELT_FOLLOWER_CONFIG_LEFT.config));
         hood = new Hood(HoodConstants.HOOD_CONFIG, new SparkMaxIO(HoodConstants.HOOD_CONFIG));
         // hopper =
         //     new Hopper(
@@ -128,8 +130,8 @@ public class RobotContainer {
           new Shooter(
             ShooterConstants.MAIN_WHEEL_MOTOR_CONFIG, 
             ShooterConstants.HOOD_WHEEL_MOTOR_CONFIG, 
-            new MotorIO[] {new SparkMaxIO(ShooterConstants.MAIN_WHEEL_MOTOR_CONFIG)}, 
-            new MotorIO[] {new SparkMaxIO(ShooterConstants.HOOD_WHEEL_MOTOR_CONFIG)}
+            new MotorIO[] {new SparkMaxIO(ShooterConstants.MAIN_WHEEL_MOTOR_CONFIG), new SparkMaxIO(ShooterConstants.MAIN_WHEEL_MOTOR_FOLLOWER_CONFIG.config)}, 
+            new MotorIO[] {new SparkMaxIO(ShooterConstants.HOOD_WHEEL_MOTOR_CONFIG), new SparkMaxIO(ShooterConstants.HOOD_WHEEL_MOTOR_FOLLOWER_CONFIG.config)}
             );
         vision =
             new Vision(
@@ -168,7 +170,8 @@ public class RobotContainer {
             new BeltDrive(
           BeltDriveConstants.BELT_DRIVE_CONFIG, 
           new SimSparkMaxIO(BeltDriveConstants.BELT_DRIVE_CONFIG),
-          new SimSparkMaxIO(BeltDriveConstants.BELT_FOLLOWER_CONFIG.config));
+          new SimSparkMaxIO(BeltDriveConstants.BELT_FOLLOWER_CONFIG.config),
+          new SimSparkMaxIO(BeltDriveConstants.BELT_FOLLOWER_CONFIG_LEFT.config));
 
         hood = new Hood(HoodConstants.HOOD_CONFIG, new SimSparkMaxIO(HoodConstants.HOOD_CONFIG));
         // hopper =
@@ -185,8 +188,8 @@ public class RobotContainer {
           new Shooter(
             ShooterConstants.MAIN_WHEEL_MOTOR_CONFIG, 
             ShooterConstants.HOOD_WHEEL_MOTOR_CONFIG, 
-            new MotorIO[] {new SimSparkMaxIO(ShooterConstants.MAIN_WHEEL_MOTOR_CONFIG)}, 
-            new MotorIO[] {new SimSparkMaxIO(ShooterConstants.HOOD_WHEEL_MOTOR_CONFIG)}
+            new MotorIO[] {new SimSparkMaxIO(ShooterConstants.MAIN_WHEEL_MOTOR_CONFIG), new SimSparkMaxIO(ShooterConstants.MAIN_WHEEL_MOTOR_FOLLOWER_CONFIG.config)}, 
+            new MotorIO[] {new SimSparkMaxIO(ShooterConstants.HOOD_WHEEL_MOTOR_CONFIG), new SimSparkMaxIO(ShooterConstants.HOOD_WHEEL_MOTOR_FOLLOWER_CONFIG.config)}
             );
         vision =
             new Vision(
@@ -218,7 +221,11 @@ public class RobotContainer {
                 controller::xVelocityAnalog,
                 controller::yVelocityAnalog,
                 controller::rotationVelocityAnalog);
-        beltDrive = new BeltDrive(BeltDriveConstants.BELT_DRIVE_CONFIG, new SimSparkMaxIO(BeltDriveConstants.BELT_DRIVE_CONFIG), new SimSparkMaxIO(BeltDriveConstants.BELT_FOLLOWER_CONFIG.config));
+        beltDrive = new BeltDrive(
+          BeltDriveConstants.BELT_DRIVE_CONFIG, 
+          new SimSparkMaxIO(BeltDriveConstants.BELT_DRIVE_CONFIG), 
+          new SimSparkMaxIO(BeltDriveConstants.BELT_FOLLOWER_CONFIG.config),
+          new SimSparkMaxIO(BeltDriveConstants.BELT_FOLLOWER_CONFIG_LEFT.config));
 
         hood = new Hood(HoodConstants.HOOD_CONFIG, new SimSparkMaxIO(HoodConstants.HOOD_CONFIG));
         // hopper =
@@ -235,8 +242,8 @@ public class RobotContainer {
           new Shooter(
             ShooterConstants.MAIN_WHEEL_MOTOR_CONFIG, 
             ShooterConstants.HOOD_WHEEL_MOTOR_CONFIG, 
-            new MotorIO[] {new SimSparkMaxIO(ShooterConstants.MAIN_WHEEL_MOTOR_CONFIG)}, 
-            new MotorIO[] {new SimSparkMaxIO(ShooterConstants.HOOD_WHEEL_MOTOR_CONFIG)}
+            new MotorIO[] {new SimSparkMaxIO(ShooterConstants.MAIN_WHEEL_MOTOR_CONFIG), new SimSparkMaxIO(ShooterConstants.MAIN_WHEEL_MOTOR_FOLLOWER_CONFIG.config)}, 
+            new MotorIO[] {new SimSparkMaxIO(ShooterConstants.HOOD_WHEEL_MOTOR_CONFIG), new SimSparkMaxIO(ShooterConstants.HOOD_WHEEL_MOTOR_FOLLOWER_CONFIG.config)}
             );
         vision = new Vision(robotState::addVisionObservation, new VisionIO[] {});
         break;
@@ -269,7 +276,11 @@ public class RobotContainer {
     controller.resetGyroButton().onTrue(Commands.runOnce(resetGyro).ignoringDisable(true).alongWith(
     Commands.print("reset gyro")
     ));
-    // controller.shootCloseButton().onTrue(structure.shootCloseButtonCommand());
+    // controller.shootCloseButton().onTrue(structure.shootCloseButtonCommand().alongWith(Commands.print("Shooting close...")));
+    controller.shootCloseButton().onTrue(shooter.shooterMainSysidRoutine(true, Direction.kForward));
+    controller.shootButton().onTrue(shooter.shooterMainSysidRoutine(true, Direction.kReverse));
+    controller.intakeButton().onTrue(shooter.shooterMainSysidRoutine(false, Direction.kForward));
+    controller.openClimbButton().onTrue(shooter.shooterMainSysidRoutine(false, Direction.kReverse));
     // controller.shootButton().onTrue(structure.shootOnTheMoveButtonCommand());
     // controller.intakeButton().whileTrue(structure.setIntakeStateCommand(StructureIntakeStates.INTAKING));
     // controller.intakeButton().whileFalse(structure.setIntakeStateCommand(StructureIntakeStates.CLOSED));

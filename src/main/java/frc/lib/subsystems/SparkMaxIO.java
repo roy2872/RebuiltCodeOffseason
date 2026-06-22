@@ -202,6 +202,20 @@ public class SparkMaxIO implements MotorIO {
                 PersistMode.kPersistParameters));
   }
 
+  @Override
+  public void setPID(double kP, double kI, double kD) {
+    config.sparkConfig.closedLoop.pid(kP, kI, kD, ClosedLoopSlot.kSlot0);
+    tryUntilOk(
+      motor, 
+        5, 
+        () ->
+            motor.configure(
+                config.sparkConfig,
+                ResetMode.kResetSafeParameters,
+                PersistMode.kPersistParameters));
+      
+  }
+
   private boolean absoluteEncoderConnected() {
     return true;
   }

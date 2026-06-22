@@ -27,8 +27,8 @@ public class BeltDrive extends MotorSubsystemWithFollowers<MotorInputsAutoLogged
   @AutoLogOutput(key = "BeltDrive/currentState")
   private BeltDriveStates currentState = BeltDriveStates.IDLE;
 
-  public BeltDrive(MotorSubsystemWithFollowersConfig config, MotorIO io, MotorIO followerIO) {
-    super(config, new MotorInputsAutoLogged(), io, new MotorInputsAutoLogged[] {new MotorInputsAutoLogged()}, new MotorIO[] {followerIO});
+  public BeltDrive(MotorSubsystemWithFollowersConfig config, MotorIO io, MotorIO... followerIOs) {
+    super(config, new MotorInputsAutoLogged(), io, new MotorInputsAutoLogged[] {new MotorInputsAutoLogged(), new MotorInputsAutoLogged()}, followerIOs);
     SmartDashboard.putBoolean("BeltDrive/ManualControl", false);
     for(var state : BeltDriveStates.values()) 
       chooser.addOption(state.name(), state);
