@@ -29,9 +29,17 @@ public class Shooter extends SubsystemBase {
 
   private static final String DASHBOARD_PREFIX = "Shooter/Override/";
   private static final String MODE_CHOOSER_KEY = DASHBOARD_PREFIX + "Mode";
-  // private static final String CONTROL_CHOOSER_KEY = DASHBOARD_PREFIX + "ControlType";
   private static final String VOLTAGE_KEY = DASHBOARD_PREFIX + "Voltage";
   private static final String VELOCITY_KEY = DASHBOARD_PREFIX + "Velocity";
+
+
+
+  private static final String PID_PREFIX = "Shooter/PID/";
+  private static final String MOTOR_SELECT_KEY = PID_PREFIX + "Motor/";
+  private static final String KP_KEY = PID_PREFIX + "Kp";
+  private static final String KI_KEY = PID_PREFIX + "Ki";
+  private static final String KD_KEY = PID_PREFIX + "Kd";
+  private static final String PID_CONFIRM_KEY = PID_PREFIX + "Confirm";
 
   public enum ShooterStates {
     IDLE,
@@ -45,6 +53,7 @@ public class Shooter extends SubsystemBase {
   private SimpleMotorFeedforward mainWheelFFController, hoodWheelFFController;
   private DoubleSupplier mainWheelVelocity, hoodWheelVelocity;
   private final SendableChooser<ShooterOverrideMode> overrideModeChooser = new SendableChooser<>();
+  private final SendableChooser<Integer> motorPIDChooser = new SendableChooser<>();
 
   private SysIdRoutine mainWheelRoutine;
   private SysIdRoutine hoodWheelRoutine;
@@ -70,8 +79,8 @@ public class Shooter extends SubsystemBase {
             ShooterConstants.HOOD_WHEEL_FF_CONSTANTS.kA(),
             Constants.CYCLE_TIME);
 
-    mainWheel = new ShooterWheel(mainWheelFFController, "MainWheel", mainWheelConfig, mainMotorIOs[0], mainMotorIOs[0]);
-    hoodWheel = new ShooterWheel(hoodWheelFFController, "HoodWheel", hoodWheelConfig, hoodMotorIOs[0], hoodMotorIOs[0]);
+    mainWheel = new ShooterWheel(mainWheelFFController, "MainWheel", mainWheelConfig, mainMotorIOs[0], mainMotorIOs[1]);
+    hoodWheel = new ShooterWheel(hoodWheelFFController, "HoodWheel", hoodWheelConfig, hoodMotorIOs[0], hoodMotorIOs[1]);
 
     mainWheelVelocity = () -> 0;
     hoodWheelVelocity = () -> 0;
@@ -82,6 +91,14 @@ public class Shooter extends SubsystemBase {
     SmartDashboard.putData(MODE_CHOOSER_KEY, overrideModeChooser);
     SmartDashboard.putNumber(VOLTAGE_KEY, 0.0);
     SmartDashboard.putNumber(VELOCITY_KEY, 0.0);
+
+    motorPIDChooser.setDefaultOption("Motor1", 1);
+    motorPIDChooser.addOption("Motor2", 2);
+    SmartDashboard.putData(MOTOR_SELECT_KEY, motorPIDChooser);
+    SmartDashboard.putNumber(KP_KEY, ShooterConstants.MAIN_PID.kP);
+    SmartDashboard.putNumber(KI_KEY, ShooterConstants.MAIN_PID.kI);
+    SmartDashboard.putNumber(KD_KEY, ShooterConstants.MAIN_PID.kD);
+    SmartDashboard.putBoolean(PID_CONFIRM_KEY, false);
 
     mainWheelRoutine = new SysIdRoutine(
       new SysIdRoutine.Config(
@@ -113,6 +130,14 @@ public class Shooter extends SubsystemBase {
   @Override
   public void periodic() {
     super.periodic();
+    if (SmartDashboard.getBoolean(PID_CONFIRM_KEY, false)) {
+      ShooterWheel wheel = motorPIDChooser.getSelected() == 1 ? mainWheel : hoodWheel;
+      wheel.setPID(
+        SmartDashboard.getNumber(KP_KEY, ShooterConstants.MAIN_PID.kP),
+        SmartDashboard.getNumber(KI_KEY, ShooterConstants.MAIN_PID.kI),
+        SmartDashboard.getNumber(KD_KEY, ShooterConstants.MAIN_PID.kD)
+      );
+    }
     if (!runDashboardOverride()) {
       stateMachine();
     }

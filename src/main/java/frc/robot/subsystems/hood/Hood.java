@@ -8,6 +8,9 @@ import java.util.function.DoubleSupplier;
 
 import edu.wpi.first.math.controller.SimpleMotorFeedforward;
 import edu.wpi.first.wpilibj.Timer;
+import edu.wpi.first.wpilibj.RobotBase;
+import edu.wpi.first.wpilibj.RobotController;
+import edu.wpi.first.wpilibj.RobotState;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
@@ -17,6 +20,8 @@ import frc.lib.subsystems.MotorIO;
 import frc.lib.subsystems.MotorInputsAutoLogged;
 import frc.lib.subsystems.MotorSubsystem;
 import frc.lib.subsystems.MotorSubsystemConfig;
+import frc.lib.util.ControlGains.PidGains;
+
 import org.littletonrobotics.junction.AutoLogOutput;
 import org.littletonrobotics.junction.Logger;
 
@@ -32,6 +37,12 @@ public class Hood extends MotorSubsystem<MotorInputsAutoLogged, MotorIO> {
   private static final String MODE_CHOOSER_KEY = DASHBOARD_PREFIX + "Mode";
   private static final String VOLTAGE_KEY = DASHBOARD_PREFIX + "Voltage";
   private static final String POSITION_KEY = DASHBOARD_PREFIX + "Position";
+
+  private static final String PID_PREFIX = "Hood/PID/";
+  private static final String KP_KEY = PID_PREFIX + "Kp";
+  private static final String KI_KEY = PID_PREFIX + "Ki";
+  private static final String KD_KEY = PID_PREFIX + "Kd";
+  private static final String PID_CONFIRM_KEY = PID_PREFIX + "Confirm";
 
   public enum HoodStates {
     TRACKING,
@@ -81,6 +92,11 @@ public class Hood extends MotorSubsystem<MotorInputsAutoLogged, MotorIO> {
     SmartDashboard.putData(MODE_CHOOSER_KEY, overrideModeChooser);
     SmartDashboard.putNumber(VOLTAGE_KEY, 0.0);
     SmartDashboard.putNumber(POSITION_KEY, HOOD_STARTING_ANGLE);
+
+    SmartDashboard.putNumber(KP_KEY, HOOD_PID.kP);
+    SmartDashboard.putNumber(KI_KEY, HOOD_PID.kI);
+    SmartDashboard.putNumber(KD_KEY, HOOD_PID.kD);
+    SmartDashboard.putBoolean(PID_CONFIRM_KEY, false);
     super.setCurrentPosition(HoodConstants.HOOD_STARTING_ANGLE);
     bootSequenceTimer = new Timer();
   }
@@ -90,6 +106,12 @@ public class Hood extends MotorSubsystem<MotorInputsAutoLogged, MotorIO> {
     super.periodic();
     if(SmartDashboard.getBoolean("Hood/ResetButton", false)) {
       setState(HoodStates.BOOT_SEQUENCE);
+    if (SmartDashboard.getBoolean(PID_CONFIRM_KEY, false)) {
+      io.setPID(
+        SmartDashboard.getNumber(KP_KEY, HOOD_PID.kP),
+        SmartDashboard.getNumber(KI_KEY, HOOD_PID.kI),
+        SmartDashboard.getNumber(KD_KEY, HOOD_PID.kD)
+      );
     }
     if (!runDashboardOverride()) {
       stateMachine();
