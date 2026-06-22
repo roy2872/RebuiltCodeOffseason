@@ -7,6 +7,7 @@ import static frc.robot.subsystems.hood.HoodConstants.*;
 import java.util.function.DoubleSupplier;
 
 import edu.wpi.first.math.controller.SimpleMotorFeedforward;
+import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.RobotBase;
 import edu.wpi.first.wpilibj.RobotController;
 import edu.wpi.first.wpilibj.RobotState;
@@ -46,7 +47,8 @@ public class Hood extends MotorSubsystem<MotorInputsAutoLogged, MotorIO> {
   public enum HoodStates {
     TRACKING,
     IDLE,
-    CLOSED
+    CLOSED,
+    BOOT_SEQUENCE
   }
 
   @AutoLogOutput(key = "Hood/currentState")
@@ -57,11 +59,16 @@ public class Hood extends MotorSubsystem<MotorInputsAutoLogged, MotorIO> {
 
   private final SimpleMotorFeedforward MOTOR_FF;
   private final SendableChooser<HoodOverrideMode> overrideModeChooser = new SendableChooser<>();
+  private final Timer bootSequenceTimer;
+
+  @AutoLogOutput(key = "Hood/hasBeenReset")
+  private boolean hasBeenReset = false;
 
   private SysIdRoutine hoodRoutine;
 
   public Hood(MotorSubsystemConfig config, MotorIO io) {
     super(new MotorInputsAutoLogged(), io, config);
+    SmartDashboard.putBoolean("Hood/ResetButton", false);
     MOTOR_FF =
         new SimpleMotorFeedforward( // kg is negligable
             HOOD_FF.kS(), HOOD_FF.kV(), HOOD_FF.kA());
@@ -91,11 +98,14 @@ public class Hood extends MotorSubsystem<MotorInputsAutoLogged, MotorIO> {
     SmartDashboard.putNumber(KD_KEY, HOOD_PID.kD);
     SmartDashboard.putBoolean(PID_CONFIRM_KEY, false);
     super.setCurrentPosition(HoodConstants.HOOD_STARTING_ANGLE);
+    bootSequenceTimer = new Timer();
   }
 
   @Override
   public void periodic() {
     super.periodic();
+    if(SmartDashboard.getBoolean("Hood/ResetButton", false)) {
+      setState(HoodStates.BOOT_SEQUENCE);
     if (SmartDashboard.getBoolean(PID_CONFIRM_KEY, false)) {
       io.setPID(
         SmartDashboard.getNumber(KP_KEY, HOOD_PID.kP),
@@ -141,10 +151,24 @@ public class Hood extends MotorSubsystem<MotorInputsAutoLogged, MotorIO> {
       case TRACKING -> super.setMaxMotionSetpointPosition(
           targetAngle.getAsDouble(), MOTOR_FF.calculate(super.inputs.velocityUnitsPerSecond));
       case CLOSED -> super.setMaxMotionSetpointPosition(HOOD_MAX_ANGLE, HOOD_ANGLE_TOLERANCE);
+      case BOOT_SEQUENCE -> {
+        if(!bootSequenceTimer.hasElapsed(BOOT_SEQUENCE_TIME)) {
+          hasBeenReset = true;
+          resetPosition(HOOD_STARTING_ANGLE);
+          bootSequenceTimer.reset();
+          bootSequenceTimer.stop();
+        }
+        else super.setVoltageOutput(BOOT_SEQUENCE_VOLTAGE);
+      }
+      default -> super.setVoltageOutput(0);
     }
   }
 
   public void setState(HoodStates wantedState) {
+    if(wantedState == HoodStates.BOOT_SEQUENCE && currentState != HoodStates.BOOT_SEQUENCE) 
+      startBootSequence();
+    else if (currentState == HoodStates.BOOT_SEQUENCE && wantedState != HoodStates.BOOT_SEQUENCE) 
+      return;
     if (currentState != wantedState) currentState = wantedState;
   }
 
@@ -156,6 +180,17 @@ public class Hood extends MotorSubsystem<MotorInputsAutoLogged, MotorIO> {
   public void resetPosition(double newpos) {
     super.setCurrentPosition(newpos);
   }
+
+  public void startBootSequence() {
+    bootSequenceTimer.reset();
+    bootSequenceTimer.start();
+    setState(HoodStates.BOOT_SEQUENCE);
+  }
+
+  public void stopBootSequence() {
+    bootSequenceTimer.stop();
+    setState(HoodStates.IDLE);
+  }
   
   public Command hoodSysidRoutine(boolean quasistatic, SysIdRoutine.Direction direction) {
     return Commands.print(
@@ -163,12 +198,14 @@ public class Hood extends MotorSubsystem<MotorInputsAutoLogged, MotorIO> {
       "please uncomment the following code if you are sure of what you're doing."
     );
   }
-    // return Commands.either(
-    //   hoodRoutine.quasistatic(direction),
-    //   hoodRoutine.dynamic(direction),
-    //   () -> quasistatic
-    // );
+
+  public boolean wasHoodReset() {
+    return hasBeenReset;
+  }
+
   public boolean atSetpoint() {
-    return Math.abs(super.inputs.unitPosition - targetAngle.getAsDouble()) <= 0;
+    if(currentState == HoodStates.BOOT_SEQUENCE) 
+      return false;
+    return Math.abs(super.inputs.unitPosition - targetAngle.getAsDouble()) <= 0.5;
   }
 }
