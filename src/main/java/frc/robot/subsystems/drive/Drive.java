@@ -85,6 +85,7 @@ public class Drive extends SubsystemBase {
     SHOOT_DRIVE,
     SHOOT_ON_THE_MOVE,
     AUTO_ALIGN,
+    AUTO_ALIGN_ANGLE,
     AUTONOMOUS,
     SLOWLY_FORWARD,
     PATH_AND_SHOOT,
@@ -156,6 +157,7 @@ public class Drive extends SubsystemBase {
   private final Trigger xLockOverrideButton;
 
   private Supplier<Pose2d> autoAlignTarget;
+  private Supplier<Rotation2d> autoAlignAngleTarget;
   private Supplier<Rotation2d> shootDriveTargetAngle;
   private Supplier<Rotation2d> shootMoveDriveTargetAngle;
   private Supplier<Translation2d> shootMoveDriveTargetTranslation;
@@ -436,6 +438,10 @@ public class Drive extends SubsystemBase {
             new ChassisSpeeds(
                 linearVelocityTranslation.getX(), linearVelocityTranslation.getY(), rot));
         break;
+
+      case AUTO_ALIGN_ANGLE:
+       autoAlignAngle();
+        break;
       
       case X_LOCK:
         for (int i=0; i<4; i++) { // could need tuning
@@ -670,6 +676,20 @@ public class Drive extends SubsystemBase {
     };
   }
 
+  private void autoAlignAngle() {
+        if(autoAlignAngleTarget == null) return ;
+        Rotation2d targetAngle = autoAlignAngleTarget.get();
+        double rot =
+            rotationController.calculate(
+                (RobotState.getInstance().getEstimatedPose().getRotation().getDegrees() % 360 + 360)
+                    % 360,
+                (targetAngle.getDegrees() % 360 + 360) % 360);
+        rot = Math.signum(rot) * Math.min(Math.abs(rot), maxAutoAlignAngularVelocity);
+        runVelocityFieldRelative(
+            new ChassisSpeeds(
+                0, 0, rot));
+  }
+
   private Translation2d getLinearVelocityFromJoysticks(double x, double y) {
     // Apply deadband
     double linearMagnitude = MathUtil.applyDeadband(Math.hypot(x, y), DriveConstants.DEADBAND);
@@ -855,6 +875,13 @@ private SwerveSample mirrorSampleLeftRight(SwerveSample s) {
     driveState = DriveStates.AUTO_ALIGN;
   }
 
+  public void setStateAutoAlignAngle(Supplier<Rotation2d> targetRotation) {
+    autoAlignAngleTarget = targetRotation;
+    this.maxAutoAlignAngularVelocity = getMaxAngularSpeedRadPerSec();
+    if (driveState == DriveStates.AUTO_ALIGN_ANGLE) return;
+    driveState = DriveStates.AUTO_ALIGN_ANGLE;
+  }
+
   public void setStatePathAndShoot(Supplier<Translation2d> targetTranslation, double maxVelocity, double maxAngularVelocity) {
      shootMoveDriveTargetTranslation = targetTranslation;
      this.maxAutoAlignVelocity = maxVelocity;
@@ -898,7 +925,7 @@ private SwerveSample mirrorSampleLeftRight(SwerveSample s) {
     double difference = Math.abs(currentPose.getRotation().getDegrees() - (shootDriveTargetAngle.get().getDegrees()));
     difference = (difference + 360.0) % 360;
     if(difference > 180) difference = 360 - difference;
-    return difference < toleranceDeg;
+    return difference <= toleranceDeg;
   }
 
     public boolean isAtShootOnTheMoveSetpoint(double toleranceDeg) {
@@ -909,7 +936,18 @@ private SwerveSample mirrorSampleLeftRight(SwerveSample s) {
     double difference = Math.abs(currentPose.getRotation().getDegrees() - (shootMoveDriveTargetAngle.get().getDegrees()));
     difference = (difference + 360.0) % 360;
     if(difference > 180) difference = 360 - difference;
-    return difference < toleranceDeg;
+    return difference <= toleranceDeg;
+  }
+
+  public boolean isAtAutoAlignAngleSetpoint(double toleranceDeg) {
+    Pose2d currentPose =
+    RobotState.getInstance().getEstimatedPose() != null
+        ? RobotState.getInstance().getEstimatedPose()
+        : new Pose2d(1, 1, new Rotation2d());
+    double difference = Math.abs(currentPose.getRotation().getDegrees() - (autoAlignAngleTarget.get().getDegrees()));
+    difference = (difference + 360.0) % 360;
+    if(difference > 180) difference = 360 - difference;
+    return difference <= toleranceDeg;
   }
 
   public boolean isAtPathAndShootSetpointAngle(double toleranceDeg) {
