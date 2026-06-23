@@ -276,11 +276,11 @@ public class RobotContainer {
     controller.resetGyroButton().onTrue(Commands.runOnce(resetGyro).ignoringDisable(true).alongWith(
     Commands.print("reset gyro")
     ));
-    // controller.shootCloseButton().onTrue(structure.shootCloseButtonCommand().alongWith(Commands.print("Shooting close...")));
-    controller.shootCloseButton().onTrue(shooter.shooterMainSysidRoutine(true, Direction.kForward));
-    controller.shootButton().onTrue(shooter.shooterMainSysidRoutine(true, Direction.kReverse));
-    controller.intakeButton().onTrue(shooter.shooterMainSysidRoutine(false, Direction.kForward));
-    controller.openClimbButton().onTrue(shooter.shooterMainSysidRoutine(false, Direction.kReverse));
+    controller.shootCloseButton().onTrue(structure.shootCloseButtonCommand().alongWith(Commands.print("Shooting close...")));
+    // controller.shootCloseButton().onTrue(shooter.shooterMainSysidRoutine(true, Direction.kForward));
+    // controller.shootButton().onTrue(shooter.shooterMainSysidRoutine(true, Direction.kReverse));
+    // controller.intakeButton().onTrue(shooter.shooterMainSysidRoutine(false, Direction.kForward));
+    // controller.openClimbButton().onTrue(shooter.shooterMainSysidRoutine(false, Direction.kReverse));
     // controller.shootButton().onTrue(structure.shootOnTheMoveButtonCommand());
     // controller.intakeButton().whileTrue(structure.setIntakeStateCommand(StructureIntakeStates.INTAKING));
     // controller.intakeButton().whileFalse(structure.setIntakeStateCommand(StructureIntakeStates.CLOSED));

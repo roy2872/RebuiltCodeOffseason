@@ -138,6 +138,8 @@ public class Shooter extends SubsystemBase {
     //     SmartDashboard.getNumber(KD_KEY, ShooterConstants.MAIN_PID.kD)
     //   );
     // }
+    mainWheel.realPeriodic();
+    hoodWheel.realPeriodic();
     if (!runDashboardOverride()) {
       stateMachine();
     }
