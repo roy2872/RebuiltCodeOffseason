@@ -67,4 +67,9 @@ public class TwoControllers implements ControllerInterface {
   public Trigger fetchButton() {
     return new Trigger(() -> mainController.getRawAxis(7) == 1);
   }
+
+  @Override
+  public Trigger xLockOverride() {
+    return new Trigger(() -> false);
+  }
 }

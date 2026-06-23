@@ -25,4 +25,6 @@ public interface ControllerInterface {
   public Trigger purgeIntakeButton();
 
   public Trigger fetchButton();
+
+  public Trigger xLockOverride();
 }

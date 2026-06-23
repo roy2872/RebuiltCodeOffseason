@@ -69,4 +69,9 @@ public class DummyController implements ControllerInterface {
   public Trigger fetchButton() {
     return new Trigger(() -> false);
   }
+
+  @Override
+  public Trigger xLockOverride() {
+    return new Trigger(() -> false);
+  }
 }

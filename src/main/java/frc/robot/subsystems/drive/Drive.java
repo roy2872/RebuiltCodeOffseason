@@ -58,6 +58,7 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
+import edu.wpi.first.wpilibj2.command.button.Trigger;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine.Config;
 import frc.lib.util.LocalADStarAK;
@@ -88,6 +89,7 @@ public class Drive extends SubsystemBase {
     SLOWLY_FORWARD,
     PATH_AND_SHOOT,
     CHOREO_PATH_FOLLOWING,
+    X_LOCK,
     IDLE
   }
 
@@ -151,6 +153,7 @@ public class Drive extends SubsystemBase {
   private final Consumer<Pose2d> resetSimulationPoseCallBack;
 
   private final DoubleSupplier xJoystickVelocity, yJoystickVelocity, rJoystickVelocity;
+  private final Trigger xLockOverrideButton;
 
   private Supplier<Pose2d> autoAlignTarget;
   private Supplier<Rotation2d> shootDriveTargetAngle;
@@ -184,7 +187,8 @@ public class Drive extends SubsystemBase {
       Consumer<Pose2d> resetSimulationPoseCallBack,
       DoubleSupplier xJoystickVelocity,
       DoubleSupplier yJoystickVelocity,
-      DoubleSupplier rJoystickVelocity) {
+      DoubleSupplier rJoystickVelocity,
+      Trigger xLockOverrideButton) {
 
     rotationController.enableContinuousInput(0, 360);
     rotationController.setTolerance(2);
@@ -246,6 +250,7 @@ public class Drive extends SubsystemBase {
     this.xJoystickVelocity = xJoystickVelocity;
     this.yJoystickVelocity = yJoystickVelocity;
     this.rJoystickVelocity = rJoystickVelocity;
+    this.xLockOverrideButton = xLockOverrideButton;
 
     shootDriveTargetAngle = () -> Rotation2d.fromDegrees(RobotState.getInstance().getShootingInfo().get(2));
     shootMoveDriveTargetAngle = () -> Rotation2d.fromDegrees(RobotState.getInstance().getShootOnTheMoveScoringInfo().get(2));
@@ -341,6 +346,9 @@ public class Drive extends SubsystemBase {
     // Update gyro alert
     gyroDisconnectedAlert.set(!gyroInputs.connected && Constants.currentMode != Mode.SIM);
 
+    if(xLockOverrideButton.getAsBoolean()) {
+      setDriveState(DriveStates.X_LOCK);
+    }
     stateMachine();
   }
 
@@ -429,6 +437,12 @@ public class Drive extends SubsystemBase {
                 linearVelocityTranslation.getX(), linearVelocityTranslation.getY(), rot));
         break;
       
+      case X_LOCK:
+        for (int i=0; i<4; i++) { // could need tuning
+          modules[i].runSetpoint(new SwerveModuleState(0, Rotation2d.fromDegrees(45 + 90 * i)));
+        }
+        break;
+        
       default:
         System.out.println("Drive subsystem is really broken");
         break;
