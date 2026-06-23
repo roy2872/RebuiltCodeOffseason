@@ -52,6 +52,7 @@ public class ShooterConstants {
 
   public static final double COMPENSATION_FACTOR = 1.0;
   public static final double BACKSPIN_FACTOR = 1.0; 
+  public static final double CLOSE_SHOOTING_VELOCITY = 8.5; // [m/s]
 
   public static final double ACTIVATE_MAX_POWER_PERCENTAGE = 0.88;
 
