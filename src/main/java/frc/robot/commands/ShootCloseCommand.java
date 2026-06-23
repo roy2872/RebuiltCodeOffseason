@@ -13,8 +13,6 @@ import frc.robot.subsystems.beltDrive.BeltDrive.BeltDriveStates;
 import frc.robot.subsystems.drive.Drive;
 import frc.robot.subsystems.drive.Drive.DriveStates;
 import frc.robot.subsystems.hood.Hood;
-import frc.robot.subsystems.hopper.Hopper;
-import frc.robot.subsystems.hopper.Hopper.HopperStates;
 import frc.robot.subsystems.leds.Leds;
 import frc.robot.subsystems.leds.Leds.ledsStates;
 import frc.robot.subsystems.shooter.Shooter;

@@ -878,7 +878,6 @@ private SwerveSample mirrorSampleLeftRight(SwerveSample s) {
   public void setStateAutoAlignAngle(Supplier<Rotation2d> targetRotation) {
     autoAlignAngleTarget = targetRotation;
     this.maxAutoAlignAngularVelocity = getMaxAngularSpeedRadPerSec();
-    if (driveState == DriveStates.AUTO_ALIGN_ANGLE) return;
     driveState = DriveStates.AUTO_ALIGN_ANGLE;
   }
 

@@ -7,6 +7,7 @@ package frc.robot;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj2.command.Command;
+import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.InstantCommand;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
@@ -206,7 +207,7 @@ public class SuperStructure extends SubsystemBase {
       if (currentCommand != null) currentCommand.cancel();
       currentCommand = 
           new ShootInPlaceCommand(beltDrive, drive, hood, leds, shooter);
-      currentCommand.schedule();
+      CommandScheduler.getInstance().schedule(currentCommand);
     }
   }
 
@@ -214,7 +215,7 @@ public class SuperStructure extends SubsystemBase {
     if (currentState != previousState) {
       if (currentCommand != null) currentCommand.cancel();
         currentCommand = new ShootCloseCommand(beltDrive, drive, hood, leds, shooter);
-        currentCommand.schedule();
+        CommandScheduler.getInstance().schedule(currentCommand);
     }
   }
 
@@ -223,7 +224,7 @@ public class SuperStructure extends SubsystemBase {
       if (currentCommand != null) currentCommand.cancel();
       currentCommand = 
           new ShootOnTheMoveCommand(beltDrive, drive, hood, leds, shooter);
-      currentCommand.schedule();
+      CommandScheduler.getInstance().schedule(currentCommand);
     }
   }
 
@@ -232,13 +233,8 @@ public class SuperStructure extends SubsystemBase {
       if (currentCommand != null) currentCommand.cancel();
       currentCommand = 
           new FetchCommand(beltDrive, drive, hood, leds, shooter);
+      CommandScheduler.getInstance().schedule(currentCommand);
     }
-    intake.setState(IntakeStates.PURGE);
-    hood.setState(HoodStates.IDLE);
-    beltDrive.setState(BeltDriveStates.IDLE);
-    // hopper.setState(HopperStates.PURGE);
-    shooter.setState(ShooterStates.IDLE);
-    drive.setState(DriveStates.FIELD_DRIVE);
   }
 
   private void purgeIntake() {
@@ -251,9 +247,6 @@ public class SuperStructure extends SubsystemBase {
     // hopper.setState(HopperStates.PURGE);
     shooter.setState(ShooterStates.IDLE);
     drive.setState(DriveStates.FIELD_DRIVE);
-        currentCommand = new ShootCloseCommand(beltDrive, drive, hood, leds, shooter);
-        currentCommand.schedule();
-    }
   }
 
   public void setWantedState(SuperStructureStates wantedState) {
