@@ -92,12 +92,22 @@ public class ShooterWheel extends MotorSubsystemWithFollowers<MotorInputsAutoLog
       }
 
       case ACTIVE -> {
-        super.setMaxMotionSetpointVelocity(
+          if(currentVelocity < targetVelocity && 
+  targetVelocity - currentVelocity > (1-ShooterConstants.ACTIVATE_MAX_POWER_PERCENTAGE)*targetVelocity + 0.3 * targetVelocity) {
+            super.setVoltageOutput(10.0);
+          }
+          else 
+          super.setMaxMotionSetpointVelocity(
             targetVelocity,
             ffController.calculate(currentVelocity));
       }
 
       case HOLD -> {
+          if(currentVelocity < targetVelocity && 
+  targetVelocity - currentVelocity > (1-ShooterConstants.ACTIVATE_MAX_POWER_PERCENTAGE)*targetVelocity + 0.3 * targetVelocity) {
+            super.setVoltageOutput(10.0);
+          }
+          else 
           super.setMaxMotionSetpointVelocity(
             targetVelocity,
             ffController.calculate(currentVelocity));

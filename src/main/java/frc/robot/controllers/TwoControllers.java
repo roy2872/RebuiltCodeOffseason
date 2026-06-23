@@ -39,16 +39,6 @@ public class TwoControllers implements ControllerInterface {
   }
 
   @Override
-  public Trigger openClimbButton() {
-    return new Trigger(() -> mainController.getRawAxis(6) == 0);
-  }
-
-  @Override
-  public Trigger closeClimbButton() {
-    return new Trigger(() -> mainController.getRawAxis(6) == -1);
-  }
-
-  @Override
   public Trigger shootButton() {
     return new Trigger(() -> mainController.getRawAxis(7) == -1);
   }
@@ -66,5 +56,10 @@ public class TwoControllers implements ControllerInterface {
   @Override
   public Trigger fetchButton() {
     return new Trigger(() -> mainController.getRawAxis(7) == 1);
+  }
+
+  @Override
+  public Trigger xLockOverride() {
+    return new Trigger(() -> false);
   }
 }

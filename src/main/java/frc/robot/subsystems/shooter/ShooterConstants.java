@@ -54,6 +54,8 @@ public class ShooterConstants {
   public static final double BACKSPIN_FACTOR = 1.0; 
   public static final double CLOSE_SHOOTING_VELOCITY = 8.5; // [m/s]
 
+  public static final double ACTIVATE_MAX_POWER_PERCENTAGE = 0.88;
+
   static {
     MAIN_WHEEL_MOTOR_CONFIG.name = "ShooterMainWheel";
     MAIN_WHEEL_MOTOR_FOLLOWER_CONFIG.config.name = "ShooterMainWheelFollower";
@@ -67,28 +69,28 @@ public class ShooterConstants {
     MAIN_WHEEL_MOTOR_CONFIG
         .sparkConfig
         .idleMode(IdleMode.kCoast)
-        .smartCurrentLimit(40)
+        .smartCurrentLimit(70)
         .inverted(false)
         .secondaryCurrentLimit(80)
         .closedLoop
         .pidf(
             MAIN_PID.kP, MAIN_PID.kI, MAIN_PID.kD, 0, ClosedLoopSlot.kSlot0)
         .maxMotion
-        .cruiseVelocity(5000)
-        .maxAcceleration(10000); // keep velocity ff 0
+        .cruiseVelocity(5600)
+        .maxAcceleration(15000); // keep velocity ff 0
         
     HOOD_WHEEL_MOTOR_CONFIG
         .sparkConfig
         .idleMode(IdleMode.kCoast)
-        .smartCurrentLimit(40)
+        .smartCurrentLimit(70)
         .inverted(false)
         .secondaryCurrentLimit(80)
         .closedLoop
         .pidf(
             HOOD_PID.kP, HOOD_PID.kI, HOOD_PID.kD, 0, ClosedLoopSlot.kSlot0)
         .maxMotion
-        .cruiseVelocity(5000)
-        .maxAcceleration(10000); // keep velocity ff 0
+        .cruiseVelocity(5600)
+        .maxAcceleration(15000); // keep velocity ff 0
 
     MAIN_WHEEL_MOTOR_FOLLOWER_CONFIG.config.sparkConfig.apply(MAIN_WHEEL_MOTOR_CONFIG.sparkConfig).follow(56, true);
     // MAIN_WHEEL_MOTOR_FOLLOWER_CONFIG.inverted = true;`````

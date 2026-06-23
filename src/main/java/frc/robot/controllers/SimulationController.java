@@ -36,16 +36,6 @@ public class SimulationController implements ControllerInterface {
   }
 
   @Override
-  public Trigger openClimbButton() {
-    return new Trigger(() -> controller.getRawButton(5));
-  }
-
-  @Override
-  public Trigger closeClimbButton() {
-    return new Trigger(() -> controller.getRawButton(6));
-  }
-
-  @Override
   public Trigger shootCloseButton() {
     return new Trigger(() -> controller.getRawButton(7));
   }
@@ -63,5 +53,10 @@ public class SimulationController implements ControllerInterface {
   @Override
   public Trigger fetchButton() {
     return new Trigger(() -> controller.getRawButton(4));
+  }
+
+  @Override
+  public Trigger xLockOverride() {
+    return new Trigger(() -> false);
   }
 }
