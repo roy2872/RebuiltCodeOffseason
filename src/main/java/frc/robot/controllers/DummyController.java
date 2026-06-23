@@ -41,16 +41,6 @@ public class DummyController implements ControllerInterface {
   }
 
   @Override
-  public Trigger openClimbButton() {
-    return new Trigger(() -> controller.getRawButton(4));
-  }
-
-  @Override
-  public Trigger closeClimbButton() {
-    return new Trigger(() -> false);
-  }
-
-  @Override
   public Trigger shootButton() {
     return new Trigger(() -> controller.getRawButton(2));
   }

@@ -37,16 +37,6 @@ public class SingleXboxController implements ControllerInterface {
   }
 
   @Override
-  public Trigger openClimbButton() {
-    return new Trigger(() -> (controller.getLeftBumperButton()));
-  }
-
-  @Override
-  public Trigger closeClimbButton() {
-    return new Trigger(() -> (controller.getLeftTriggerAxis() > 0.25));
-  }
-
-  @Override
   public Trigger shootButton() {
     return new Trigger(() -> controller.getRightBumperButton());
   }

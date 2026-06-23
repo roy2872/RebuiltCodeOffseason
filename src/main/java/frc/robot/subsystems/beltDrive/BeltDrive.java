@@ -39,7 +39,6 @@ public class BeltDrive extends MotorSubsystemWithFollowers<MotorInputsAutoLogged
   @Override
   public void periodic() {
     super.periodic();
-    System.out.println(stateChooser.get());
     if(SmartDashboard.getBoolean("BeltDrive/ManualControl", false) && stateChooser.get() != null)
       currentState = stateChooser.get();
     stateMachine();
