@@ -15,6 +15,7 @@ package frc.robot;
 
 import org.ironmaple.simulation.SimulatedArena;
 import org.ironmaple.simulation.drivesims.SwerveDriveSimulation;
+import org.littletonrobotics.junction.Logger;
 
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
@@ -29,6 +30,8 @@ import frc.lib.subsystems.SimSparkMaxIO;
 import frc.lib.subsystems.SparkMaxIO;
 import frc.lib.util.AllianceFlipping;
 import frc.lib.util.TableLoader;
+import frc.robot.SuperStructure.StructureIntakeStates;
+import frc.robot.SuperStructure.SuperStructureStates;
 import frc.robot.controllers.ControllerInterface;
 import frc.robot.controllers.DummyController;
 import frc.robot.controllers.SimulationController;
@@ -280,34 +283,19 @@ public class RobotContainer {
     controller.resetGyroButton().onTrue(Commands.runOnce(resetGyro).ignoringDisable(true).alongWith(
     Commands.print("reset gyro")
     ));
-    // controller.shootCloseButton().onTrue(structure.shootCloseButtonCommand().alongWith(Commands.print("Shooting close...")));
-    controller.shootCloseButton().onTrue(shooter.shooterMainSysidRoutine(true, Direction.kForward));
-    controller.shootButton().onTrue(shooter.shooterMainSysidRoutine(true, Direction.kReverse));
-    controller.intakeButton().onTrue(shooter.shooterMainSysidRoutine(false, Direction.kForward));
-    controller.openClimbButton().onTrue(shooter.shooterMainSysidRoutine(false, Direction.kReverse));
-    // controller.shootButton().onTrue(structure.shootOnTheMoveButtonCommand());
-    // controller.intakeButton().whileTrue(structure.setIntakeStateCommand(StructureIntakeStates.INTAKING));
-    // controller.intakeButton().whileFalse(structure.setIntakeStateCommand(StructureIntakeStates.CLOSED));
-    // controller.fetchButton().onTrue(structure.setWantedStateCommand(SuperStructureStates.FETCH));
+    controller.shootCloseButton().onTrue(structure.shootCloseButtonCommand());
+    controller.shootButton().onTrue(structure.shootButtonCommand());
+    controller.intakeButton().whileTrue(structure.setIntakeStateCommand(StructureIntakeStates.INTAKING));
+    controller.intakeButton().whileFalse(structure.setIntakeStateCommand(StructureIntakeStates.CLOSED));
+    controller.fetchButton().onTrue(structure.fetchButtonCommand());
     // controller.fetchButton().onFalse(structure.setWantedStateCommand(SuperStructureStates.TRAVEL));
-    // controller.openClimbButton().onTrue(structure.openClimbButtonCommand());
-    // controller.closeClimbButton().onTrue(structure.climbButtonCommand());
     // controller.purgeIntakeButton().onTrue(structure.purgeIntakeButtonTrueCommand());
     // controller.purgeIntakeButton().onFalse(structure.purgeIntakeButtonFalseCommand());
-
-
     // controller.intakeButton().onTrue(Commands.run(() ->intake.setState(IntakeStates.SHUFFLE), intake));
     // controller.intakeButton().onFalse(Commands.run(() -> intake.setState(IntakeStates.CLOSED), intake));
     // controller.intakeButton().onTrue(Commands.run(() -> intake.setState(IntakeStates.CLOSED), intake));
-    // controller.shootButton().onTrue(shooter.shooterHoodSysidRoutine(false, Direction.kForward));
-    // controller.intakeButton().onTrue(shooter.shooterHoodSysidRoutine(true, Direction.kForward));
-    // controller.openClimbButton().onTrue(shooter.shooterHoodSysidRoutine(false, Direction.kReverse));
     // controller.purgeIntakeButton().onTrue(shooter.shooterHoodSysidRoutine(true, Direction.kReverse));
-    // controller.shootButton().onTrue(drive.driveMotorSysIdCommand(false, Direction.kForward));
     // controller.intakeButton().onTrue(drive.driveMotorSysIdCommand(true, Direction.kForward));
-    // controller.openClimbButton().onTrue(drive.driveMotorSysIdCommand(false, Direction.kReverse));
-    // controller.purgeIntakeButton().onTrue(drive.driveMotorSysIdCommand(true, Direction.kReverse));
-
   }
 
   /**
@@ -338,20 +326,26 @@ public class RobotContainer {
   public void updateSimulation() {
     if (Constants.currentMode != Constants.Mode.SIM) return;
 
-    // SimulatedArena.getInstance().simulationPeriodic();
-    // Logger.recordOutput(
-        // "FieldSimulation/RobotPosition", driveSimulation.getSimulatedDriveTrainPose());
+    SimulatedArena.getInstance().simulationPeriodic();
+    Logger.recordOutput(
+        "FieldSimulation/RobotPosition", driveSimulation.getSimulatedDriveTrainPose());
   }
 
   public void autonomousInit() {
-    // structure.setWantedState(SuperStructureStates.AUTO);
+    if(!hood.wasHoodReset()) 
+      hood.startBootSequence();
     if (Constants.currentMode != Constants.Mode.SIM) return;
 
     // Reset the simulation to the initial pose
     // driveSimulation.setSimulationWorldPose(RobotState.getInstance().getEstimatedPose());
   }
+
+  public void disabledInit() {
+    hood.stopBootSequence();
+  }
   
   public void teleopInit() {
-    // structure.teleopInit();
+    if(!hood.wasHoodReset()) 
+      hood.startBootSequence();
   }
 }

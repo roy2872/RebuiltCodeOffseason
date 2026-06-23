@@ -48,11 +48,11 @@ public class IntakeConstants {
 
     // public static final double INTAKE_OPEN_ANGLE = Units.degreesToRadians(30); // TODO: tune angles
     // public static final double INTAKE_CLOSED_ANGLE = Units.degreesToRadians(80);
-    public static final double INTAKE_OPEN_ANGLE = 0.18;
-    public static final double INTAKE_CLOSED_ANGLE = 0.3; 
+    public static final double INTAKE_OPEN_ANGLE = 0.03;
+    public static final double INTAKE_CLOSED_ANGLE = 0.140; 
 
-    public static final double INTAKE_MIN_ANGLE = Units.degreesToRadians(0);
-    public static final double INTAKE_MAX_ANGLE = Units.degreesToRadians(90);
+    // public static final double INTAKE_MIN_ANGLE = Units.degreesToRadians(0);
+    // public static final double INTAKE_MAX_ANGLE = Units.degreesToRadians(90);
 
     public static final FFConstants INTAKE_DEPLOY_FF =
         switch (Constants.currentMode) {
@@ -92,9 +92,9 @@ public class IntakeConstants {
           .sparkConfig
           .softLimit
           .forwardSoftLimitEnabled(true)
-          .forwardSoftLimit(10)
+          .forwardSoftLimit(0.0)
           .reverseSoftLimitEnabled(true)
-          .reverseSoftLimit(0); // TODO: may be the other way around
+          .reverseSoftLimit(-5.0); // TODO: may be the other way around
 
       INTAKE_DEPLOY_CONFIG.unitToRotorRatio = 1.0; // TODO: set ratio
 

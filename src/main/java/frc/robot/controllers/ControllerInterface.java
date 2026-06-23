@@ -14,10 +14,6 @@ public interface ControllerInterface {
 
   public Trigger intakeButton();
 
-  public Trigger openClimbButton();
-
-  public Trigger closeClimbButton();
-
   public Trigger shootButton();
 
   public Trigger shootCloseButton();

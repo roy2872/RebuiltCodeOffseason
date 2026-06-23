@@ -155,7 +155,7 @@ public class SuperStructure extends SubsystemBase {
       case FETCH -> fetch();
 
       case PURGE_INTAKE -> purgeIntake();
-
+        
       default -> {}
     }
   }
@@ -251,6 +251,9 @@ public class SuperStructure extends SubsystemBase {
     // hopper.setState(HopperStates.PURGE);
     shooter.setState(ShooterStates.IDLE);
     drive.setState(DriveStates.FIELD_DRIVE);
+        currentCommand = new ShootCloseCommand(beltDrive, drive, hood, leds, shooter);
+        currentCommand.schedule();
+    }
   }
 
   public void setWantedState(SuperStructureStates wantedState) {
@@ -275,19 +278,28 @@ public class SuperStructure extends SubsystemBase {
   }
 
   public Command shootButtonCommand() {
-    return Commands.either(setWantedStateCommand(SuperStructureStates.TRAVEL), setWantedStateCommand(SuperStructureStates.SHOOT), () -> currentState == SuperStructureStates.SHOOT);
+    return Commands.either(setWantedStateCommand(SuperStructureStates.TRAVEL), 
+      setWantedStateCommand(SuperStructureStates.SHOOT), () -> currentState == SuperStructureStates.SHOOT);
   }
 
   public Command shootCloseButtonCommand() {
-    return Commands.either(setWantedStateCommand(SuperStructureStates.TRAVEL), setWantedStateCommand(SuperStructureStates.SHOOT_CLOSE), () -> currentState == SuperStructureStates.SHOOT_CLOSE);
+    return Commands.either(setWantedStateCommand(SuperStructureStates.TRAVEL), 
+      setWantedStateCommand(SuperStructureStates.SHOOT_CLOSE), () -> currentState == SuperStructureStates.SHOOT_CLOSE);
   }
   
   public Command shootOnTheMoveButtonCommand() {
-    return Commands.either(setWantedStateCommand(SuperStructureStates.TRAVEL), setWantedStateCommand(SuperStructureStates.SHOOT_ON_THE_MOVE), () -> currentState == SuperStructureStates.SHOOT_ON_THE_MOVE);
+    return Commands.either(setWantedStateCommand(SuperStructureStates.TRAVEL), 
+      setWantedStateCommand(SuperStructureStates.SHOOT_ON_THE_MOVE), () -> currentState == SuperStructureStates.SHOOT_ON_THE_MOVE);
   }
 
   public Command intakeButtonCommand() {
-    return Commands.either(setIntakeStateCommand(StructureIntakeStates.CLOSED), setIntakeStateCommand(StructureIntakeStates.INTAKING), () -> intakeState == StructureIntakeStates.INTAKING); // changed from idle to closed
+    return Commands.either(setIntakeStateCommand(StructureIntakeStates.CLOSED), 
+      setIntakeStateCommand(StructureIntakeStates.INTAKING), () -> intakeState == StructureIntakeStates.INTAKING);
+  }
+
+  public Command fetchButtonCommand() {
+    return Commands.either(setWantedStateCommand(SuperStructureStates.TRAVEL), 
+      setWantedStateCommand(SuperStructureStates.FETCH), () -> currentState == SuperStructureStates.FETCH);
   }
 
   public Command purgeIntakeButtonTrueCommand() {

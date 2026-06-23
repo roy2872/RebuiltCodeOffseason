@@ -1,5 +1,7 @@
 package frc.lib.subsystems;
 
+import frc.lib.util.ControlGains.PidGains;
+
 public interface MotorIO {
   void updateInputs(MotorInputs inputs);
 
@@ -42,4 +44,6 @@ public interface MotorIO {
   void setEnableHardLimit(boolean fwd, boolean rev);
 
   void setPID(double kP, double kI, double kD);
+
+  PidGains getPID();
 }

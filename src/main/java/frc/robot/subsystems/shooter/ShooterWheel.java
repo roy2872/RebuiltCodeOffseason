@@ -47,10 +47,10 @@ public class ShooterWheel extends MotorSubsystemWithFollowers<MotorInputsAutoLog
       mainIO,
       new MotorInputsAutoLogged[]{new MotorInputsAutoLogged()}, new MotorIO[]{followerIO}
     );
-
     super.setName(name);
     this.ffController = ffController;
     velocitySetpointSupplier = () -> 0;
+    super.setupPID();
   }
 
   public void realPeriodic() {
@@ -72,13 +72,22 @@ public class ShooterWheel extends MotorSubsystemWithFollowers<MotorInputsAutoLog
       case IDLE -> super.setVoltageOutput(0);
 
       case ACTIVE -> {
-        super.setMaxMotionSetpointVelocity(
+          if(currentVelocity < targetVelocity && 
+  targetVelocity - currentVelocity > (1-ShooterConstants.ACTIVATE_MAX_POWER_PERCENTAGE)*targetVelocity + 0.3 * targetVelocity) {
+            super.setVoltageOutput(10.0);
+          }
+          else 
+          super.setMaxMotionSetpointVelocity(
             targetVelocity,
             ffController.calculate(currentVelocity));
-        // super.setVoltageOutput(8);
       }
 
       case HOLD -> {
+          if(currentVelocity < targetVelocity && 
+  targetVelocity - currentVelocity > (1-ShooterConstants.ACTIVATE_MAX_POWER_PERCENTAGE)*targetVelocity + 0.3 * targetVelocity) {
+            super.setVoltageOutput(10.0);
+          }
+          else 
           super.setMaxMotionSetpointVelocity(
             targetVelocity,
             ffController.calculate(currentVelocity));
@@ -133,7 +142,7 @@ public class ShooterWheel extends MotorSubsystemWithFollowers<MotorInputsAutoLog
   public boolean atVelocity() {
     double targetVelocity = velocitySetpointSupplier.getAsDouble();
     double currentVelocity = inputs.velocityUnitsPerSecond;
-    double tolerance = Math.min(0.05 * targetVelocity, 0.05);
+    double tolerance = Math.min(0.08 * targetVelocity, 1); // 0.05
     return Math.abs(currentVelocity - targetVelocity) <= tolerance;
   }
 

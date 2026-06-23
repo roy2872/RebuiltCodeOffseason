@@ -41,7 +41,7 @@ public class VisionConstants {
         0.2, // Camera 0
         0.2 // Camera 1
       };
-
+// limelight: 65 pitch, 0.47 m z, 0.266 m backwards in x, 0 y
       public static final double ON_EDGE_THRESHOLD = 0.92;
   // Multipliers to apply for MegaTag 2 observations
   public static double linearStdDevMegatag2Factor = 0.5; // More stable than full 3D solve

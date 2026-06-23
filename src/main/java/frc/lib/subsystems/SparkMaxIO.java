@@ -13,10 +13,13 @@ import com.revrobotics.spark.SparkClosedLoopController;
 import com.revrobotics.spark.SparkClosedLoopController.ArbFFUnits;
 import com.revrobotics.spark.SparkLowLevel.MotorType;
 import com.revrobotics.spark.SparkMax;
+import com.revrobotics.spark.config.ClosedLoopConfigAccessor;
+import com.revrobotics.spark.config.SparkMaxConfigAccessor;
 import com.revrobotics.spark.config.SparkBaseConfig.IdleMode;
 import edu.wpi.first.math.filter.Debouncer;
 import edu.wpi.first.units.measure.Angle;
 import frc.lib.util.SparkUtil;
+import frc.lib.util.ControlGains.PidGains;
 import frc.robot.Robot;
 
 public class SparkMaxIO implements MotorIO {
@@ -62,7 +65,7 @@ public class SparkMaxIO implements MotorIO {
   @Override
   public void updateInputs(MotorInputs inputs) {
     sparkStickyFault = false;
-
+    
     if (config.usingAbsoluteEncoder)
       if (absoluteEncoderConnected())
         rotorOffset =
@@ -77,7 +80,7 @@ public class SparkMaxIO implements MotorIO {
 
     ifOk(
         motor,
-        () -> rotorToUnits(encoder.getVelocity()),
+        () -> velocityRotorToUnits(encoder.getVelocity()),
         (velocity) -> inputs.velocityUnitsPerSecond = velocity);
 
     ifOk(
@@ -116,7 +119,7 @@ public class SparkMaxIO implements MotorIO {
   @Override
   public void setVelocitySetpoint(double unitsPerSecond, double ffVolts) {
     closedLoopController.setReference(
-        unitsToRotor(unitsPerSecond),
+        velocityUnitsToRotor(unitsPerSecond),
         ControlType.kVelocity,
         ClosedLoopSlot.kSlot0,
         ffVolts,
@@ -136,7 +139,7 @@ public class SparkMaxIO implements MotorIO {
   @Override
   public void setMaxMotionSetpointVelocity(double unitsPerSecond, double ffVolts) {
     closedLoopController.setReference(
-        unitsToRotor(unitsPerSecond),
+        velocityUnitsToRotor(unitsPerSecond),
         ControlType.kMAXMotionVelocityControl,
         ClosedLoopSlot.kSlot0,
         ffVolts,
@@ -216,6 +219,12 @@ public class SparkMaxIO implements MotorIO {
       
   }
 
+  @Override
+  public PidGains getPID() {
+      ClosedLoopConfigAccessor accessor = motor.configAccessor.closedLoop;
+      return new PidGains(accessor.getP(), accessor.getI(), accessor.getD());
+  }
+
   private boolean absoluteEncoderConnected() {
     return true;
   }
@@ -226,6 +235,14 @@ public class SparkMaxIO implements MotorIO {
 
   private double rotorToUnits(double rotor) {
     return rotor * config.unitToRotorRatio;
+  }
+
+  private double velocityUnitsToRotor(double units) {
+    return units / config.unitToRotorRatio * 60.0; // convert to units per minute for spark max
+  }
+
+  private double velocityRotorToUnits(double rotor) {
+    return rotor * config.unitToRotorRatio / 60.0; // convert to units per second
   }
 
   private double clampPosition(double positionUnits) {
