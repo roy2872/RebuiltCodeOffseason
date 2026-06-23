@@ -95,14 +95,14 @@ public class ShooterConstants {
     HOOD_WHEEL_MOTOR_FOLLOWER_CONFIG.config.sparkConfig.apply(HOOD_WHEEL_MOTOR_CONFIG.sparkConfig).follow(58);
     HOOD_WHEEL_MOTOR_FOLLOWER_CONFIG.inverted = true;
 
-    MAIN_WHEEL_MOTOR_CONFIG.unitToRotorRatio = 0.319; // TODO: set ratio
-    HOOD_WHEEL_MOTOR_CONFIG.unitToRotorRatio = (0.319 / 2);
+    MAIN_WHEEL_MOTOR_CONFIG.unitToRotorRatio = 1.0;//0.319; // TODO: set ratio
+    HOOD_WHEEL_MOTOR_CONFIG.unitToRotorRatio = 1.0;//(0.319 / 2);
 
     MAIN_WHEEL_MOTOR_CONFIG.usingAbsoluteEncoder = false;
     HOOD_WHEEL_MOTOR_CONFIG.usingAbsoluteEncoder = false;
 
-    MAIN_WHEEL_MOTOR_CONFIG.momentOfInertia = 0.1; // TODO: set MOI
-    HOOD_WHEEL_MOTOR_CONFIG.momentOfInertia = 0.1;
+    MAIN_WHEEL_MOTOR_CONFIG.momentOfInertia = 0.01; // TODO: set MOI
+    HOOD_WHEEL_MOTOR_CONFIG.momentOfInertia = 0.0096;
     // HOOD_WHEEL_MOTOR_CONFIG.inverted = true;
     MAIN_WHEEL_MOTOR_CONFIG.followerConfigs = new FollowerConfig[]{MAIN_WHEEL_MOTOR_FOLLOWER_CONFIG};
     HOOD_WHEEL_MOTOR_CONFIG.followerConfigs = new FollowerConfig[]{HOOD_WHEEL_MOTOR_FOLLOWER_CONFIG};
