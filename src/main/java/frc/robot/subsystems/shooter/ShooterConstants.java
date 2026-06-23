@@ -15,28 +15,28 @@ public class ShooterConstants {
 
   public static final SimpleFFConstants MAIN_WHEEL_FF_CONSTANTS =
       switch (Constants.currentMode) {
-        case REAL -> new SimpleFFConstants(0.0, 0.13, 3.0);
+        case REAL -> new SimpleFFConstants(0.0, 0.44, 3.0);
         case SIM -> new SimpleFFConstants(0.0, 0.0, 0.0);
         default -> new SimpleFFConstants(0.0, 0.0, 0.0);
       };
 
   public static final SimpleFFConstants HOOD_WHEEL_FF_CONSTANTS =
       switch (Constants.currentMode) {
-        case REAL -> new SimpleFFConstants(0.0, 0.13, 1.68);
+        case REAL -> new SimpleFFConstants(0.0, 0.82, 1.68);
         case SIM -> new SimpleFFConstants(0.0, 0.0, 0.0);
         default -> new SimpleFFConstants(0.0, 0.0, 0.0);
       };
 
   protected static final PidGains MAIN_PID =
       switch (Constants.currentMode) {
-        case REAL -> new PidGains(0.001205, 0.0, 0.1); 
+        case REAL -> new PidGains(0.000605, 0.0, 0.1); 
         case SIM -> new PidGains(0.1, 0.0, 0.0);
         default -> new PidGains(0.1, 0.0, 0.0);
       };
 
   protected static final PidGains HOOD_PID =
       switch (Constants.currentMode) {
-        case REAL -> new PidGains(0.0005, 0.0, 0.05);
+        case REAL -> new PidGains(0.0003, 0.0, 0.1);
         case SIM -> new PidGains(0.1, 0.0, 0.0);
         default -> new PidGains(0.1, 0.0, 0.0);
       };
@@ -94,8 +94,8 @@ public class ShooterConstants {
     HOOD_WHEEL_MOTOR_FOLLOWER_CONFIG.config.sparkConfig.apply(HOOD_WHEEL_MOTOR_CONFIG.sparkConfig).follow(58);
     HOOD_WHEEL_MOTOR_FOLLOWER_CONFIG.inverted = true;
 
-    MAIN_WHEEL_MOTOR_CONFIG.unitToRotorRatio = 1/0.319; // TODO: set ratio
-    HOOD_WHEEL_MOTOR_CONFIG.unitToRotorRatio = 1/(0.319 / 2);
+    MAIN_WHEEL_MOTOR_CONFIG.unitToRotorRatio = 0.319; // TODO: set ratio
+    HOOD_WHEEL_MOTOR_CONFIG.unitToRotorRatio = (0.319 / 2);
 
     MAIN_WHEEL_MOTOR_CONFIG.usingAbsoluteEncoder = false;
     HOOD_WHEEL_MOTOR_CONFIG.usingAbsoluteEncoder = false;

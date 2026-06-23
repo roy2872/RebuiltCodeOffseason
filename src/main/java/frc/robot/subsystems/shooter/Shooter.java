@@ -165,7 +165,7 @@ public class Shooter extends SubsystemBase {
       case VELOCITY -> {
         double velocitySetpoint = SmartDashboard.getNumber(VELOCITY_KEY, 0.0);
         mainWheel.runVelocity(() -> velocitySetpoint);
-        hoodWheel.runVelocity(() -> velocitySetpoint);
+        hoodWheel.runVelocity(() -> velocitySetpoint/2);
         return true;
       }
     }
@@ -217,8 +217,7 @@ public class Shooter extends SubsystemBase {
    * @param shooterVelocity [rps]
    */
   public void runVelocity(DoubleSupplier shooterVelocity) {
-    runVelocity(shooterVelocity, shooterVelocity);
-    setState(ShooterStates.SHOOTING);
+    runVelocity(shooterVelocity, () -> shooterVelocity.getAsDouble()/2.0);
   }
 
   /**

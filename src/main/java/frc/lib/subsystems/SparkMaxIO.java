@@ -65,7 +65,7 @@ public class SparkMaxIO implements MotorIO {
   @Override
   public void updateInputs(MotorInputs inputs) {
     sparkStickyFault = false;
-
+    
     if (config.usingAbsoluteEncoder)
       if (absoluteEncoderConnected())
         rotorOffset =
@@ -80,7 +80,7 @@ public class SparkMaxIO implements MotorIO {
 
     ifOk(
         motor,
-        () -> rotorToUnits(encoder.getVelocity())/60.0,
+        () -> velocityRotorToUnits(encoder.getVelocity()),
         (velocity) -> inputs.velocityUnitsPerSecond = velocity);
 
     ifOk(
@@ -119,7 +119,7 @@ public class SparkMaxIO implements MotorIO {
   @Override
   public void setVelocitySetpoint(double unitsPerSecond, double ffVolts) {
     closedLoopController.setReference(
-        unitsToRotor(unitsPerSecond) * 60,
+        velocityUnitsToRotor(unitsPerSecond),
         ControlType.kVelocity,
         ClosedLoopSlot.kSlot0,
         ffVolts,
@@ -139,7 +139,7 @@ public class SparkMaxIO implements MotorIO {
   @Override
   public void setMaxMotionSetpointVelocity(double unitsPerSecond, double ffVolts) {
     closedLoopController.setReference(
-        unitsToRotor(unitsPerSecond) * 60,
+        velocityUnitsToRotor(unitsPerSecond),
         ControlType.kMAXMotionVelocityControl,
         ClosedLoopSlot.kSlot0,
         ffVolts,
@@ -235,6 +235,14 @@ public class SparkMaxIO implements MotorIO {
 
   private double rotorToUnits(double rotor) {
     return rotor * config.unitToRotorRatio;
+  }
+
+  private double velocityUnitsToRotor(double units) {
+    return units / config.unitToRotorRatio * 60.0; // convert to units per minute for spark max
+  }
+
+  private double velocityRotorToUnits(double rotor) {
+    return rotor * config.unitToRotorRatio / 60.0; // convert to units per second
   }
 
   private double clampPosition(double positionUnits) {
