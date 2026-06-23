@@ -52,6 +52,7 @@ public class ShooterConstants {
 
   public static final double COMPENSATION_FACTOR = 1.0;
   public static final double BACKSPIN_FACTOR = 1.0; 
+  public static final double CLOSE_SHOOTING_VELOCITY = 8.5; // [m/s]
 
   static {
     MAIN_WHEEL_MOTOR_CONFIG.name = "ShooterMainWheel";
