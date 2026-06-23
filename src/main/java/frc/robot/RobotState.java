@@ -27,6 +27,7 @@ import edu.wpi.first.math.numbers.N2;
 import edu.wpi.first.math.numbers.N3;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
+import edu.wpi.first.wpilibj.smartdashboard.Field2d;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj.RobotController;
 import edu.wpi.first.wpilibj.Timer;
@@ -49,10 +50,6 @@ import org.littletonrobotics.junction.AutoLogOutput;
 import org.littletonrobotics.junction.Logger;
 
 public class RobotState {
-
-  // private final double txTyObservationStaleSecs = 0.2; // seconds
-  // private final double minDistanceTagPoseBlend = 0.4; // meters
-  // private final double maxDistanceTagPoseBlend = 0.9; // meters
 
   private static RobotState instance;
 
@@ -80,6 +77,8 @@ public class RobotState {
       TimeInterpolatableBuffer.createBuffer(POSE_BUFFER_SIZE);
 
   private final Matrix<N3, N1> qStdDevs = new Matrix<>(Nat.N3(), Nat.N1());
+
+  private final Field2d field2d = new Field2d();
 
   private final SwerveDriveKinematics kinematics;
   private SwerveModulePosition[] lastWheelPosition =
@@ -324,6 +323,8 @@ public class RobotState {
   }
 
   public void periodic() {
+    field2d.setRobotPose(getEstimatedPose());
+    
     // fuelPoses.removeIf(
     //     (fuelPose) ->
     //         Timer.getFPGATimestamp() - fuelPose.timestamp()
