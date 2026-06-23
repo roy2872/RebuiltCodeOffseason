@@ -1,7 +1,13 @@
 package frc.robot.subsystems.shooter;
 
+import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.controller.SimpleMotorFeedforward;
+import edu.wpi.first.math.system.plant.DCMotor;
+import edu.wpi.first.math.util.Units;
 import edu.wpi.first.util.CircularBuffer;
+import edu.wpi.first.util.sendable.SendableBuilder.BackendKind;
+import edu.wpi.first.wpilibj.RobotController;
+import edu.wpi.first.wpilibj2.command.Command;
 import frc.lib.subsystems.MotorIO;
 import frc.lib.subsystems.MotorInputsAutoLogged;
 import frc.lib.subsystems.MotorSubsystem;
@@ -9,6 +15,9 @@ import frc.lib.subsystems.MotorSubsystemConfig;
 import frc.lib.subsystems.MotorSubsystemWithFollowers;
 import frc.lib.subsystems.MotorSubsystemWithFollowersConfig;
 import frc.lib.subsystems.MotorSubsystemWithFollowersConfig.FollowerConfig;
+import frc.robot.Constants;
+
+import static frc.robot.subsystems.drive.DriveConstants.MAX_ACCELERATION;
 
 import java.util.function.DoubleSupplier;
 import org.littletonrobotics.junction.Logger;
@@ -34,6 +43,10 @@ public class ShooterWheel extends MotorSubsystemWithFollowers<MotorInputsAutoLog
 
   // private final CircularBuffer<Double> kfBuffer = new CircularBuffer<>(10);
 
+  private DCMotor gearbox;
+
+  private double profiledSetpointRadPerSec = 0.0;
+
   public ShooterWheel(
       SimpleMotorFeedforward ffController, 
       String name, 
@@ -51,6 +64,8 @@ public class ShooterWheel extends MotorSubsystemWithFollowers<MotorInputsAutoLog
     this.ffController = ffController;
     velocitySetpointSupplier = () -> 0;
     super.setupPID();
+
+    gearbox = DCMotor.getNEO(2);
   }
 
   public void realPeriodic() {
@@ -63,13 +78,18 @@ public class ShooterWheel extends MotorSubsystemWithFollowers<MotorInputsAutoLog
 
   private void stateMachine() {
 
-    double targetVelocity = velocitySetpointSupplier.getAsDouble();
+    double targetVelocity = Units.radiansPerSecondToRotationsPerMinute(profiledSetpointRadPerSec) / 60.0; // [RPS]
     double currentVelocity = inputs.velocityUnitsPerSecond;
     double voltage = inputs.appliedVolts;
 
+    Logger.recordOutput(getName() + "/targetVelocity", targetVelocity);
     switch (currentState) {
 
-      case IDLE -> super.setVoltageOutput(0);
+      case IDLE -> {
+        super.setVoltageOutput(0);
+        targetVelocity = 0; 
+        profiledSetpointRadPerSec = 0;
+      }
 
       case ACTIVE -> {
           if(currentVelocity < targetVelocity && 
@@ -130,9 +150,46 @@ public class ShooterWheel extends MotorSubsystemWithFollowers<MotorInputsAutoLog
   }
 
   public void runVelocity(DoubleSupplier velocitySetpointSupplier) {
-    currentState = WheelStates.ACTIVE;
-    this.velocitySetpointSupplier = velocitySetpointSupplier;
+      currentState = WheelStates.ACTIVE;
+      
+      this.velocitySetpointSupplier = velocitySetpointSupplier;
+      
+      double targetVelocityRadPerSec = Units.rotationsPerMinuteToRadiansPerSecond(
+          this.velocitySetpointSupplier.getAsDouble() * 60.0
+      );
+
+      double vbus = RobotController.getBatteryVoltage();
+      if (Constants.currentMode == Constants.Mode.SIM) {
+          vbus = 12.0;
+      }
+      double supplyLimit = 120.0; 
+      double budget = supplyLimit * vbus * 0.82; 
+      
+      // Fixed Kv division formula
+      double backEmf = profiledSetpointRadPerSec / gearbox.KvRadPerSecPerVolt;
+
+      // 2. Physics current bounds
+      double maxStatorCurrent = (-backEmf + Math.sqrt(backEmf * backEmf + 4.0 * budget * gearbox.rOhms)) / (2.0 * gearbox.rOhms);
+      double voltageLimitedCurrent = Math.max(0.0, (vbus - backEmf) / gearbox.rOhms);
+      maxStatorCurrent = Math.min(maxStatorCurrent, voltageLimitedCurrent);
+
+      // 3. Accelerations bounds
+      double moi = getName() == "MainWheel" ? 0.003 : 0.000096;
+
+      double maxAccelFromCurrent = (gearbox.getTorque(maxStatorCurrent) - gearbox.getTorque(ffController.getKs() / gearbox.rOhms)) / moi;
+      maxAccelFromCurrent = MathUtil.clamp(maxAccelFromCurrent, 0.0, Units.rotationsPerMinuteToRadiansPerSecond(10000.0));
+
+      // 4. Smooth profiling step
+      double maxStep = maxAccelFromCurrent * Constants.CYCLE_TIME;
+      double error = targetVelocityRadPerSec - profiledSetpointRadPerSec;
+      
+      if (Math.abs(error) <= maxStep) {
+          profiledSetpointRadPerSec = targetVelocityRadPerSec;
+      } else {
+          profiledSetpointRadPerSec += Math.copySign(maxStep, error);
+      }
   }
+
 
   public void holdVelocity(DoubleSupplier velocitySetpointSupplier) {
     currentState = WheelStates.HOLD;
@@ -143,6 +200,9 @@ public class ShooterWheel extends MotorSubsystemWithFollowers<MotorInputsAutoLog
     double targetVelocity = velocitySetpointSupplier.getAsDouble();
     double currentVelocity = inputs.velocityUnitsPerSecond;
     double tolerance = Math.min(0.08 * targetVelocity, 1); // 0.05
+    if (targetVelocity < 1e-4) {
+      tolerance = 1.0; 
+    }
     return Math.abs(currentVelocity - targetVelocity) <= tolerance;
   }
 

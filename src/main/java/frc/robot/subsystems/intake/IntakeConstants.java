@@ -14,7 +14,7 @@ public class IntakeConstants {
 
   public static final class IntakeRollerConstants {
 
-    public static final double ROLLER_VOLTAGE_INTAKE = 9.0;
+    public static final double ROLLER_VOLTAGE_INTAKE = 8.0;
 
     public static final SimpleFFConstants INTAKE_ROLLER_FF =
         switch (Constants.currentMode) {
@@ -87,14 +87,16 @@ public class IntakeConstants {
               DEPLOY_PID.kD,
               0,
               ClosedLoopSlot.kSlot0)
-            .feedbackSensor(FeedbackSensor.kAbsoluteEncoder); // keep velocity ff 0
+            .feedbackSensor(FeedbackSensor.kAbsoluteEncoder)
+            .maxMotion
+            .maxVelocity(4.0); // keep velocity ff 0
       INTAKE_DEPLOY_CONFIG
           .sparkConfig
           .softLimit
           .forwardSoftLimitEnabled(true)
-          .forwardSoftLimit(0.0)
+          .forwardSoftLimit(0.14)
           .reverseSoftLimitEnabled(true)
-          .reverseSoftLimit(-5.0); // TODO: may be the other way around
+          .reverseSoftLimit(0.04); // TODO: may be the other way around
 
       INTAKE_DEPLOY_CONFIG.unitToRotorRatio = 1.0; // TODO: set ratio
 

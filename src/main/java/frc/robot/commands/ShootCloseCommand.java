@@ -28,7 +28,8 @@ public class ShootCloseCommand extends SequentialCommandGroup {
         Commands.runOnce(() -> drive.setState(DriveStates.IDLE), drive),
         Commands.runOnce(() -> shooter.runVelocity(() -> Constants.SHOOT_CLOSE_VELOCITY), shooter),
         Commands.runOnce(() -> hood.setTargetAngle(() -> Constants.SHOOT_CLOSE_ANGLE), hood)),
-        Commands.waitUntil(() -> shooter.atVelocity() && hood.atSetpoint()) // TODO: can calculate needed accuracy for drive
+        Commands.runEnd(() -> shooter.runExitVelocity(() -> Constants.SHOOT_CLOSE_VELOCITY),() -> shooter.setState(ShooterStates.IDLE),  shooter)
+          .raceWith(Commands.waitUntil(() -> shooter.atVelocity() && hood.atSetpoint())) // TODO: can calculate needed accuracy for drive
           .andThen(Commands.runOnce(() -> beltDrive.setState(BeltDriveStates.ACTIVE), beltDrive)
           .alongWith(
             // Commands.runOnce(() -> hopper.setState(HopperStates.ACTIVE), hopper).alongWith(
