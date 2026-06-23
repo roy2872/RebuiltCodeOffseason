@@ -56,4 +56,9 @@ public class SingleXboxController implements ControllerInterface {
   public Trigger fetchButton() {
     return new Trigger(() -> controller.getPOV() == 180);
   }
+
+  @Override
+  public Trigger xLockOverride() {
+    return new Trigger(() -> false);
+  }
 }

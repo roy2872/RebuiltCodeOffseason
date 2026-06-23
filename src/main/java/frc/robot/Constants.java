@@ -61,6 +61,9 @@ public final class Constants {
   public static final double SHOOT_CLOSE_VELOCITY = 10.0; // m/s
   public static final double SHOOT_CLOSE_ANGLE = 79.0; // deg
 
+  public static final double FETCH_VELOCITY = 12.0; // m/s
+  public static final double FETCH_ANGLE = 70.0; // deg
+
   public static final class FieldConstants {
 
     public static AprilTagFieldLayout aprilTagLayout =

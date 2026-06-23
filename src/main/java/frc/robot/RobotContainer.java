@@ -23,6 +23,7 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import edu.wpi.first.wpilibj2.command.Commands;
+import edu.wpi.first.wpilibj2.command.button.Trigger;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine.Direction;
 import frc.lib.subsystems.MotorIO;
 import frc.lib.subsystems.SimSparkMaxIO;
@@ -106,7 +107,8 @@ public class RobotContainer {
                 (robotPose) -> {},
                 controller::xVelocityAnalog,
                 controller::yVelocityAnalog,
-                controller::rotationVelocityAnalog);
+                controller::rotationVelocityAnalog,
+                controller.xLockOverride());
 
         beltDrive =
             new BeltDrive(
@@ -167,7 +169,8 @@ public class RobotContainer {
                 (robotPose) -> driveSimulation.getSimulatedDriveTrainPose(),
                 controller::xVelocityAnalog,
                 controller::yVelocityAnalog,
-                controller::rotationVelocityAnalog);;
+                controller::rotationVelocityAnalog,
+                controller.xLockOverride());
 
         beltDrive =
             new BeltDrive(
@@ -223,7 +226,8 @@ public class RobotContainer {
                 (robotPose) -> {},
                 controller::xVelocityAnalog,
                 controller::yVelocityAnalog,
-                controller::rotationVelocityAnalog);
+                controller::rotationVelocityAnalog,
+                controller.xLockOverride());
         beltDrive = new BeltDrive(
           BeltDriveConstants.BELT_DRIVE_CONFIG, 
           new SimSparkMaxIO(BeltDriveConstants.BELT_DRIVE_CONFIG), 
