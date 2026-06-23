@@ -7,7 +7,7 @@ import frc.lib.subsystems.MotorSubsystemWithFollowersConfig.FollowerConfig;
 
 public class BeltDriveConstants {
 
-  public static final double ACTIVE_VOLTAGE = 9.0;
+  public static final double ACTIVE_VOLTAGE = 8.0;
   public static final double PURGE_VOLTAGE = -6.0;
   public static final MotorSubsystemWithFollowersConfig BELT_DRIVE_CONFIG = new MotorSubsystemWithFollowersConfig();
   public static final FollowerConfig BELT_FOLLOWER_CONFIG = new FollowerConfig();

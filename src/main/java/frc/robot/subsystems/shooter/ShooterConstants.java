@@ -36,7 +36,7 @@ public class ShooterConstants {
 
   protected static final PidGains HOOD_PID =
       switch (Constants.currentMode) {
-        case REAL -> new PidGains(0.001, 0.0, 0.05);
+        case REAL -> new PidGains(0.0005, 0.0, 0.05);
         case SIM -> new PidGains(0.1, 0.0, 0.0);
         default -> new PidGains(0.1, 0.0, 0.0);
       };
@@ -75,7 +75,7 @@ public class ShooterConstants {
         .maxMotion
         .cruiseVelocity(5000)
         .maxAcceleration(10000); // keep velocity ff 0
-
+        
     HOOD_WHEEL_MOTOR_CONFIG
         .sparkConfig
         .idleMode(IdleMode.kCoast)
@@ -94,8 +94,8 @@ public class ShooterConstants {
     HOOD_WHEEL_MOTOR_FOLLOWER_CONFIG.config.sparkConfig.apply(HOOD_WHEEL_MOTOR_CONFIG.sparkConfig).follow(58);
     HOOD_WHEEL_MOTOR_FOLLOWER_CONFIG.inverted = true;
 
-    MAIN_WHEEL_MOTOR_CONFIG.unitToRotorRatio = 1.0 / 60.0; // TODO: set ratio
-    HOOD_WHEEL_MOTOR_CONFIG.unitToRotorRatio = 1.0 / 60.0;
+    MAIN_WHEEL_MOTOR_CONFIG.unitToRotorRatio = 1/0.319; // TODO: set ratio
+    HOOD_WHEEL_MOTOR_CONFIG.unitToRotorRatio = 1/(0.319 / 2);
 
     MAIN_WHEEL_MOTOR_CONFIG.usingAbsoluteEncoder = false;
     HOOD_WHEEL_MOTOR_CONFIG.usingAbsoluteEncoder = false;

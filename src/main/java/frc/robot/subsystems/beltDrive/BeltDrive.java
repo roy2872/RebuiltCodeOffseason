@@ -32,13 +32,14 @@ public class BeltDrive extends MotorSubsystemWithFollowers<MotorInputsAutoLogged
     SmartDashboard.putBoolean("BeltDrive/ManualControl", false);
     for(var state : BeltDriveStates.values()) 
       chooser.addOption(state.name(), state);
-    stateChooser = new LoggedDashboardChooser<>("BeltDrive/StateChooser", chooser);
+    stateChooser = new LoggedDashboardChooser<>("BeltDrive/StateChooser", chooser); 
     SmartDashboard.putNumber("BeltDrive/RequestedManualVoltage", 0.0);
   }
 
   @Override
   public void periodic() {
     super.periodic();
+    System.out.println(stateChooser.get());
     if(SmartDashboard.getBoolean("BeltDrive/ManualControl", false) && stateChooser.get() != null)
       currentState = stateChooser.get();
     stateMachine();

@@ -154,7 +154,8 @@ public class Hood extends MotorSubsystem<MotorInputsAutoLogged, MotorIO> {
           targetAngle.getAsDouble(), MOTOR_FF.calculate(super.inputs.unitPosition, super.inputs.velocityUnitsPerSecond));
       case CLOSED -> super.setMaxMotionSetpointPosition(HOOD_MAX_ANGLE, HOOD_ANGLE_TOLERANCE);
       case BOOT_SEQUENCE -> {
-        if(!bootSequenceTimer.hasElapsed(BOOT_SEQUENCE_TIME)) {
+        bootSequenceTimer.start();
+        if(bootSequenceTimer.hasElapsed(BOOT_SEQUENCE_TIME)) {
           hasBeenReset = true;
           resetPosition(HOOD_STARTING_ANGLE);
           bootSequenceTimer.reset();

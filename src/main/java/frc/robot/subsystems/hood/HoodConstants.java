@@ -46,7 +46,7 @@ public class HoodConstants {
         .sparkConfig
         .idleMode(IdleMode.kCoast)
         .smartCurrentLimit(10) 
-        .inverted(false)
+        .inverted(true)
         .secondaryCurrentLimit(20)
         .closedLoop
         .pidf(HOOD_PID.kP, HOOD_PID.kI, HOOD_PID.kD, 0, ClosedLoopSlot.kSlot0)

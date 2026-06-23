@@ -80,7 +80,7 @@ public class SparkMaxIO implements MotorIO {
 
     ifOk(
         motor,
-        () -> rotorToUnits(encoder.getVelocity()),
+        () -> rotorToUnits(encoder.getVelocity())/60.0,
         (velocity) -> inputs.velocityUnitsPerSecond = velocity);
 
     ifOk(
@@ -119,7 +119,7 @@ public class SparkMaxIO implements MotorIO {
   @Override
   public void setVelocitySetpoint(double unitsPerSecond, double ffVolts) {
     closedLoopController.setReference(
-        unitsToRotor(unitsPerSecond),
+        unitsToRotor(unitsPerSecond) * 60,
         ControlType.kVelocity,
         ClosedLoopSlot.kSlot0,
         ffVolts,
@@ -139,7 +139,7 @@ public class SparkMaxIO implements MotorIO {
   @Override
   public void setMaxMotionSetpointVelocity(double unitsPerSecond, double ffVolts) {
     closedLoopController.setReference(
-        unitsToRotor(unitsPerSecond),
+        unitsToRotor(unitsPerSecond) * 60,
         ControlType.kMAXMotionVelocityControl,
         ClosedLoopSlot.kSlot0,
         ffVolts,
