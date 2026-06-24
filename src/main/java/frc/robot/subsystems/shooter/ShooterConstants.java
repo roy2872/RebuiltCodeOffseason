@@ -15,14 +15,14 @@ public class ShooterConstants {
 
   public static final SimpleFFConstants MAIN_WHEEL_FF_CONSTANTS =
       switch (Constants.currentMode) {
-        case REAL -> new SimpleFFConstants(0.0, 0.44, 3.0);
+        case REAL -> new SimpleFFConstants(0.35, 0.127, 0.012); // native units rps
         case SIM -> new SimpleFFConstants(0.0, 0.0, 0.0);
         default -> new SimpleFFConstants(0.0, 0.0, 0.0);
       };
 
   public static final SimpleFFConstants HOOD_WHEEL_FF_CONSTANTS =
       switch (Constants.currentMode) {
-        case REAL -> new SimpleFFConstants(0.0, 0.82, 1.68);
+        case REAL -> new SimpleFFConstants(0.25, 0.125, 0.006);
         case SIM -> new SimpleFFConstants(0.0, 0.0, 0.0);
         default -> new SimpleFFConstants(0.0, 0.0, 0.0);
       };
