@@ -50,6 +50,7 @@ public class ShooterWheel extends MotorSubsystemWithFollowers<MotorInputsAutoLog
   private double profiledSetpointRadPerSec = 0.0;
 
   private Debouncer atGoalTimer;
+  private boolean atGoal = false;
 
   private double ffVolts = 0.0; //fuck it we ball
   private double filteredAccel = 0.0;
@@ -83,16 +84,20 @@ public class ShooterWheel extends MotorSubsystemWithFollowers<MotorInputsAutoLog
     stateMachine();
 
     Logger.recordOutput(getName() + "/currentState", currentState);
-    Logger.recordOutput(getName() + "/requestedVelocity", velocitySetpointSupplier.getAsDouble());
+    // Logger.recordOutput(getName() + "/requestedVelocity", velocitySetpointSupplier.getAsDouble());
   }
 
   private void stateMachine() {
 
-    double targetVelocity = Units.radiansPerSecondToRotationsPerMinute(profiledSetpointRadPerSec) / 60.0; // [RPS]
+    double targetVelocity = Units.radiansPerSecondToRotationsPerMinute(profiledSetpointRadPerSec) / 60.0; // [rps]
+    // double targetVelocity = rpsToMps(Units.radiansPerSecondToRotationsPerMinute(profiledSetpointRadPerSec) / 60.0); // [m/s]
     double currentVelocity = inputs.velocityUnitsPerSecond;
     double voltage = inputs.appliedVolts;
 
-    Logger.recordOutput(getName() + "/targetVelocity", targetVelocity);
+    // Logger.recordOutput(getName() + "/targetVelocityRPS", targetVelocity);
+    Logger.recordOutput(getName() + "/ffVolts", ffVolts);
+    Logger.recordOutput(getName() + "/targetVelocityMPS", rpsToMps(targetVelocity));
+    Logger.recordOutput(getName() + "/currentVelocityMPS", rpsToMps(currentVelocity));
     switch (currentState) {
 
       case IDLE -> {
@@ -100,6 +105,7 @@ public class ShooterWheel extends MotorSubsystemWithFollowers<MotorInputsAutoLog
         ffVolts = 0; 
         profiledSetpointRadPerSec = 0;
         atGoalTimer.calculate(false);
+        atGoal = false;
       }
 
       case ACTIVE -> {
@@ -162,18 +168,26 @@ public class ShooterWheel extends MotorSubsystemWithFollowers<MotorInputsAutoLog
     velocitySetpointSupplier = () -> 0;
   }
 
+  /**
+   * Runs the shooter wheel with the desired velocity
+   * 
+   * @param velocitySetpointSupplier The desired speed, in [m/s]
+  **/
   public void runVelocity(DoubleSupplier velocitySetpointSupplier) {
       currentState = WheelStates.ACTIVE;
       
       this.velocitySetpointSupplier = velocitySetpointSupplier;
       
       double targetVelocityRadPerSec = Units.rotationsPerMinuteToRadiansPerSecond(
-          this.velocitySetpointSupplier.getAsDouble() * 60.0
+          mpsToRps(velocitySetpointSupplier.getAsDouble()) * 60.0
       );
 
       double currentVelocityRadPerSec = Units.rotationsPerMinuteToRadiansPerSecond(
           inputs.velocityUnitsPerSecond * 60.0
       );
+
+      // Logger.recordOutput(getName() + "/currentVelocityRadPerSec", currentVelocityRadPerSec);
+      // Logger.recordOutput(getName() + "/targetVelocityRadPerSec", targetVelocityRadPerSec);
 
       double vbus = RobotController.getBatteryVoltage();
       if (Constants.currentMode == Constants.Mode.SIM) {
@@ -231,12 +245,20 @@ public class ShooterWheel extends MotorSubsystemWithFollowers<MotorInputsAutoLog
         nativeAccel * ffController.getKa();
         
 
-      Logger.recordOutput(getName() + "/error", Units.radiansPerSecondToRotationsPerMinute(profiledError)/60.0);
-      Logger.recordOutput(getName() + "/ffVolts", ffVolts);
-      Logger.recordOutput(getName() + "/SetpointAccel", filteredAccel);
-      Logger.recordOutput(getName() + "/maxAccel", maxAccelFromCurrent);
+      // Logger.recordOutput(getName() + "/error", Units.radiansPerSecondToRotationsPerMinute(profiledError)/60.0);
+      // Logger.recordOutput(getName() + "/ffVolts", ffVolts);
+      // Logger.recordOutput(getName() + "/SetpointAccel", filteredAccel);
+      // Logger.recordOutput(getName() + "/maxAccel", maxAccelFromCurrent);
   }
 
+  private double mpsToRps(double mps) {
+    double radius = getName() == "MainWheel" ? ShooterConstants.MAIN_WHEEL_DIAMETER/2.0 : ShooterConstants.HOOD_WHEEL_DIAMETER/2.0;
+    return mps/(2 * Math.PI * radius); 
+  }
+  private double rpsToMps(double rps) {
+    double radius = getName() == "MainWheel" ? ShooterConstants.MAIN_WHEEL_DIAMETER/2.0 : ShooterConstants.HOOD_WHEEL_DIAMETER/2.0;
+    return 2 * Math.PI * radius * rps;
+  }
 
   public void holdVelocity(DoubleSupplier velocitySetpointSupplier) {
     currentState = WheelStates.HOLD;
@@ -244,14 +266,15 @@ public class ShooterWheel extends MotorSubsystemWithFollowers<MotorInputsAutoLog
   }
 
   public boolean atVelocity() {
-    double targetVelocity = velocitySetpointSupplier.getAsDouble();
+    double targetVelocity = mpsToRps(velocitySetpointSupplier.getAsDouble());
     double currentVelocity = inputs.velocityUnitsPerSecond;
-    double tolerance = Math.min(0.15 * targetVelocity, 1); // 0.05
+    double tolerance = Math.max(0.20 * targetVelocity, 1); // 0.05
     if (targetVelocity < 1e-4) {
       tolerance = 1.0; 
     }
-    boolean atGoal = Math.abs(currentVelocity - targetVelocity) <= tolerance;
+    atGoal = Math.abs(currentVelocity - targetVelocity) <= tolerance;
     return atGoalTimer.calculate(atGoal);
+    // return atGoal;
   }
 
   // private void resetHold() {

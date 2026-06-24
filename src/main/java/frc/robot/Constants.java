@@ -58,7 +58,7 @@ public final class Constants {
   public static final double FIELD_LENGTH = AprilTagFieldLayout.loadField(AprilTagFields.kDefaultField).getFieldLength();
   public static final double FIELD_WIDTH = AprilTagFieldLayout.loadField(AprilTagFields.kDefaultField).getFieldWidth();
   public static final double POSE_BUFFER_SIZE = 1.2; // seconds
-  public static final double SHOOT_CLOSE_VELOCITY = 30.5; // m/s
+  public static final double SHOOT_CLOSE_VELOCITY = 8.5; // m/s
   // public static final double SHOOT_CLOSE_VELOCITY = 8.5; // m/s
   public static final double SHOOT_CLOSE_ANGLE = 79.0; // deg
 

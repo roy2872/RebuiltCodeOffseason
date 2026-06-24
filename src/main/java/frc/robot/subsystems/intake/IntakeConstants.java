@@ -14,7 +14,7 @@ public class IntakeConstants {
 
   public static final class IntakeRollerConstants {
 
-    public static final double ROLLER_VOLTAGE_INTAKE = 8.0;
+    public static final double ROLLER_VOLTAGE_INTAKE = -8.0;
 
     public static final SimpleFFConstants INTAKE_ROLLER_FF =
         switch (Constants.currentMode) {
@@ -48,8 +48,8 @@ public class IntakeConstants {
 
     // public static final double INTAKE_OPEN_ANGLE = Units.degreesToRadians(30); // TODO: tune angles
     // public static final double INTAKE_CLOSED_ANGLE = Units.degreesToRadians(80);
-    public static final double INTAKE_OPEN_ANGLE = 0.03;
-    public static final double INTAKE_CLOSED_ANGLE = 0.140; 
+    public static final double INTAKE_OPEN_ANGLE = 0.2;
+    public static final double INTAKE_CLOSED_ANGLE = 0.3; 
 
     // public static final double INTAKE_MIN_ANGLE = Units.degreesToRadians(0);
     // public static final double INTAKE_MAX_ANGLE = Units.degreesToRadians(90);
@@ -94,9 +94,9 @@ public class IntakeConstants {
           .sparkConfig
           .softLimit
           .forwardSoftLimitEnabled(true)
-          .forwardSoftLimit(0.14)
+          .forwardSoftLimit(0.3)
           .reverseSoftLimitEnabled(true)
-          .reverseSoftLimit(0.04); // TODO: may be the other way around
+          .reverseSoftLimit(0.2); // TODO: may be the other way around
 
       INTAKE_DEPLOY_CONFIG.unitToRotorRatio = 1.0; // TODO: set ratio
 

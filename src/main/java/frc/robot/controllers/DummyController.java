@@ -22,7 +22,7 @@ public class DummyController implements ControllerInterface {
 
   @Override
   public double xVelocityAnalog() {
-    return -controller.getRawAxis(0);
+    return controller.getRawAxis(0);
   }
 
   @Override

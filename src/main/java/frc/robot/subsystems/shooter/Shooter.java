@@ -214,7 +214,7 @@ public class Shooter extends SubsystemBase {
 
   /**
    * Runs the shooter wheels at the same velocity.
-   * @param shooterVelocity [rps]
+   * @param shooterVelocity [m/s]
    */
   public void runVelocity(DoubleSupplier shooterVelocity) {
     runVelocity(shooterVelocity, () -> shooterVelocity.getAsDouble()/2.0);
@@ -252,9 +252,9 @@ public class Shooter extends SubsystemBase {
   public boolean atVelocity() {
     return mainWheel.atVelocity() && hoodWheel.atVelocity();
   }
-  private double velocityToRPM(double velocityMetersPerSec, double diameterMeters) {
-    return (60 * velocityMetersPerSec) / (Math.PI * diameterMeters);
-  }
+  // private double velocityToRPM(double velocityMetersPerSec, double diameterMeters) {
+  //   return (60 * velocityMetersPerSec) / (Math.PI * diameterMeters);
+  // }
 }
 // package frc.robot.subsystems.shooter;
 
