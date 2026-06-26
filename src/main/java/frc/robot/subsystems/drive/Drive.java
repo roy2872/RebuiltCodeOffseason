@@ -416,27 +416,7 @@ public class Drive extends SubsystemBase {
         break;
 
       case AUTO_ALIGN:
-        if(autoAlignTarget == null) break;
-        autoAlignTarget =
-            autoAlignTarget != null ? autoAlignTarget : () -> new Pose2d(3, 3, new Rotation2d());
-
-        Translation2d distance =
-            autoAlignTarget.get().getTranslation().minus(RobotState.getInstance().getEstimatedPose().getTranslation());
-        double linearVelocity =
-            linearVelocityController.calculate(0, Math.hypot(distance.getX(), distance.getY()));
-        linearVelocity = Math.min(linearVelocity, maxAutoAlignVelocity);
-        Translation2d linearVelocityTranslation =
-            new Translation2d(
-                linearVelocity, new Rotation2d(Math.atan2(distance.getY(), distance.getX())));
-        double rot =
-            rotationController.calculate(
-                (RobotState.getInstance().getEstimatedPose().getRotation().getDegrees() % 360 + 360)
-                    % 360,
-                (autoAlignTarget.get().getRotation().getDegrees() % 360 + 360) % 360);
-        rot = Math.signum(rot) * Math.min(Math.abs(rot), maxAutoAlignAngularVelocity);
-        runVelocityFieldRelative(
-            new ChassisSpeeds(
-                linearVelocityTranslation.getX(), linearVelocityTranslation.getY(), rot));
+        autoAlign();
         break;
 
       case AUTO_ALIGN_ANGLE:
@@ -689,6 +669,53 @@ public class Drive extends SubsystemBase {
             new ChassisSpeeds(
                 0, 0, rot));
   }
+
+  // Ensure this is called in your constructor or initialization to fix the angle wrapping issue:
+// rotationController.enableContinuousInput(0, 360);
+
+public void autoAlign() {
+    // 1. Safe Supplier check (ensures the supplier itself and its provided value aren't null)
+    if (autoAlignTarget == null || autoAlignTarget.get() == null) {
+        return; // Use 'return' if this is a standard method, or 'break' if inside a loop
+    }
+
+    Pose2d targetPose = autoAlignTarget.get();
+    Pose2d currentPose = RobotState.getInstance().getEstimatedPose();
+
+    System.out.println("Auto align target: " + targetPose.toString());
+
+    // 2. Calculate distance translation
+    Translation2d distance = targetPose.getTranslation().minus(currentPose.getTranslation());
+    double currentDistance = Math.hypot(distance.getX(), distance.getY());
+
+    // 3. Corrected PID arguments: calculate(measurement, setpoint)
+    // We measure the current distance, and our target goal is 0.
+    double linearVelocity = linearVelocityController.calculate(currentDistance, 0);
+    linearVelocity = Math.min(linearVelocity, maxAutoAlignVelocity);
+
+    Translation2d linearVelocityTranslation = new Translation2d(
+        linearVelocity, 
+        new Rotation2d(Math.atan2(distance.getY(), distance.getX()))
+    );
+
+    // 4. Cleaned up rotation angles (Ensure continuous input is enabled on the controller)
+    double currentAngle = (currentPose.getRotation().getDegrees() % 360 + 360) % 360;
+    double targetAngle = (targetPose.getRotation().getDegrees() % 360 + 360) % 360;
+
+    double rot = rotationController.calculate(currentAngle, targetAngle);
+    
+    // 5. Clean clamping using WPILib MathUtil
+    rot = edu.wpi.first.math.MathUtil.clamp(rot, -maxAutoAlignAngularVelocity, maxAutoAlignAngularVelocity);
+
+    // 6. Drive
+    runVelocityFieldRelative(
+        new ChassisSpeeds(
+            linearVelocityTranslation.getX(), 
+            linearVelocityTranslation.getY(), 
+            rot
+        )
+    );
+}
 
   private Translation2d getLinearVelocityFromJoysticks(double x, double y) {
     // Apply deadband

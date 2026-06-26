@@ -16,6 +16,7 @@ package frc.robot;
 import org.ironmaple.simulation.SimulatedArena;
 import org.ironmaple.simulation.drivesims.SwerveDriveSimulation;
 import org.littletonrobotics.junction.Logger;
+import org.littletonrobotics.junction.networktables.LoggedDashboardChooser;
 
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
@@ -32,9 +33,12 @@ import frc.lib.util.AllianceFlipping;
 import frc.lib.util.TableLoader;
 import frc.robot.SuperStructure.StructureIntakeStates;
 import frc.robot.SuperStructure.SuperStructureStates;
+import frc.robot.autonomous.DepotAuto;
 import frc.robot.controllers.ControllerInterface;
 import frc.robot.controllers.DummyController;
 import frc.robot.controllers.SimulationController;
+import frc.robot.controllers.SingleXboxController;
+import frc.robot.controllers.TwoControllers;
 import frc.robot.generated.TunerConstants;
 import frc.robot.subsystems.beltDrive.BeltDrive;
 import frc.robot.subsystems.beltDrive.BeltDriveConstants;
@@ -57,6 +61,7 @@ import frc.robot.subsystems.shooter.ShooterConstants;
 import frc.robot.subsystems.vision.Vision;
 import frc.robot.subsystems.vision.VisionConstants;
 import frc.robot.subsystems.vision.VisionIO;
+import frc.robot.subsystems.vision.VisionIOLimelight;
 import frc.robot.subsystems.vision.VisionIOPhoton;
 import frc.robot.subsystems.vision.VisionIOPhotonSim;
 /**
@@ -85,7 +90,7 @@ public class RobotContainer {
   private final ControllerInterface controller;
 
   // Dashboard inputs
-  // private final LoggedDashboardChooser<Command> autoChooser;
+  private final LoggedDashboardChooser<Command> autoChooser;
 
   /** The container for the robot. Contains subsystems, OI devices, and commands. */
   public RobotContainer() {
@@ -95,8 +100,8 @@ public class RobotContainer {
     switch (Constants.currentMode) {
       case REAL:
         // Real robot, instantiate hardware IO implementations
-        controller = new DummyController();
-        // controller = new TwoControllers();
+        // controller = new twoco();
+        controller = new TwoControllers();
         drive =
             new Drive(
                 new GyroIONavX(),
@@ -141,11 +146,12 @@ public class RobotContainer {
         vision =
             new Vision(
                 robotState::addVisionObservation,
-                new VisionIO[] {new VisionIOPhoton("BLcamera", VisionConstants.robotToBLcamera)
+                new VisionIO[] {
+                  // new VisionIOPhoton("BLcamera", VisionConstants.robotToBLcamera)
                   
-                  ,
-                  new VisionIOPhoton("BRcamera", VisionConstants.robotToBRcamera),
-                  /*new VisionIOLimelight("limelight-tsachi", RobotState.getInstance()::getYaw)*/
+                //   ,
+                //   new VisionIOPhoton("BRcamera", VisionConstants.robotToBRcamera),
+                  new VisionIOLimelight("limelight-tsachi", () -> RobotState.getInstance().getEstimatedPose().getRotation())
                 });
         break;
 
@@ -261,10 +267,9 @@ public class RobotContainer {
             beltDrive, drive, hood, intake, leds, shooter, vision);
 
     // Set up auto routines
-    // autoChooser = new LoggedDashboardChooser<>("Auto Choices");
-    // autoChooser.addDefaultOption("Human Player Auto", new HumanPlayerAuto(beltDrive, drive, hood, hopper, intake, leds, shooter));
-    // autoChooser.addOption("Right Middle Fuel Auto", new RightMiddleFuelAuto(beltDrive, drive, hood, hopper, intake, leds, shooter, false));
-
+    autoChooser = new LoggedDashboardChooser<>("Auto Choices");
+    autoChooser.addDefaultOption("Do Nothing", Commands.print("Doing nothing"));
+    autoChooser.addOption("Depot Middle Auto", new DepotAuto(beltDrive, drive, hood, intake, leds, shooter));
     // Configure the button bindings
     configureButtonBindings();
   }
@@ -289,8 +294,8 @@ public class RobotContainer {
     controller.intakeButton().whileFalse(structure.setIntakeStateCommand(StructureIntakeStates.CLOSED));
     controller.fetchButton().onTrue(structure.fetchButtonCommand());
     // controller.fetchButton().onFalse(structure.setWantedStateCommand(SuperStructureStates.TRAVEL));
-    // controller.purgeIntakeButton().onTrue(structure.purgeIntakeButtonTrueCommand());
-    // controller.purgeIntakeButton().onFalse(structure.purgeIntakeButtonFalseCommand());
+    controller.purgeIntakeButton().onTrue(structure.purgeIntakeButtonTrueCommand());
+    controller.purgeIntakeButton().onFalse(structure.purgeIntakeButtonFalseCommand());
     // controller.intakeButton().onTrue(Commands.run(() ->intake.setState(IntakeStates.SHUFFLE), intake));
     // controller.intakeButton().onFalse(Commands.run(() -> intake.setState(IntakeStates.CLOSED), intake));
     // controller.intakeButton().onTrue(Commands.run(() -> intake.setState(IntakeStates.CLOSED), intake));
@@ -304,8 +309,8 @@ public class RobotContainer {
    * @return the command to run in autonomous
    */
   public Command getAutonomousCommand() {
-    // return autoChooser.get();
-    return Commands.print("aodkpoakf");
+    return autoChooser.get();
+    // return Commands.print("aodkpoakf");
   }
 
   public void periodic() {

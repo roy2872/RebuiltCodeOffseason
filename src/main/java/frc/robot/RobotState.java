@@ -76,6 +76,8 @@ public class RobotState {
   @AutoLogOutput private Pose2d odometryPose = Pose2d.kZero;
   @AutoLogOutput private Pose2d estimatedPose = Pose2d.kZero;
 
+  private double lastLimelightYawUpdate = 0.0;
+
   private final TimeInterpolatableBuffer<Pose2d> poseBuffer =
       TimeInterpolatableBuffer.createBuffer(POSE_BUFFER_SIZE);
 
@@ -324,6 +326,13 @@ public class RobotState {
   }
 
   public void periodic() {
+    if(bestLimelightYawObservation != null && (lastLimelightYawUpdate - RobotController.getFPGATime() * (1e-6)) < 5.0) {
+      var vel = getFieldVelocity();
+      if(/*(RobotController.getFPGATime() * (1e-6) - bestLimelightYawObservation.timestamp < 0.3)*/ true && 
+        (Math.hypot(vel.vxMetersPerSecond, vel.vyMetersPerSecond) < 1.0) && vel.omegaRadiansPerSecond < 1.0) {
+          resetPose(new Pose2d(estimatedPose.getMeasureX(), estimatedPose.getMeasureY(), bestLimelightYawObservation.yaw));
+        }
+    }
     // fuelPoses.removeIf(
     //     (fuelPose) ->
     //         Timer.getFPGATimestamp() - fuelPose.timestamp()
@@ -384,7 +393,7 @@ public class RobotState {
     return VecBuilder.fill(
         shootingData.get(0, 0), // hood angle
         shootingData.get(1, 0), // flywheel velocity
-        getAngleToHub().getDegrees() // robot angle
+        getAngleToHub().plus(Rotation2d.k180deg).getDegrees() // robot angle
     );
   }
 

@@ -14,11 +14,11 @@ import frc.robot.Constants;
 
 public class HoodConstants {
 
-  public static final double HOOD_STARTING_ANGLE = 90; // [deg]
+  public static final double HOOD_STARTING_ANGLE = 88; // [deg]
   public static final double HOOD_MIN_ANGLE = HOOD_STARTING_ANGLE-26; 
   public static final double HOOD_MAX_ANGLE = HOOD_STARTING_ANGLE-2; 
   public static final double BOOT_SEQUENCE_TIME = 2.0;
-  public static final double BOOT_SEQUENCE_VOLTAGE = 1.0; // [V]
+  public static final double BOOT_SEQUENCE_VOLTAGE = 0.5; // [V]
   public static final double HOOD_CLOSE_ANGLE = 85.0; // [deg]
   
   public static final double HOOD_ANGLE_TOLERANCE = 0.3; // [deg]

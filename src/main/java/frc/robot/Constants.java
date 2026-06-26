@@ -55,15 +55,15 @@ public final class Constants {
   }
 
   public static final double CYCLE_TIME = 0.02;
-  public static final double FIELD_LENGTH = AprilTagFieldLayout.loadField(AprilTagFields.kDefaultField).getFieldLength();
-  public static final double FIELD_WIDTH = AprilTagFieldLayout.loadField(AprilTagFields.kDefaultField).getFieldWidth();
+  public static final double FIELD_LENGTH = AprilTagFieldLayout.loadField(AprilTagFields.k2026RebuiltAndymark).getFieldLength();
+  public static final double FIELD_WIDTH = AprilTagFieldLayout.loadField(AprilTagFields.k2026RebuiltAndymark).getFieldWidth();
   public static final double POSE_BUFFER_SIZE = 1.2; // seconds
-  public static final double SHOOT_CLOSE_VELOCITY = 8.5; // m/s
+  public static final double SHOOT_CLOSE_VELOCITY = 9.0; // m/s
   // public static final double SHOOT_CLOSE_VELOCITY = 8.5; // m/s
-  public static final double SHOOT_CLOSE_ANGLE = 79.0; // deg
+  public static final double SHOOT_CLOSE_ANGLE = 86.0; // deg
 
-  public static final double FETCH_VELOCITY = 12.0; // m/s
-  public static final double FETCH_ANGLE = 70.0; // deg
+  public static final double FETCH_VELOCITY = 15.0; // m/s
+  public static final double FETCH_ANGLE = 80.0; // deg
 
   public static final class FieldConstants {
 

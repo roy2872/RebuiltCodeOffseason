@@ -24,8 +24,8 @@ public class FetchCommand extends SequentialCommandGroup {
       Commands.parallel(
         Commands.runOnce(() -> drive.setStateAutoAlignAngle(() -> AllianceFlipping.apply(Rotation2d.kZero)), drive),
         Commands.runOnce(() -> shooter.runVelocity(() -> Constants.FETCH_VELOCITY), shooter),
-        Commands.runOnce(() -> hood.setTargetAngle(() -> Constants.FETCH_ANGLE), hood),
-        Commands.waitUntil(() -> shooter.atVelocity() && hood.atSetpoint() && drive.isAtAutoAlignAngleSetpoint(1.0))
+        Commands.runOnce(() -> hood.setTargetAngle(() -> Constants.FETCH_ANGLE), hood))
+          .raceWith(Commands.waitUntil(() -> shooter.atVelocity() && hood.atSetpoint()) // TODO: can calculate needed accuracy for drive
           .andThen(Commands.runOnce(() -> beltDrive.setState(BeltDriveStates.ACTIVE), beltDrive)
           .alongWith(
             // Commands.runOnce(() -> hopper.setState(HopperStates.ACTIVE), hopper).alongWith(

@@ -162,6 +162,7 @@ public class Hood extends MotorSubsystem<MotorInputsAutoLogged, MotorIO> {
           resetPosition(HOOD_STARTING_ANGLE);
           bootSequenceTimer.reset();
           bootSequenceTimer.stop();
+          currentState = HoodStates.IDLE;
         }
         else super.setVoltageOutput(BOOT_SEQUENCE_VOLTAGE);
       }
@@ -171,10 +172,13 @@ public class Hood extends MotorSubsystem<MotorInputsAutoLogged, MotorIO> {
 
   public void setState(HoodStates wantedState) {
     previousState = currentState;
-    if(wantedState == HoodStates.BOOT_SEQUENCE && currentState != HoodStates.BOOT_SEQUENCE) 
+    if(wantedState == HoodStates.BOOT_SEQUENCE && currentState != HoodStates.BOOT_SEQUENCE) {
+      currentState = HoodStates.BOOT_SEQUENCE;
       startBootSequence();
-    else if (currentState == HoodStates.BOOT_SEQUENCE && wantedState != HoodStates.BOOT_SEQUENCE) 
+    }
+    else if (currentState == HoodStates.BOOT_SEQUENCE && wantedState != HoodStates.BOOT_SEQUENCE) {
       return;
+    }
     if (currentState != wantedState) currentState = wantedState;
   }
 
