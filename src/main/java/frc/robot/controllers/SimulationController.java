@@ -62,6 +62,6 @@ public class SimulationController implements ControllerInterface {
 
   @Override
   public Trigger xLockOverride() {
-    return new Trigger(() -> false);
+    return new Trigger(() -> controller.getRawButton(8));
   }
 }

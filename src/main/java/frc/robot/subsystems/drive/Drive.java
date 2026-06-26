@@ -424,9 +424,10 @@ public class Drive extends SubsystemBase {
         break;
       
       case X_LOCK:
-        for (int i=0; i<4; i++) { // could need tuning
-          modules[i].runSetpoint(new SwerveModuleState(0, Rotation2d.fromDegrees(45 + 90 * i)));
-        }
+        modules[0].runSetpoint(new SwerveModuleState(0, Rotation2d.fromDegrees(45 + 90 * 0)));
+        modules[1].runSetpoint(new SwerveModuleState(0, Rotation2d.fromDegrees(45 + 90 * 1)));
+        modules[2].runSetpoint(new SwerveModuleState(0, Rotation2d.fromDegrees(45 + 90 * 3)));
+        modules[3].runSetpoint(new SwerveModuleState(0, Rotation2d.fromDegrees(45 + 90 * 2)));
         break;
         
       default:
