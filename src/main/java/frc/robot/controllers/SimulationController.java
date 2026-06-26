@@ -36,6 +36,11 @@ public class SimulationController implements ControllerInterface {
   }
 
   @Override
+  public Trigger closeIntakeButton() {
+    return new Trigger(() -> controller.getRawButton(6));
+  }
+
+  @Override
   public Trigger shootCloseButton() {
     return new Trigger(() -> controller.getRawButton(7));
   }

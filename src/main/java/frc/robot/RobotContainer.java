@@ -96,6 +96,7 @@ public class RobotContainer {
   public RobotContainer() {
     // SimulatedArena.overrideInstance(new Arena2026Rebuilt(false));
     Constants.RobotState.shooterTableData = TableLoader.loadFromCSV("shootingSolutions.csv");
+    Constants.RobotState.fetchingTableData = TableLoader.loadDoubleMapFromCSV("fetchingSolutions.csv");
     robotState = RobotState.getInstance();
     switch (Constants.currentMode) {
       case REAL:
@@ -290,10 +291,9 @@ public class RobotContainer {
     ));
     controller.shootCloseButton().onTrue(structure.shootCloseButtonCommand());
     controller.shootButton().onTrue(structure.shootButtonCommand());
-    controller.intakeButton().whileTrue(structure.setIntakeStateCommand(StructureIntakeStates.INTAKING));
-    controller.intakeButton().whileFalse(structure.setIntakeStateCommand(StructureIntakeStates.CLOSED));
+    controller.intakeButton().onTrue(structure.intakeButtonCommand());
+    controller.closeIntakeButton().onTrue(structure.closeIntakeButtonCommand());
     controller.fetchButton().onTrue(structure.fetchButtonCommand());
-    // controller.fetchButton().onFalse(structure.setWantedStateCommand(SuperStructureStates.TRAVEL));
     controller.purgeIntakeButton().onTrue(structure.purgeIntakeButtonTrueCommand());
     controller.purgeIntakeButton().onFalse(structure.purgeIntakeButtonFalseCommand());
     // controller.intakeButton().onTrue(Commands.run(() ->intake.setState(IntakeStates.SHUFFLE), intake));

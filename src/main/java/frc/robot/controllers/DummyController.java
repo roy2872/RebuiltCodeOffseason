@@ -41,6 +41,11 @@ public class DummyController implements ControllerInterface {
   }
 
   @Override
+  public Trigger closeIntakeButton() {
+    return new Trigger(() -> controller.getRawButton(4));
+  }
+
+  @Override
   public Trigger shootButton() {
     return new Trigger(() -> controller.getRawButton(2));
   }

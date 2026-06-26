@@ -448,6 +448,20 @@ public class RobotState {
     );
   }
 
+  public Vector<N3> getFetchingInfo() {
+    double input = getFetchingDistance();
+    Double fetchVel = fetchingTableData.get(input);
+    return VecBuilder.fill(
+        FETCHING_ANGLE, // hood angle
+        fetchVel == null ? 10.0 : fetchVel.doubleValue(), // flywheel velocity
+        AllianceFlipping.apply(Rotation2d.kZero).getDegrees() // robot angle
+    );
+  }
+
+  public double getFetchingDistance() {
+    return Math.abs(getEstimatedPose().getX() - AllianceFlipping.applyX(FETCHING_TARGET_LINE));
+  }
+
   public void addLimelightYawObservation(LimelightYawObservation observation) {
     bestLimelightYawObservation = observation;
   }

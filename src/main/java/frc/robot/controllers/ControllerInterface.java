@@ -14,6 +14,8 @@ public interface ControllerInterface {
 
   public Trigger intakeButton();
 
+  public Trigger closeIntakeButton();
+
   public Trigger shootButton();
 
   public Trigger shootCloseButton();

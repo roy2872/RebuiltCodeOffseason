@@ -170,7 +170,7 @@ public class SuperStructure extends SubsystemBase {
 
       case IDLE -> {
         if(shouldPurgeIntake) intake.setState(Intake.IntakeStates.PURGE);
-        else intake.setState(Intake.IntakeStates.IDLE);
+        else intake.setState(Intake.IntakeStates.OPEN);
       }
 
       case CLOSED -> {
@@ -286,8 +286,13 @@ public class SuperStructure extends SubsystemBase {
   }
 
   public Command intakeButtonCommand() {
-    return Commands.either(setIntakeStateCommand(StructureIntakeStates.CLOSED), 
+    return Commands.either(setIntakeStateCommand(StructureIntakeStates.IDLE), 
       setIntakeStateCommand(StructureIntakeStates.INTAKING), () -> intakeState == StructureIntakeStates.INTAKING);
+  }
+
+  public Command closeIntakeButtonCommand() {
+    return Commands.either(setIntakeStateCommand(StructureIntakeStates.IDLE), 
+      setIntakeStateCommand(StructureIntakeStates.CLOSED), () -> intakeState == StructureIntakeStates.CLOSED);
   }
 
   public Command fetchButtonCommand() {

@@ -39,6 +39,11 @@ public class TwoControllers implements ControllerInterface {
   }
 
   @Override
+  public Trigger closeIntakeButton() {
+    return new Trigger(() -> operatorController.getRawButton(5));
+  }
+
+  @Override
   public Trigger shootButton() {
     return new Trigger(() -> operatorController.getRawButton(8));
   }
