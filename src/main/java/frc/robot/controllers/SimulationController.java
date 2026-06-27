@@ -31,6 +31,11 @@ public class SimulationController implements ControllerInterface {
   }
 
   @Override
+  public Trigger alignToBumpButton() {
+    return new Trigger(() -> controller.getRawButton(10));
+  }
+
+  @Override
   public Trigger intakeButton() {
     return new Trigger(() -> controller.getRawButton(1));
   }

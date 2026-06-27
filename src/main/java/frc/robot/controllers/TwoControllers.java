@@ -34,6 +34,11 @@ public class TwoControllers implements ControllerInterface {
   }
 
   @Override
+  public Trigger alignToBumpButton() {
+    return mainController.alignToBumpButton();
+  }
+
+  @Override
   public Trigger intakeButton() {
     return operatorController.intakeButton();
   }
