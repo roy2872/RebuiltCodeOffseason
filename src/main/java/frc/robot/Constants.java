@@ -64,7 +64,7 @@ public final class Constants {
   // public static final double SHOOT_CLOSE_VELOCITY = 8.5; // m/s
   public static final double SHOOT_CLOSE_ANGLE = 81.0; // deg
 
-  public static final double FETCH_VELOCITY = 15.0; // m/s
+  public static final double FETCH_VELOCITY = 13.7; // m/s
   public static final double FETCH_ANGLE = 52.0; // deg
 
   public static final class FieldConstants {

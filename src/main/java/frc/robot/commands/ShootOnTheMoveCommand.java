@@ -4,6 +4,10 @@
 
 package frc.robot.commands;
 
+import java.util.function.Supplier;
+
+import edu.wpi.first.math.Vector;
+import edu.wpi.first.math.numbers.N3;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.SequentialCommandGroup;
 import frc.robot.RobotState;
@@ -20,21 +24,19 @@ import frc.robot.subsystems.shooter.Shooter;
 
 public class ShootOnTheMoveCommand extends SequentialCommandGroup {
 
+  private final Supplier<Vector<N3>> shootingDataSupplier;
+
   public ShootOnTheMoveCommand(
       BeltDrive beltDrive, Drive drive, Hood hood, Leds leds, Shooter shooter) {
-    addRequirements(getRequirements());
+    shootingDataSupplier = () -> RobotState.getInstance().getShootOnTheMoveScoringInfo();
     addCommands(
       Commands.parallel(
-        Commands.run(() -> drive.setState(DriveStates.SHOOT_ON_THE_MOVE), drive),
-        Commands.run(() -> shooter.runVelocity(() -> RobotState.getInstance().getShootOnTheMoveScoringInfo().get(1)), shooter),
-        Commands.run(() -> hood.setTargetAngle(() -> RobotState.getInstance().getShootOnTheMoveScoringInfo().get(0)), hood),
-        Commands.waitUntil(() -> shooter.atVelocity() && hood.atSetpoint() && drive.isAtShootOnTheMoveSetpoint(1.0)) // TODO: can calculate needed accuracy for drive
-          .andThen(Commands.runOnce(() -> beltDrive.setState(BeltDriveStates.ACTIVE), beltDrive)
-          .alongWith(
-          // Commands.runOnce(() -> hopper.setState(HopperStates.ACTIVE), hopper).alongWith(
-            Commands.runOnce(() -> leds.setState(ledsStates.PURPLE), leds))
-            // )
-      )
-    ));
+        Commands.runOnce(() -> drive.setState(DriveStates.SHOOT_ON_THE_MOVE), drive),
+        Commands.runOnce(() -> hood.setTargetAngle(() -> shootingDataSupplier.get().get(0)), hood),
+        Commands.runOnce(() -> shooter.runVelocity(() -> shootingDataSupplier.get().get(1)),  shooter)),
+        Commands.waitUntil(() -> shooter.atVelocity() && hood.atSetpoint()), // TODO: can calculate needed accuracy for drive
+        Commands.runOnce(() -> beltDrive.setState(BeltDriveStates.ACTIVE), beltDrive),
+        Commands.runOnce(() -> leds.setState(ledsStates.AQUA), leds)
+    );
   }
 }

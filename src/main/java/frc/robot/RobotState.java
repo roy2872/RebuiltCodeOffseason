@@ -448,6 +448,11 @@ public class RobotState {
     );
   }
 
+      /**
+   * 
+   * 
+   * @return a vector that consists of {Hood angle[deg], Flywheel velocity[m/s], Robot angle[deg]}
+   */
   public Vector<N3> getFetchingInfo() {
     double input = getFetchingDistance();
     Double fetchVel = fetchingTableData.get(input);

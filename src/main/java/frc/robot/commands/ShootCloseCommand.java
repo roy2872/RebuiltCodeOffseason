@@ -27,17 +27,12 @@ public class ShootCloseCommand extends SequentialCommandGroup {
     // addRequirements(getRequirements());
     addCommands(
       Commands.parallel(
-        Commands.run(() -> drive.setState(DriveStates.IDLE), drive),
-        Commands.run(() -> hood.setTargetAngle(() -> Constants.SHOOT_CLOSE_ANGLE), hood)),
-        Commands.run(() -> shooter.runVelocity(() -> Constants.SHOOT_CLOSE_VELOCITY),  shooter)
-          .raceWith(Commands.waitUntil(() -> shooter.atVelocity() && hood.atSetpoint())) // TODO: can calculate needed accuracy for drive
-          .andThen(Commands.runOnce(() -> beltDrive.setState(BeltDriveStates.ACTIVE), beltDrive)
-          .alongWith(
-            // Commands.runOnce(() -> hopper.setState(HopperStates.ACTIVE), hopper).alongWith(
-              Commands.runOnce(() -> leds.setState(ledsStates.PURPLE), leds)
-              // )
-          )
-      )
+        Commands.runOnce(() -> drive.setState(DriveStates.IDLE), drive),
+        Commands.runOnce(() -> hood.setTargetAngle(() -> Constants.SHOOT_CLOSE_ANGLE), hood),
+        Commands.runOnce(() -> shooter.runVelocity(() -> Constants.SHOOT_CLOSE_VELOCITY),  shooter)),
+        Commands.waitUntil(() -> shooter.atVelocity() && hood.atSetpoint()), // TODO: can calculate needed accuracy for drive
+        Commands.runOnce(() -> beltDrive.setState(BeltDriveStates.ACTIVE), beltDrive),
+        Commands.runOnce(() -> leds.setState(ledsStates.AQUA), leds)
     );
   }
 }

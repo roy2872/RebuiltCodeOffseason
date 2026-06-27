@@ -1,39 +1,34 @@
 package frc.robot.commands;
 
-import java.util.function.Supplier;
-import edu.wpi.first.math.Vector;
 import edu.wpi.first.math.geometry.Rotation2d;
-import edu.wpi.first.math.numbers.N3;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.SequentialCommandGroup;
 import frc.lib.util.AllianceFlipping;
 import frc.robot.Constants;
-import frc.robot.RobotState;
 import frc.robot.subsystems.beltDrive.BeltDrive;
 import frc.robot.subsystems.beltDrive.BeltDrive.BeltDriveStates;
 import frc.robot.subsystems.drive.Drive;
+import frc.robot.subsystems.drive.Drive.DriveStates;
 import frc.robot.subsystems.hood.Hood;
 import frc.robot.subsystems.leds.Leds;
 import frc.robot.subsystems.leds.Leds.ledsStates;
 import frc.robot.subsystems.shooter.Shooter;
 
-public class FetchCommand extends SequentialCommandGroup {
-  private final Supplier<Vector<N3>> fetchingDataSupplier;
-    public FetchCommand(
+public class ManualFetchCommand extends SequentialCommandGroup {
+    public ManualFetchCommand(
         BeltDrive beltDrive,
         Drive drive,
         Hood hood,
         Leds leds,
         Shooter shooter) {
-      fetchingDataSupplier = () -> RobotState.getInstance().getFetchingInfo();
           addCommands(
       Commands.parallel(
         Commands.runOnce(() -> drive.setStateAutoAlignAngle(() -> AllianceFlipping.apply(Rotation2d.kZero)), drive),
-        Commands.runOnce(() -> hood.setTargetAngle(() -> fetchingDataSupplier.get().get(0)), hood),
-        Commands.runOnce(() -> shooter.runVelocity(() -> fetchingDataSupplier.get().get(1)),  shooter)),
-        Commands.waitUntil(() -> shooter.atVelocity() && hood.atSetpoint() && drive.isAtAutoAlignAngleSetpoint(2.0)),
+        Commands.runOnce(() -> hood.setTargetAngle(() -> Constants.FETCH_ANGLE), hood),
+        Commands.runOnce(() -> shooter.runVelocity(() -> Constants.FETCH_VELOCITY),  shooter)),
+        Commands.waitUntil(() -> shooter.atVelocity() && hood.atSetpoint()), // TODO: can calculate needed accuracy for drive
         Commands.runOnce(() -> beltDrive.setState(BeltDriveStates.ACTIVE), beltDrive),
         Commands.runOnce(() -> leds.setState(ledsStates.AQUA), leds)
-    );
+        );
     }
 }
