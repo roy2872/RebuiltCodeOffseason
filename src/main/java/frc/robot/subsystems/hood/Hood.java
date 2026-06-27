@@ -55,6 +55,8 @@ public class Hood extends MotorSubsystem<MotorInputsAutoLogged, MotorIO> {
   @AutoLogOutput(key = "Hood/currentState")
   private HoodStates currentState = HoodStates.IDLE;
 
+  private HoodStates previousState = HoodStates.IDLE;
+
   @AutoLogOutput(key = "Hood/targetAngle")
   private DoubleSupplier targetAngle = ()->0.0;
 
@@ -154,12 +156,13 @@ public class Hood extends MotorSubsystem<MotorInputsAutoLogged, MotorIO> {
           targetAngle.getAsDouble(), MOTOR_FF.calculate(super.inputs.unitPosition, super.inputs.velocityUnitsPerSecond));
       case CLOSED -> super.setMaxMotionSetpointPosition(HOOD_MAX_ANGLE, HOOD_ANGLE_TOLERANCE);
       case BOOT_SEQUENCE -> {
-        bootSequenceTimer.start();
+        if(previousState != currentState) bootSequenceTimer.start();
         if(bootSequenceTimer.hasElapsed(BOOT_SEQUENCE_TIME)) {
           hasBeenReset = true;
           resetPosition(HOOD_STARTING_ANGLE);
           bootSequenceTimer.reset();
           bootSequenceTimer.stop();
+          currentState = HoodStates.IDLE;
         }
         else super.setVoltageOutput(BOOT_SEQUENCE_VOLTAGE);
       }
@@ -168,10 +171,14 @@ public class Hood extends MotorSubsystem<MotorInputsAutoLogged, MotorIO> {
   }
 
   public void setState(HoodStates wantedState) {
-    if(wantedState == HoodStates.BOOT_SEQUENCE && currentState != HoodStates.BOOT_SEQUENCE) 
+    previousState = currentState;
+    if(wantedState == HoodStates.BOOT_SEQUENCE && currentState != HoodStates.BOOT_SEQUENCE) {
+      currentState = HoodStates.BOOT_SEQUENCE;
       startBootSequence();
-    else if (currentState == HoodStates.BOOT_SEQUENCE && wantedState != HoodStates.BOOT_SEQUENCE) 
+    }
+    else if (currentState == HoodStates.BOOT_SEQUENCE && wantedState != HoodStates.BOOT_SEQUENCE) {
       return;
+    }
     if (currentState != wantedState) currentState = wantedState;
   }
 

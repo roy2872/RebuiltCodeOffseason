@@ -14,9 +14,7 @@ public interface ControllerInterface {
 
   public Trigger intakeButton();
 
-  public Trigger openClimbButton();
-
-  public Trigger closeClimbButton();
+  public Trigger closeIntakeButton();
 
   public Trigger shootButton();
 
@@ -25,4 +23,6 @@ public interface ControllerInterface {
   public Trigger purgeIntakeButton();
 
   public Trigger fetchButton();
+
+  public Trigger xLockOverride();
 }

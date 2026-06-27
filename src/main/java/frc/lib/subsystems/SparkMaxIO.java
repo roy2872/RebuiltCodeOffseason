@@ -65,7 +65,7 @@ public class SparkMaxIO implements MotorIO {
   @Override
   public void updateInputs(MotorInputs inputs) {
     sparkStickyFault = false;
-
+    
     if (config.usingAbsoluteEncoder)
       if (absoluteEncoderConnected())
         rotorOffset =

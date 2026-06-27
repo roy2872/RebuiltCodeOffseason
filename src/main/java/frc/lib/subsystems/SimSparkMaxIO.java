@@ -1,10 +1,14 @@
 package frc.lib.subsystems;
 
 import com.revrobotics.sim.SparkMaxSim;
+
+import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.system.plant.DCMotor;
 import edu.wpi.first.math.system.plant.LinearSystemId;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.Notifier;
+import edu.wpi.first.wpilibj.RobotController;
+import edu.wpi.first.wpilibj.simulation.BatterySim;
 import edu.wpi.first.wpilibj.simulation.DCMotorSim;
 import edu.wpi.first.wpilibj.simulation.RoboRioSim;
 import java.util.Optional;
@@ -55,31 +59,44 @@ public class SimSparkMaxIO extends SparkMaxIO {
   }
 
   public void updateSim() {
-    double simVoltage = motor.getAppliedOutput() * RoboRioSim.getVInVoltage();
-    simVoltage *= invertVoltage ? -1 : 1;
-    sim.setInput(simVoltage);
-    Logger.recordOutput(config.name + "/Sim/SimVoltage", simVoltage);
+    
+    double currentRotorVelocityRadPerSec = sim.getAngularVelocityRadPerSec();
+    double currentRotorRPM = Units.radiansToRotations(currentRotorVelocityRadPerSec) / getSimRatio() * 60.0;
 
+    
+    double vBus = RoboRioSim.getVInVoltage();
+
+    sparkMaxSim.iterate(currentRotorRPM, vBus, simPeriod);
+
+    
+    double simVoltage = sparkMaxSim.getAppliedOutput() * vBus;
+    simVoltage *= invertVoltage ? -1.0 : 1.0;
+    simVoltage = MathUtil.clamp(simVoltage, -12.0, 12.0);
+
+    
+    sim.setInput(simVoltage);
     sim.update(simPeriod);
 
+    // Apply overrides if active
     overridePos.ifPresent(aDouble -> sim.setAngle(aDouble));
     overrideRPS.ifPresent(aDouble -> sim.setAngularVelocity(aDouble));
 
+    
     double simPositionRads = sim.getAngularPositionRad();
-    Logger.recordOutput(config.name + "/Sim/SimulatorPositionRadians", simPositionRads);
-
-    // Mutate rotor position
     double rotorPosition = Units.radiansToRotations(simPositionRads) / getSimRatio();
     lastRotations.set(rotorPosition);
-    sparkMaxSim.setPosition(rotorPosition);
-    Logger.recordOutput(config.name + "/Sim/setRawRotorPosition", rotorPosition);
+    
+    double nextRotorVelRPS = Units.radiansToRotations(sim.getAngularVelocityRadPerSec()) / getSimRatio();
+    lastRPS.set(nextRotorVelRPS);
 
-    // Mutate rotor vel
-    double rotorVel = Units.radiansToRotations(sim.getAngularVelocityRadPerSec()) / getSimRatio();
-    lastRPS.set(rotorVel);
-    sparkMaxSim.setVelocity(rotorVel);
-    Logger.recordOutput(
-        config.name + "/Sim/SimulatorVelocityRadS", sim.getAngularVelocityRadPerSec());
+    
+    RoboRioSim.setVInVoltage(
+        BatterySim.calculateDefaultBatteryLoadedVoltage(sim.getCurrentDrawAmps())
+    );
+
+    Logger.recordOutput(config.name + "/Sim/SimVoltage", simVoltage);
+    Logger.recordOutput(config.name + "/Sim/SimulatorPositionRadians", simPositionRads);
+    Logger.recordOutput(config.name + "/Sim/SimulatorVelocityRadS", sim.getAngularVelocityRadPerSec());
   }
 
   /**

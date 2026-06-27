@@ -7,9 +7,11 @@ package frc.robot;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj2.command.Command;
+import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.InstantCommand;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
+import frc.robot.commands.FetchCommand;
 import frc.robot.commands.ShootCloseCommand;
 import frc.robot.commands.ShootInPlaceCommand;
 import frc.robot.commands.ShootOnTheMoveCommand;
@@ -39,8 +41,7 @@ public class SuperStructure extends SubsystemBase {
     SHOOT_CLOSE,
     SHOOT_ON_THE_MOVE,
     FETCH,
-    CLIMB_OPEN,
-    CLIMB
+    PURGE_INTAKE
   }
 
   public enum StructureIntakeStates {
@@ -106,56 +107,31 @@ public class SuperStructure extends SubsystemBase {
   private SuperStructureStates handleStateTransition(SuperStructureStates wantedState) {
     return switch (wantedState) {
       case AUTO -> {
-        if(currentState == SuperStructureStates.CLIMB)
-          yield SuperStructureStates.CLIMB;
-        else 
-          yield SuperStructureStates.AUTO;
+        yield SuperStructureStates.AUTO;
       }
 
       case TRAVEL -> {
-        if(currentState == SuperStructureStates.CLIMB)
-          yield SuperStructureStates.CLIMB;
-        else 
           yield SuperStructureStates.TRAVEL;
       }
 
       case SHOOT -> {
-        if(currentState == SuperStructureStates.CLIMB)
-          yield SuperStructureStates.CLIMB;
-        else 
           yield SuperStructureStates.SHOOT;
       }
 
       case SHOOT_CLOSE -> {
-        if(currentState == SuperStructureStates.CLIMB)
-          yield SuperStructureStates.CLIMB;
-        else 
         yield SuperStructureStates.SHOOT_CLOSE;
       }
 
       case SHOOT_ON_THE_MOVE -> {
-        if(currentState == SuperStructureStates.CLIMB)
-          yield SuperStructureStates.CLIMB;
-        else 
           yield SuperStructureStates.SHOOT_ON_THE_MOVE;
       }
 
       case FETCH -> {
-        if(currentState == SuperStructureStates.CLIMB)
-          yield SuperStructureStates.CLIMB;
-        else 
           yield SuperStructureStates.FETCH;
       }
 
-      case CLIMB_OPEN -> {
-        yield SuperStructureStates.CLIMB_OPEN;
-      }
-
-      case CLIMB -> {
-        if(currentState == SuperStructureStates.CLIMB_OPEN)
-          yield SuperStructureStates.CLIMB;
-        else
-          yield currentState;
+      case PURGE_INTAKE -> {
+          yield SuperStructureStates.PURGE_INTAKE;
       }
 
       default -> {
@@ -179,10 +155,8 @@ public class SuperStructure extends SubsystemBase {
 
       case FETCH -> fetch();
 
-      case CLIMB_OPEN -> climbOpen();
-
-      case CLIMB -> climb();
-
+      case PURGE_INTAKE -> purgeIntake();
+        
       default -> {}
     }
   }
@@ -196,7 +170,7 @@ public class SuperStructure extends SubsystemBase {
 
       case IDLE -> {
         if(shouldPurgeIntake) intake.setState(Intake.IntakeStates.PURGE);
-        else intake.setState(Intake.IntakeStates.IDLE);
+        else intake.setState(Intake.IntakeStates.OPEN);
       }
 
       case CLOSED -> {
@@ -233,7 +207,7 @@ public class SuperStructure extends SubsystemBase {
       if (currentCommand != null) currentCommand.cancel();
       currentCommand = 
           new ShootInPlaceCommand(beltDrive, drive, hood, leds, shooter);
-      currentCommand.schedule();
+      CommandScheduler.getInstance().schedule(currentCommand);
     }
   }
 
@@ -241,7 +215,7 @@ public class SuperStructure extends SubsystemBase {
     if (currentState != previousState) {
       if (currentCommand != null) currentCommand.cancel();
         currentCommand = new ShootCloseCommand(beltDrive, drive, hood, leds, shooter);
-        currentCommand.schedule();
+        CommandScheduler.getInstance().schedule(currentCommand);
     }
   }
 
@@ -250,44 +224,29 @@ public class SuperStructure extends SubsystemBase {
       if (currentCommand != null) currentCommand.cancel();
       currentCommand = 
           new ShootOnTheMoveCommand(beltDrive, drive, hood, leds, shooter);
-      currentCommand.schedule();
+      CommandScheduler.getInstance().schedule(currentCommand);
     }
   }
 
   private void fetch() {
     if (currentState != previousState) {
       if (currentCommand != null) currentCommand.cancel();
+      currentCommand = 
+          new FetchCommand(beltDrive, drive, hood, leds, shooter);
+      CommandScheduler.getInstance().schedule(currentCommand);
+    }
+  }
+
+  private void purgeIntake() {
+    if (currentState != previousState) {
+      if (currentCommand != null) currentCommand.cancel();
     }
     intake.setState(IntakeStates.PURGE);
     hood.setState(HoodStates.IDLE);
-    beltDrive.setState(BeltDriveStates.IDLE);
+    beltDrive.setState(BeltDriveStates.PURGE);
     // hopper.setState(HopperStates.PURGE);
     shooter.setState(ShooterStates.IDLE);
     drive.setState(DriveStates.FIELD_DRIVE);
-  }
-
-  private void climbOpen() {
-    if (currentState != previousState) {
-      if (currentCommand != null) currentCommand.cancel();
-    }
-    drive.setState(DriveStates.FIELD_DRIVE); // could add here align command
-    hood.setState(HoodStates.IDLE);
-    beltDrive.setState(BeltDriveStates.IDLE);
-    // hopper.setState(HopperStates.IDLE);
-    shooter.setState(ShooterStates.IDLE);
-    leds.setState(ledsStates.PURPLE);
-  }
-
-  private void climb() {
-    if (currentState != previousState) {
-      if (currentCommand != null) currentCommand.cancel();
-    }
-    drive.setState(DriveStates.FIELD_DRIVE); // could automate or drive slow
-    hood.setState(HoodStates.IDLE);
-    beltDrive.setState(BeltDriveStates.IDLE);
-    // hopper.setState(HopperStates.IDLE);
-    shooter.setState(ShooterStates.IDLE);
-    leds.setState(ledsStates.FINISH_SCORE);
   }
 
   public void setWantedState(SuperStructureStates wantedState) {
@@ -312,27 +271,33 @@ public class SuperStructure extends SubsystemBase {
   }
 
   public Command shootButtonCommand() {
-    return Commands.either(setWantedStateCommand(SuperStructureStates.TRAVEL), setWantedStateCommand(SuperStructureStates.SHOOT), () -> currentState == SuperStructureStates.SHOOT);
+    return Commands.either(setWantedStateCommand(SuperStructureStates.TRAVEL), 
+      setWantedStateCommand(SuperStructureStates.SHOOT), () -> currentState == SuperStructureStates.SHOOT);
   }
 
   public Command shootCloseButtonCommand() {
-    return Commands.either(setWantedStateCommand(SuperStructureStates.TRAVEL), setWantedStateCommand(SuperStructureStates.SHOOT_CLOSE), () -> currentState == SuperStructureStates.SHOOT_CLOSE);
+    return Commands.either(setWantedStateCommand(SuperStructureStates.TRAVEL), 
+      setWantedStateCommand(SuperStructureStates.SHOOT_CLOSE), () -> currentState == SuperStructureStates.SHOOT_CLOSE);
   }
   
   public Command shootOnTheMoveButtonCommand() {
-    return Commands.either(setWantedStateCommand(SuperStructureStates.TRAVEL), setWantedStateCommand(SuperStructureStates.SHOOT_ON_THE_MOVE), () -> currentState == SuperStructureStates.SHOOT_ON_THE_MOVE);
+    return Commands.either(setWantedStateCommand(SuperStructureStates.TRAVEL), 
+      setWantedStateCommand(SuperStructureStates.SHOOT_ON_THE_MOVE), () -> currentState == SuperStructureStates.SHOOT_ON_THE_MOVE);
   }
 
   public Command intakeButtonCommand() {
-    return Commands.either(setIntakeStateCommand(StructureIntakeStates.CLOSED), setIntakeStateCommand(StructureIntakeStates.INTAKING), () -> intakeState == StructureIntakeStates.INTAKING); // changed from idle to closed
+    return Commands.either(setIntakeStateCommand(StructureIntakeStates.IDLE), 
+      setIntakeStateCommand(StructureIntakeStates.INTAKING), () -> intakeState == StructureIntakeStates.INTAKING);
   }
 
-  public Command openClimbButtonCommand() {
-    return Commands.runOnce(() -> setWantedState(SuperStructureStates.CLIMB_OPEN));
+  public Command closeIntakeButtonCommand() {
+    return Commands.either(setIntakeStateCommand(StructureIntakeStates.IDLE), 
+      setIntakeStateCommand(StructureIntakeStates.CLOSED), () -> intakeState == StructureIntakeStates.CLOSED);
   }
 
-  public Command climbButtonCommand() {
-    return Commands.runOnce(() -> setWantedState(SuperStructureStates.CLIMB));
+  public Command fetchButtonCommand() {
+    return Commands.either(setWantedStateCommand(SuperStructureStates.TRAVEL), 
+      setWantedStateCommand(SuperStructureStates.FETCH), () -> currentState == SuperStructureStates.FETCH);
   }
 
   public Command purgeIntakeButtonTrueCommand() {

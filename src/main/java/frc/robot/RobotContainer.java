@@ -15,6 +15,8 @@ package frc.robot;
 
 import org.ironmaple.simulation.SimulatedArena;
 import org.ironmaple.simulation.drivesims.SwerveDriveSimulation;
+import org.littletonrobotics.junction.Logger;
+import org.littletonrobotics.junction.networktables.LoggedDashboardChooser;
 
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
@@ -22,15 +24,21 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import edu.wpi.first.wpilibj2.command.Commands;
+import edu.wpi.first.wpilibj2.command.button.Trigger;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine.Direction;
 import frc.lib.subsystems.MotorIO;
 import frc.lib.subsystems.SimSparkMaxIO;
 import frc.lib.subsystems.SparkMaxIO;
 import frc.lib.util.AllianceFlipping;
 import frc.lib.util.TableLoader;
+import frc.robot.SuperStructure.StructureIntakeStates;
+import frc.robot.SuperStructure.SuperStructureStates;
+import frc.robot.autonomous.DepotAuto;
 import frc.robot.controllers.ControllerInterface;
 import frc.robot.controllers.DummyController;
 import frc.robot.controllers.SimulationController;
+import frc.robot.controllers.SingleXboxController;
+import frc.robot.controllers.TwoControllers;
 import frc.robot.generated.TunerConstants;
 import frc.robot.subsystems.beltDrive.BeltDrive;
 import frc.robot.subsystems.beltDrive.BeltDriveConstants;
@@ -53,6 +61,7 @@ import frc.robot.subsystems.shooter.ShooterConstants;
 import frc.robot.subsystems.vision.Vision;
 import frc.robot.subsystems.vision.VisionConstants;
 import frc.robot.subsystems.vision.VisionIO;
+import frc.robot.subsystems.vision.VisionIOLimelight;
 import frc.robot.subsystems.vision.VisionIOPhoton;
 import frc.robot.subsystems.vision.VisionIOPhotonSim;
 /**
@@ -81,18 +90,19 @@ public class RobotContainer {
   private final ControllerInterface controller;
 
   // Dashboard inputs
-  // private final LoggedDashboardChooser<Command> autoChooser;
+  private final LoggedDashboardChooser<Command> autoChooser;
 
   /** The container for the robot. Contains subsystems, OI devices, and commands. */
   public RobotContainer() {
     // SimulatedArena.overrideInstance(new Arena2026Rebuilt(false));
     Constants.RobotState.shooterTableData = TableLoader.loadFromCSV("shootingSolutions.csv");
+    Constants.RobotState.fetchingTableData = TableLoader.loadDoubleMapFromCSV("fetchingSolutions.csv");
     robotState = RobotState.getInstance();
     switch (Constants.currentMode) {
       case REAL:
         // Real robot, instantiate hardware IO implementations
-        controller = new DummyController();
-        // controller = new TwoControllers();
+        // controller = new twoco();
+        controller = new TwoControllers();
         drive =
             new Drive(
                 new GyroIONavX(),
@@ -103,7 +113,8 @@ public class RobotContainer {
                 (robotPose) -> {},
                 controller::xVelocityAnalog,
                 controller::yVelocityAnalog,
-                controller::rotationVelocityAnalog);
+                controller::rotationVelocityAnalog,
+                controller.xLockOverride());
 
         beltDrive =
             new BeltDrive(
@@ -136,11 +147,12 @@ public class RobotContainer {
         vision =
             new Vision(
                 robotState::addVisionObservation,
-                new VisionIO[] {new VisionIOPhoton("BLcamera", VisionConstants.robotToBLcamera)
+                new VisionIO[] {
+                  // new VisionIOPhoton("BLcamera", VisionConstants.robotToBLcamera)
                   
-                  ,
-                  new VisionIOPhoton("BRcamera", VisionConstants.robotToBRcamera),
-                  /*new VisionIOLimelight("limelight-tsachi", RobotState.getInstance()::getYaw)*/
+                //   ,
+                //   new VisionIOPhoton("BRcamera", VisionConstants.robotToBRcamera),
+                  new VisionIOLimelight("limelight-tsachi", () -> RobotState.getInstance().getEstimatedPose().getRotation())
                 });
         break;
 
@@ -164,7 +176,8 @@ public class RobotContainer {
                 (robotPose) -> driveSimulation.getSimulatedDriveTrainPose(),
                 controller::xVelocityAnalog,
                 controller::yVelocityAnalog,
-                controller::rotationVelocityAnalog);;
+                controller::rotationVelocityAnalog,
+                controller.xLockOverride());
 
         beltDrive =
             new BeltDrive(
@@ -220,7 +233,8 @@ public class RobotContainer {
                 (robotPose) -> {},
                 controller::xVelocityAnalog,
                 controller::yVelocityAnalog,
-                controller::rotationVelocityAnalog);
+                controller::rotationVelocityAnalog,
+                controller.xLockOverride());
         beltDrive = new BeltDrive(
           BeltDriveConstants.BELT_DRIVE_CONFIG, 
           new SimSparkMaxIO(BeltDriveConstants.BELT_DRIVE_CONFIG), 
@@ -254,10 +268,9 @@ public class RobotContainer {
             beltDrive, drive, hood, intake, leds, shooter, vision);
 
     // Set up auto routines
-    // autoChooser = new LoggedDashboardChooser<>("Auto Choices");
-    // autoChooser.addDefaultOption("Human Player Auto", new HumanPlayerAuto(beltDrive, drive, hood, hopper, intake, leds, shooter));
-    // autoChooser.addOption("Right Middle Fuel Auto", new RightMiddleFuelAuto(beltDrive, drive, hood, hopper, intake, leds, shooter, false));
-
+    autoChooser = new LoggedDashboardChooser<>("Auto Choices");
+    autoChooser.addDefaultOption("Do Nothing", Commands.print("Doing nothing"));
+    autoChooser.addOption("Depot Middle Auto", new DepotAuto(beltDrive, drive, hood, intake, leds, shooter));
     // Configure the button bindings
     configureButtonBindings();
   }
@@ -276,34 +289,18 @@ public class RobotContainer {
     controller.resetGyroButton().onTrue(Commands.runOnce(resetGyro).ignoringDisable(true).alongWith(
     Commands.print("reset gyro")
     ));
-    controller.shootCloseButton().onTrue(structure.shootCloseButtonCommand().alongWith(Commands.print("Shooting close...")));
-    // controller.shootCloseButton().onTrue(shooter.shooterMainSysidRoutine(true, Direction.kForward));
-    // controller.shootButton().onTrue(shooter.shooterMainSysidRoutine(true, Direction.kReverse));
-    // controller.intakeButton().onTrue(shooter.shooterMainSysidRoutine(false, Direction.kForward));
-    // controller.openClimbButton().onTrue(shooter.shooterMainSysidRoutine(false, Direction.kReverse));
-    // controller.shootButton().onTrue(structure.shootOnTheMoveButtonCommand());
-    // controller.intakeButton().whileTrue(structure.setIntakeStateCommand(StructureIntakeStates.INTAKING));
-    // controller.intakeButton().whileFalse(structure.setIntakeStateCommand(StructureIntakeStates.CLOSED));
-    // controller.fetchButton().onTrue(structure.setWantedStateCommand(SuperStructureStates.FETCH));
-    // controller.fetchButton().onFalse(structure.setWantedStateCommand(SuperStructureStates.TRAVEL));
-    // controller.openClimbButton().onTrue(structure.openClimbButtonCommand());
-    // controller.closeClimbButton().onTrue(structure.climbButtonCommand());
-    // controller.purgeIntakeButton().onTrue(structure.purgeIntakeButtonTrueCommand());
-    // controller.purgeIntakeButton().onFalse(structure.purgeIntakeButtonFalseCommand());
-
-
+    controller.shootCloseButton().onTrue(structure.shootCloseButtonCommand());
+    controller.shootButton().onTrue(structure.shootButtonCommand());
+    controller.intakeButton().onTrue(structure.intakeButtonCommand());
+    controller.closeIntakeButton().onTrue(structure.closeIntakeButtonCommand());
+    controller.fetchButton().onTrue(structure.fetchButtonCommand());
+    controller.purgeIntakeButton().onTrue(structure.purgeIntakeButtonTrueCommand());
+    controller.purgeIntakeButton().onFalse(structure.purgeIntakeButtonFalseCommand());
     // controller.intakeButton().onTrue(Commands.run(() ->intake.setState(IntakeStates.SHUFFLE), intake));
     // controller.intakeButton().onFalse(Commands.run(() -> intake.setState(IntakeStates.CLOSED), intake));
     // controller.intakeButton().onTrue(Commands.run(() -> intake.setState(IntakeStates.CLOSED), intake));
-    // controller.shootButton().onTrue(shooter.shooterHoodSysidRoutine(false, Direction.kForward));
-    // controller.intakeButton().onTrue(shooter.shooterHoodSysidRoutine(true, Direction.kForward));
-    // controller.openClimbButton().onTrue(shooter.shooterHoodSysidRoutine(false, Direction.kReverse));
     // controller.purgeIntakeButton().onTrue(shooter.shooterHoodSysidRoutine(true, Direction.kReverse));
-    // controller.shootButton().onTrue(drive.driveMotorSysIdCommand(false, Direction.kForward));
     // controller.intakeButton().onTrue(drive.driveMotorSysIdCommand(true, Direction.kForward));
-    // controller.openClimbButton().onTrue(drive.driveMotorSysIdCommand(false, Direction.kReverse));
-    // controller.purgeIntakeButton().onTrue(drive.driveMotorSysIdCommand(true, Direction.kReverse));
-
   }
 
   /**
@@ -312,8 +309,8 @@ public class RobotContainer {
    * @return the command to run in autonomous
    */
   public Command getAutonomousCommand() {
-    // return autoChooser.get();
-    return Commands.print("aodkpoakf");
+    return autoChooser.get();
+    // return Commands.print("aodkpoakf");
   }
 
   public void periodic() {
@@ -334,9 +331,9 @@ public class RobotContainer {
   public void updateSimulation() {
     if (Constants.currentMode != Constants.Mode.SIM) return;
 
-    // SimulatedArena.getInstance().simulationPeriodic();
-    // Logger.recordOutput(
-        // "FieldSimulation/RobotPosition", driveSimulation.getSimulatedDriveTrainPose());
+    SimulatedArena.getInstance().simulationPeriodic();
+    Logger.recordOutput(
+        "FieldSimulation/RobotPosition", driveSimulation.getSimulatedDriveTrainPose());
   }
 
   public void autonomousInit() {

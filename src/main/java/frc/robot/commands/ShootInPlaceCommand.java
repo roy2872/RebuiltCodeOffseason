@@ -26,7 +26,7 @@ public class ShootInPlaceCommand extends SequentialCommandGroup {
     addCommands(
       Commands.parallel(
         Commands.runOnce(() -> drive.setState(DriveStates.SHOOT_DRIVE), drive),
-        Commands.runOnce(() -> shooter.runExitVelocity(() -> RobotState.getInstance().getShootingInfo().get(1)), shooter),
+        Commands.runOnce(() -> shooter.runVelocity(() -> RobotState.getInstance().getShootingInfo().get(1)), shooter),
         Commands.runOnce(() -> hood.setTargetAngle(() -> RobotState.getInstance().getShootingInfo().get(0)), hood),
         Commands.waitUntil(() -> shooter.atVelocity() && hood.atSetpoint() && drive.isAtShootDriveSetpoint(1.0)) // TODO: can calculate needed accuracy for drive
           .andThen(Commands.runOnce(() -> beltDrive.setState(BeltDriveStates.ACTIVE), beltDrive)

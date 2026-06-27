@@ -15,28 +15,28 @@ public class ShooterConstants {
 
   public static final SimpleFFConstants MAIN_WHEEL_FF_CONSTANTS =
       switch (Constants.currentMode) {
-        case REAL -> new SimpleFFConstants(0.0, 0.13, 3.0);
+        case REAL -> new SimpleFFConstants(0.35, 0.127, 0.012); // native units rps
         case SIM -> new SimpleFFConstants(0.0, 0.0, 0.0);
         default -> new SimpleFFConstants(0.0, 0.0, 0.0);
       };
 
   public static final SimpleFFConstants HOOD_WHEEL_FF_CONSTANTS =
       switch (Constants.currentMode) {
-        case REAL -> new SimpleFFConstants(0.0, 0.13, 1.68);
+        case REAL -> new SimpleFFConstants(0.25, 0.125, 0.006);
         case SIM -> new SimpleFFConstants(0.0, 0.0, 0.0);
         default -> new SimpleFFConstants(0.0, 0.0, 0.0);
       };
 
   protected static final PidGains MAIN_PID =
       switch (Constants.currentMode) {
-        case REAL -> new PidGains(0.001205, 0.0, 0.1); 
+        case REAL -> new PidGains(0.000605, 0.0, 0.1); 
         case SIM -> new PidGains(0.1, 0.0, 0.0);
         default -> new PidGains(0.1, 0.0, 0.0);
       };
 
   protected static final PidGains HOOD_PID =
       switch (Constants.currentMode) {
-        case REAL -> new PidGains(0.0005, 0.0, 0.05);
+        case REAL -> new PidGains(0.0003, 0.0, 0.1);
         case SIM -> new PidGains(0.1, 0.0, 0.0);
         default -> new PidGains(0.1, 0.0, 0.0);
       };
@@ -53,6 +53,8 @@ public class ShooterConstants {
   public static final double COMPENSATION_FACTOR = 1.0;
   public static final double BACKSPIN_FACTOR = 1.0; 
 
+  public static final double ACTIVATE_MAX_POWER_PERCENTAGE = 0.88;
+
   static {
     MAIN_WHEEL_MOTOR_CONFIG.name = "ShooterMainWheel";
     MAIN_WHEEL_MOTOR_FOLLOWER_CONFIG.config.name = "ShooterMainWheelFollower";
@@ -66,42 +68,42 @@ public class ShooterConstants {
     MAIN_WHEEL_MOTOR_CONFIG
         .sparkConfig
         .idleMode(IdleMode.kCoast)
-        .smartCurrentLimit(40)
+        .smartCurrentLimit(70)
         .inverted(false)
         .secondaryCurrentLimit(80)
         .closedLoop
         .pidf(
             MAIN_PID.kP, MAIN_PID.kI, MAIN_PID.kD, 0, ClosedLoopSlot.kSlot0)
         .maxMotion
-        .cruiseVelocity(5000)
-        .maxAcceleration(10000); // keep velocity ff 0
+        .cruiseVelocity(5600)
+        .maxAcceleration(15000); // keep velocity ff 0
         
     HOOD_WHEEL_MOTOR_CONFIG
         .sparkConfig
         .idleMode(IdleMode.kCoast)
-        .smartCurrentLimit(40)
+        .smartCurrentLimit(70)
         .inverted(false)
         .secondaryCurrentLimit(80)
         .closedLoop
         .pidf(
             HOOD_PID.kP, HOOD_PID.kI, HOOD_PID.kD, 0, ClosedLoopSlot.kSlot0)
         .maxMotion
-        .cruiseVelocity(5000)
-        .maxAcceleration(10000); // keep velocity ff 0
+        .cruiseVelocity(5600)
+        .maxAcceleration(15000); // keep velocity ff 0
 
     MAIN_WHEEL_MOTOR_FOLLOWER_CONFIG.config.sparkConfig.apply(MAIN_WHEEL_MOTOR_CONFIG.sparkConfig).follow(56, true);
     // MAIN_WHEEL_MOTOR_FOLLOWER_CONFIG.inverted = true;`````
     HOOD_WHEEL_MOTOR_FOLLOWER_CONFIG.config.sparkConfig.apply(HOOD_WHEEL_MOTOR_CONFIG.sparkConfig).follow(58);
     HOOD_WHEEL_MOTOR_FOLLOWER_CONFIG.inverted = true;
 
-    MAIN_WHEEL_MOTOR_CONFIG.unitToRotorRatio = 1/0.319; // TODO: set ratio
-    HOOD_WHEEL_MOTOR_CONFIG.unitToRotorRatio = 1/(0.319 / 2);
+    MAIN_WHEEL_MOTOR_CONFIG.unitToRotorRatio = 1.0;//0.319; // TODO: set ratio
+    HOOD_WHEEL_MOTOR_CONFIG.unitToRotorRatio = 1.0;//(0.319 / 2);
 
     MAIN_WHEEL_MOTOR_CONFIG.usingAbsoluteEncoder = false;
     HOOD_WHEEL_MOTOR_CONFIG.usingAbsoluteEncoder = false;
 
-    MAIN_WHEEL_MOTOR_CONFIG.momentOfInertia = 0.1; // TODO: set MOI
-    HOOD_WHEEL_MOTOR_CONFIG.momentOfInertia = 0.1;
+    MAIN_WHEEL_MOTOR_CONFIG.momentOfInertia = 0.01; // TODO: set MOI
+    HOOD_WHEEL_MOTOR_CONFIG.momentOfInertia = 0.0096;
     // HOOD_WHEEL_MOTOR_CONFIG.inverted = true;
     MAIN_WHEEL_MOTOR_CONFIG.followerConfigs = new FollowerConfig[]{MAIN_WHEEL_MOTOR_FOLLOWER_CONFIG};
     HOOD_WHEEL_MOTOR_CONFIG.followerConfigs = new FollowerConfig[]{HOOD_WHEEL_MOTOR_FOLLOWER_CONFIG};

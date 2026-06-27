@@ -165,7 +165,7 @@ public class Shooter extends SubsystemBase {
       case VELOCITY -> {
         double velocitySetpoint = SmartDashboard.getNumber(VELOCITY_KEY, 0.0);
         mainWheel.runVelocity(() -> velocitySetpoint);
-        hoodWheel.runVelocity(() -> velocitySetpoint);
+        hoodWheel.runVelocity(() -> velocitySetpoint/2);
         return true;
       }
     }
@@ -214,26 +214,25 @@ public class Shooter extends SubsystemBase {
 
   /**
    * Runs the shooter wheels at the same velocity.
-   * @param shooterVelocity [rps]
+   * @param shooterVelocity [m/s]
    */
   public void runVelocity(DoubleSupplier shooterVelocity) {
-    runVelocity(shooterVelocity, shooterVelocity);
-    setState(ShooterStates.SHOOTING);
+    runVelocity(shooterVelocity, () -> shooterVelocity.getAsDouble()/2.0);
   }
 
-  /**
-   * Runs the shooter wheels at the velocity needed to achieve the supplied exit velocity.
-   * @param exitVelocity [m/s]
-   */
-  public void runExitVelocity(DoubleSupplier exitVelocity) {
-    double mainWheelRPM = velocityToRPM(exitVelocity.getAsDouble(), ShooterConstants.MAIN_WHEEL_DIAMETER)
-      * ShooterConstants.COMPENSATION_FACTOR * ShooterConstants.BACKSPIN_FACTOR;
+  // /**
+  //  * Runs the shooter wheels at the velocity needed to achieve the supplied exit velocity.
+  //  * @param exitVelocity [m/s]
+  //  */
+  // public void runExitVelocity(DoubleSupplier exitVelocity) {
+  //   double mainWheelRPM = velocityToRPM(exitVelocity.getAsDouble(), ShooterConstants.MAIN_WHEEL_DIAMETER)
+  //     * ShooterConstants.COMPENSATION_FACTOR * ShooterConstants.BACKSPIN_FACTOR;
 
-    double hoodWheelRPM = velocityToRPM(exitVelocity.getAsDouble(), ShooterConstants.HOOD_WHEEL_DIAMETER)
-      * ShooterConstants.COMPENSATION_FACTOR;
+  //   double hoodWheelRPM = velocityToRPM(exitVelocity.getAsDouble(), ShooterConstants.HOOD_WHEEL_DIAMETER)
+  //     * ShooterConstants.COMPENSATION_FACTOR;
 
-    runVelocity(() -> mainWheelRPM/60, () -> hoodWheelRPM/60); // to rps
-  }
+  //   runVelocity(() -> mainWheelRPM/60, () -> hoodWheelRPM/60); // to rps
+  // }
 
   public Command shooterMainSysidRoutine(boolean quasistatic, SysIdRoutine.Direction direction) {
     return Commands.either(
@@ -253,9 +252,9 @@ public class Shooter extends SubsystemBase {
   public boolean atVelocity() {
     return mainWheel.atVelocity() && hoodWheel.atVelocity();
   }
-  private double velocityToRPM(double velocityMetersPerSec, double diameterMeters) {
-    return (60 * velocityMetersPerSec) / (Math.PI * diameterMeters);
-  }
+  // private double velocityToRPM(double velocityMetersPerSec, double diameterMeters) {
+  //   return (60 * velocityMetersPerSec) / (Math.PI * diameterMeters);
+  // }
 }
 // package frc.robot.subsystems.shooter;
 

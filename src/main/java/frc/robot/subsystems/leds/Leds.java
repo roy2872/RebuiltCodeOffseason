@@ -10,6 +10,7 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj.util.Color;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import org.littletonrobotics.junction.AutoLogOutput;
+import org.littletonrobotics.junction.Logger;
 
 public class Leds extends SubsystemBase {
   public enum ledsStates {
@@ -65,6 +66,7 @@ public class Leds extends SubsystemBase {
       case PINK -> ledsStates.PINK.pattern().applyTo(ledBuffer);
       default -> ledsStates.OFF.pattern().applyTo(ledBuffer);
     }
+    Logger.recordOutput("leds/color", ledBuffer.getLED8Bit(0).toHexString());
   }
 
   public void setState(ledsStates state) {

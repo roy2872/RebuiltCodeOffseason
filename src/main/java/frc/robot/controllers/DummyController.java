@@ -22,7 +22,7 @@ public class DummyController implements ControllerInterface {
 
   @Override
   public double xVelocityAnalog() {
-    return -controller.getRawAxis(0);
+    return controller.getRawAxis(0);
   }
 
   @Override
@@ -41,13 +41,8 @@ public class DummyController implements ControllerInterface {
   }
 
   @Override
-  public Trigger openClimbButton() {
+  public Trigger closeIntakeButton() {
     return new Trigger(() -> controller.getRawButton(4));
-  }
-
-  @Override
-  public Trigger closeClimbButton() {
-    return new Trigger(() -> false);
   }
 
   @Override
@@ -67,6 +62,11 @@ public class DummyController implements ControllerInterface {
 
   @Override
   public Trigger fetchButton() {
+    return new Trigger(() -> false);
+  }
+
+  @Override
+  public Trigger xLockOverride() {
     return new Trigger(() -> false);
   }
 }

@@ -26,7 +26,7 @@ public class ShootOnTheMoveCommand extends SequentialCommandGroup {
     addCommands(
       Commands.parallel(
         Commands.run(() -> drive.setState(DriveStates.SHOOT_ON_THE_MOVE), drive),
-        Commands.run(() -> shooter.runExitVelocity(() -> RobotState.getInstance().getShootOnTheMoveScoringInfo().get(1)), shooter),
+        Commands.run(() -> shooter.runVelocity(() -> RobotState.getInstance().getShootOnTheMoveScoringInfo().get(1)), shooter),
         Commands.run(() -> hood.setTargetAngle(() -> RobotState.getInstance().getShootOnTheMoveScoringInfo().get(0)), hood),
         Commands.waitUntil(() -> shooter.atVelocity() && hood.atSetpoint() && drive.isAtShootOnTheMoveSetpoint(1.0)) // TODO: can calculate needed accuracy for drive
           .andThen(Commands.runOnce(() -> beltDrive.setState(BeltDriveStates.ACTIVE), beltDrive)
