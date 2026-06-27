@@ -32,6 +32,11 @@ public class SingleXboxController implements ControllerInterface {
   }
 
   @Override
+  public Trigger alignToBumpButton() {
+    return new Trigger(()->controller.getRawButton(7));
+  }
+
+  @Override
   public Trigger intakeButton() {
     return new Trigger(() -> (controller.getRightTriggerAxis() > 0.7));
   }
@@ -53,7 +58,6 @@ public class SingleXboxController implements ControllerInterface {
 
   @Override
   public Trigger purgeIntakeButton() {
-    // return new Trigger(() -> controller.getPOV() == 270);
     return new Trigger(() -> controller.getRightBumperButton());
   }
 

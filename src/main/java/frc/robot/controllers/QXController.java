@@ -31,6 +31,11 @@ public class QXController implements ControllerInterface {
   }
 
   @Override
+  public Trigger alignToBumpButton() {
+    return new Trigger(() -> controller.getRawButton(4));
+  }
+
+  @Override
   public Trigger intakeButton() {
     return new Trigger(() -> false);
   }

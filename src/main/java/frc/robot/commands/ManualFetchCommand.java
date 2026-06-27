@@ -24,8 +24,8 @@ public class ManualFetchCommand extends SequentialCommandGroup {
           addCommands(
       Commands.parallel(
         Commands.runOnce(() -> drive.setStateAutoAlignAngle(() -> AllianceFlipping.apply(Rotation2d.kZero)), drive),
-        Commands.runOnce(() -> hood.setTargetAngle(() -> Constants.FETCH_ANGLE), hood),
-        Commands.runOnce(() -> shooter.runVelocity(() -> Constants.FETCH_VELOCITY),  shooter)),
+        Commands.runOnce(() -> hood.setTargetAngle(() -> Constants.FETCHING_ANGLE), hood),
+        Commands.runOnce(() -> shooter.runVelocity(() -> Constants.FETCHING_VELOCITY),  shooter)),
         Commands.waitUntil(() -> shooter.atVelocity() && hood.atSetpoint()), // TODO: can calculate needed accuracy for drive
         Commands.runOnce(() -> beltDrive.setState(BeltDriveStates.ACTIVE), beltDrive),
         Commands.runOnce(() -> leds.setState(ledsStates.AQUA), leds)

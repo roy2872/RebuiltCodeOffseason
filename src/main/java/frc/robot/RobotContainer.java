@@ -103,7 +103,7 @@ public class RobotContainer {
       case REAL:
         // Real robot, instantiate hardware IO implementations
         // controller = new twoco();
-        controller = new TwoControllers(new QXController(0), new DummyController(1));
+        controller = new TwoControllers(new DummyController(0), new DummyController(0));
         drive =
             new Drive(
                 new GyroIONavX(),

@@ -47,7 +47,9 @@ public class ShootCommand extends SequentialCommandGroup {
                 Commands.run(() -> drive.setState(DriveStates.FIELD_DRIVE), drive), shouldAutoAlignToTarget),
                 Commands.run(() -> hood.setTargetAngle(safeHoodAngle), hood),
                 Commands.run(() -> shooter.runVelocity(safeShooterVelocity), shooter)
-            ).until(() -> shooter.atVelocity() && hood.atSetpoint() && drive.isAtAutoAlignAngleSetpoint(2.0)),
+            ).until(() -> shooter.atVelocity() && hood.atSetpoint() && 
+            (drive.isAtAutoAlignAngleSetpoint(2.0) || !shouldAutoAlignToTarget.getAsBoolean()))
+            .withTimeout(6.0),
             
             // Step 2: Keep targets active while feeding the system
             Commands.parallel(

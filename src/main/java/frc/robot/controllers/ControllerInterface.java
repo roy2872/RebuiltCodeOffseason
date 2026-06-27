@@ -12,6 +12,8 @@ public interface ControllerInterface {
 
   public double rotationVelocityAnalog();
 
+  public Trigger alignToBumpButton();
+
   public Trigger intakeButton();
 
   public Trigger closeIntakeButton();

@@ -64,6 +64,11 @@ public class TwoControllers implements ControllerInterface {
   }
 
   @Override
+  public Trigger fetchManualButton() {
+    return operatorController.fetchManualButton();
+  }
+
+  @Override
   public Trigger xLockOverride() {
     return operatorController.xLockOverride();
   }

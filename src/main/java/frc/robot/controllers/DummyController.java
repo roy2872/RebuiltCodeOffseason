@@ -36,6 +36,11 @@ public class DummyController implements ControllerInterface {
   }
 
   @Override
+  public Trigger alignToBumpButton() {
+    return new Trigger(() -> controller.getRawButton(9));
+  }
+
+  @Override
   public Trigger intakeButton() {
     return new Trigger(() -> controller.getRawButton(7));
   }
