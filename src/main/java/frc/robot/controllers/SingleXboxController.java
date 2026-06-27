@@ -13,7 +13,7 @@ public class SingleXboxController implements ControllerInterface {
 
   @Override
   public Trigger resetGyroButton() {
-    return new Trigger(() -> controller.getRawButton(8) &&true);
+    return new Trigger(() -> controller.getRawButton(8));
   }
 
   @Override
@@ -33,37 +33,42 @@ public class SingleXboxController implements ControllerInterface {
 
   @Override
   public Trigger intakeButton() {
-    return new Trigger(() -> (controller.getRightTriggerAxis() > 0.25));
+    return new Trigger(() -> (controller.getRightTriggerAxis() > 0.7));
   }
 
   @Override
   public Trigger closeIntakeButton() {
-    return new Trigger(() -> controller.getLeftBumper());
-  }
-
-  @Override
-  public Trigger shootButton() {
     return new Trigger(() -> controller.getRightBumperButton());
   }
 
   @Override
+  public Trigger shootButton() {
+    return new Trigger(() -> controller.getYButton());
+  }
+
+  @Override
   public Trigger shootCloseButton() {
-    return new Trigger(() -> controller.getRawButton(7));
+    return new Trigger(() -> controller.getXButton());
   }
 
   @Override
   public Trigger purgeIntakeButton() {
     // return new Trigger(() -> controller.getPOV() == 270);
-    return new Trigger(() -> controller.getRawButton(1));
+    return new Trigger(() -> controller.getRightBumperButton());
   }
 
   @Override
   public Trigger fetchButton() {
-    return new Trigger(() -> controller.getPOV() == 180);
+    return new Trigger(() -> controller.getBButton());
+  }
+
+  @Override
+  public Trigger fetchManualButton() {
+    return new Trigger(() -> controller.getAButton());
   }
 
   @Override
   public Trigger xLockOverride() {
-    return new Trigger(() -> false);
+    return new Trigger(() -> controller.getRightTriggerAxis() > 0.7);
   }
 }

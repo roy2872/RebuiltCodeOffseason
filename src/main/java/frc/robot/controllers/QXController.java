@@ -61,6 +61,11 @@ public class QXController implements ControllerInterface {
   }
 
   @Override
+  public Trigger fetchManualButton() {
+    return new Trigger(() -> false);
+  }
+
+  @Override
   public Trigger xLockOverride() {
     return new Trigger(() -> false);
   }

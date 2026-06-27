@@ -6,6 +6,7 @@ package frc.robot;
 
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.wpilibj.Timer;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import edu.wpi.first.wpilibj2.command.Commands;
@@ -13,7 +14,7 @@ import edu.wpi.first.wpilibj2.command.InstantCommand;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.commands.FetchCommand;
 import frc.robot.commands.ShootCloseCommand;
-import frc.robot.commands.ShootInPlaceCommand;
+import frc.robot.commands.ShootCommand;
 import frc.robot.commands.ShootOnTheMoveCommand;
 import frc.robot.subsystems.beltDrive.BeltDrive;
 import frc.robot.subsystems.beltDrive.BeltDrive.BeltDriveStates;
@@ -39,8 +40,8 @@ public class SuperStructure extends SubsystemBase {
     TRAVEL,
     SHOOT,
     SHOOT_CLOSE,
-    SHOOT_ON_THE_MOVE,
     FETCH,
+    FETCH_MANUAL,
     PURGE_INTAKE
   }
 
@@ -93,6 +94,7 @@ public class SuperStructure extends SubsystemBase {
     this.leds = leds;
     this.shooter = shooter;
     this.vision = vision;
+    SmartDashboard.putBoolean("DriverControlWhenShooting", false);
   }
 
   @Override
@@ -122,8 +124,12 @@ public class SuperStructure extends SubsystemBase {
         yield SuperStructureStates.SHOOT_CLOSE;
       }
 
-      case SHOOT_ON_THE_MOVE -> {
-          yield SuperStructureStates.SHOOT_ON_THE_MOVE;
+      // case SHOOT_ON_THE_MOVE -> {
+      //     yield SuperStructureStates.SHOOT_ON_THE_MOVE;
+      // }
+
+      case FETCH_MANUAL -> {
+        yield SuperStructureStates.FETCH_MANUAL;
       }
 
       case FETCH -> {
@@ -149,11 +155,13 @@ public class SuperStructure extends SubsystemBase {
 
       case SHOOT -> shoot();
 
-      case SHOOT_ON_THE_MOVE -> shootOnTheMove();
+      // case SHOOT_ON_THE_MOVE -> shootOnTheMove();
 
       case SHOOT_CLOSE -> shootClose();
 
       case FETCH -> fetch();
+
+      case FETCH_MANUAL -> fetchManual();
 
       case PURGE_INTAKE -> purgeIntake();
         
@@ -206,7 +214,7 @@ public class SuperStructure extends SubsystemBase {
     if (currentState != previousState) {
       if (currentCommand != null) currentCommand.cancel();
       currentCommand = 
-          new ShootInPlaceCommand(beltDrive, drive, hood, leds, shooter);
+          new ShootCommand(beltDrive, drive, hood, leds, shooter, () -> RobotState.getInstance().getShootingInfo(), ()->true);
       CommandScheduler.getInstance().schedule(currentCommand);
     }
   }
@@ -214,25 +222,35 @@ public class SuperStructure extends SubsystemBase {
   private void shootClose() {
     if (currentState != previousState) {
       if (currentCommand != null) currentCommand.cancel();
-        currentCommand = new ShootCloseCommand(beltDrive, drive, hood, leds, shooter);
+        currentCommand = new ShootCommand(beltDrive, drive, hood, leds, shooter, RobotState.getInstance()::getShootCloseInfo, 
+          () -> !SmartDashboard.getBoolean("DriverControlWhenShooting", false));
         CommandScheduler.getInstance().schedule(currentCommand);
     }
   }
 
-  private void shootOnTheMove() {
-    if (currentState != previousState) {
-      if (currentCommand != null) currentCommand.cancel();
-      currentCommand = 
-          new ShootOnTheMoveCommand(beltDrive, drive, hood, leds, shooter);
-      CommandScheduler.getInstance().schedule(currentCommand);
-    }
-  }
+  // private void shootOnTheMove() {
+  //   if (currentState != previousState) {
+  //     if (currentCommand != null) currentCommand.cancel();
+  //     currentCommand = 
+  //         new ShootOnTheMoveCommand(beltDrive, drive, hood, leds, shooter);
+  //     CommandScheduler.getInstance().schedule(currentCommand);
+  //   }
+  // }
 
   private void fetch() {
     if (currentState != previousState) {
       if (currentCommand != null) currentCommand.cancel();
       currentCommand = 
-          new FetchCommand(beltDrive, drive, hood, leds, shooter);
+          new ShootCommand(beltDrive, drive, hood, leds, shooter, RobotState.getInstance()::getFetchingInfo, ()->true);
+      CommandScheduler.getInstance().schedule(currentCommand);
+    }
+  }
+
+  private void fetchManual() {
+        if (currentState != previousState) {
+      if (currentCommand != null) currentCommand.cancel();
+      currentCommand = 
+          new ShootCommand(beltDrive, drive, hood, leds, shooter, RobotState.getInstance()::getManualFetchingInfo, ()->true);
       CommandScheduler.getInstance().schedule(currentCommand);
     }
   }
@@ -280,10 +298,10 @@ public class SuperStructure extends SubsystemBase {
       setWantedStateCommand(SuperStructureStates.SHOOT_CLOSE), () -> currentState == SuperStructureStates.SHOOT_CLOSE);
   }
   
-  public Command shootOnTheMoveButtonCommand() {
-    return Commands.either(setWantedStateCommand(SuperStructureStates.TRAVEL), 
-      setWantedStateCommand(SuperStructureStates.SHOOT_ON_THE_MOVE), () -> currentState == SuperStructureStates.SHOOT_ON_THE_MOVE);
-  }
+  // public Command shootOnTheMoveButtonCommand() {
+  //   return Commands.either(setWantedStateCommand(SuperStructureStates.TRAVEL), 
+  //     setWantedStateCommand(SuperStructureStates.SHOOT_ON_THE_MOVE), () -> currentState == SuperStructureStates.SHOOT_ON_THE_MOVE);
+  // }
 
   public Command intakeButtonCommand() {
     return Commands.either(setIntakeStateCommand(StructureIntakeStates.IDLE), 
@@ -298,6 +316,11 @@ public class SuperStructure extends SubsystemBase {
   public Command fetchButtonCommand() {
     return Commands.either(setWantedStateCommand(SuperStructureStates.TRAVEL), 
       setWantedStateCommand(SuperStructureStates.FETCH), () -> currentState == SuperStructureStates.FETCH);
+  }
+
+  public Command fetchManualButtonCommand() {
+    return Commands.either(setWantedStateCommand(SuperStructureStates.TRAVEL), 
+      setWantedStateCommand(SuperStructureStates.FETCH_MANUAL), () -> currentState == SuperStructureStates.FETCH_MANUAL);
   }
 
   public Command purgeIntakeButtonTrueCommand() {

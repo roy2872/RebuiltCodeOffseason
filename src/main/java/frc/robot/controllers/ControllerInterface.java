@@ -24,5 +24,7 @@ public interface ControllerInterface {
 
   public Trigger fetchButton();
 
+  public Trigger fetchManualButton();
+
   public Trigger xLockOverride();
 }

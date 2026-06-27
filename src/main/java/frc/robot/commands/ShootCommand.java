@@ -1,50 +1,58 @@
 package frc.robot.commands;
 
+import java.util.function.BooleanSupplier;
 import java.util.function.DoubleSupplier;
+import java.util.function.Supplier;
+import edu.wpi.first.math.Vector;
 import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.numbers.N3;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.SequentialCommandGroup;
 import frc.lib.util.AllianceFlipping;
-import frc.robot.RobotState;
 import frc.robot.subsystems.beltDrive.BeltDrive;
 import frc.robot.subsystems.beltDrive.BeltDrive.BeltDriveStates;
 import frc.robot.subsystems.drive.Drive;
+import frc.robot.subsystems.drive.Drive.DriveStates;
 import frc.robot.subsystems.hood.Hood;
 import frc.robot.subsystems.leds.Leds;
 import frc.robot.subsystems.leds.Leds.ledsStates;
 import frc.robot.subsystems.shooter.Shooter;
 
-public class FetchCommand extends SequentialCommandGroup {
+public class ShootCommand extends SequentialCommandGroup {
     
-    public FetchCommand(
+    public ShootCommand(
         BeltDrive beltDrive,
         Drive drive,
         Hood hood,
         Leds leds,
-        Shooter shooter) {
+        Shooter shooter,
+        Supplier<Vector<N3>> dataSupplier,
+        BooleanSupplier shouldAutoAlignToTarget) { // Passed as a supplier here
 
-        // 1. Safe DoubleSuppliers that protect against null or missing vector data
+        // Safe DoubleSuppliers that extract indexes safely on every loop iteration
         DoubleSupplier safeHoodAngle = () -> {
-            var data = RobotState.getInstance().getFetchingInfo();
+            Vector<N3> data = dataSupplier.get();
             return (data != null && data.getNumRows() > 0) ? data.get(0) : 0.0;
         };
 
         DoubleSupplier safeShooterVelocity = () -> {
-            var data = RobotState.getInstance().getFetchingInfo();
+            Vector<N3> data = dataSupplier.get();
             return (data != null && data.getNumRows() > 1) ? data.get(1) : 0.0;
         };
 
         addCommands(
-            // Step 1: CONTINUOUSLY align, spin up shooter, and move hood UNTIL everything is ready
+            // Step 1: Spin up and align continuously until target is met
             Commands.parallel(
-                Commands.run(() -> drive.setStateAutoAlignAngle(() -> AllianceFlipping.apply(Rotation2d.kZero)), drive),
+                Commands.either(Commands.run(() -> drive.setStateAutoAlignAngle(() -> AllianceFlipping.apply(Rotation2d.kZero)), drive),
+                Commands.run(() -> drive.setState(DriveStates.FIELD_DRIVE), drive), shouldAutoAlignToTarget),
                 Commands.run(() -> hood.setTargetAngle(safeHoodAngle), hood),
                 Commands.run(() -> shooter.runVelocity(safeShooterVelocity), shooter)
             ).until(() -> shooter.atVelocity() && hood.atSetpoint() && drive.isAtAutoAlignAngleSetpoint(2.0)),
             
-            // Step 2: Now that it's aligned, turn on the belt drive while MAINTAINING position/speed
+            // Step 2: Keep targets active while feeding the system
             Commands.parallel(
-                Commands.run(() -> drive.setStateAutoAlignAngle(() -> AllianceFlipping.apply(Rotation2d.kZero)), drive),
+                Commands.either(Commands.run(() -> drive.setStateAutoAlignAngle(() -> AllianceFlipping.apply(Rotation2d.kZero)), drive),
+                Commands.run(() -> drive.setState(DriveStates.FIELD_DRIVE), drive), shouldAutoAlignToTarget),
                 Commands.run(() -> hood.setTargetAngle(safeHoodAngle), hood),
                 Commands.run(() -> shooter.runVelocity(safeShooterVelocity), shooter),
                 Commands.runOnce(() -> beltDrive.setState(BeltDriveStates.ACTIVE), beltDrive),

@@ -115,8 +115,6 @@ public class RobotState {
     }
 
     kinematics = new SwerveDriveKinematics(Drive.getModuleTranslations());
-
-    // maybe add here vision standart devs idk wtf
   }
 
   public Pose2d getOdometryPose() {
@@ -296,31 +294,6 @@ public class RobotState {
     return ChassisSpeeds.fromRobotRelativeSpeeds(robotVelocity, getRotation());
   }
 
-  // public Optional<Translation2d> getBestFuel() {
-
-  //   double minScore = Double.POSITIVE_INFINITY;
-  //   Translation2d bestCoral = Translation2d.kZero;
-  //   boolean noFuelFlag = true;
-
-    // for (var coralPose : fuelPoses) {
-    //   Translation2d difference = coralPose.translation.minus(estimatedPose.getTranslation());
-    //   double score =
-    //       Math.abs(difference.getAngle().getDegrees() - estimatedPose.getRotation().getDegrees())
-    //               * 1
-    //           + difference.getNorm()
-    //               * 40; // can change the weights if selection method doesnt work well
-    //   if (score < minScore) {
-    //     minScore = score;
-    //     noFuelFlag = false;
-    //   }
-    // }
-    // if (!noFuelFlag) {
-    //   return Optional.of(bestCoral);
-    // } else {
-    //   return Optional.empty();
-    // }
-  // }
-
   public Rotation2d getRotation() {
     return estimatedPose.getRotation();
   }
@@ -333,24 +306,6 @@ public class RobotState {
           resetPose(new Pose2d(estimatedPose.getMeasureX(), estimatedPose.getMeasureY(), bestLimelightYawObservation.yaw));
         }
     }
-    // fuelPoses.removeIf(
-    //     (fuelPose) ->
-    //         Timer.getFPGATimestamp() - fuelPose.timestamp()
-    //             > 1); // can change this to something different
-
-    // // Log coral posses
-    // Logger.recordOutput(
-    //     "RobotState/FuelPoses",
-    //     fuelPoses.stream()
-    //         .map(
-    //             fuelPose ->
-    //                 new Pose3d(
-    //                     new Translation3d(
-    //                         fuelPose.translation().getX(),
-    //                         fuelPose.translation().getY(),
-    //                         FieldConstants.fuelDiameter / 2.0),
-    //                     new Rotation3d()))
-    //         .toArray(Pose3d[]::new));
   }
 
   public Vector<N3> getVelocityRelativeToHub(Translation2d pose) {
@@ -461,6 +416,26 @@ public class RobotState {
         fetchVel == null ? 10.0 : fetchVel.doubleValue(), // flywheel velocity
         AllianceFlipping.apply(Rotation2d.kZero).getDegrees() // robot angle
     );
+  }
+
+    /**
+   * @return a vector that consists of {Hood angle[deg], Flywheel velocity[m/s], Robot angle[deg]}
+   */
+  public Vector<N3> getManualFetchingInfo() {
+    return VecBuilder.fill(
+      FETCHING_ANGLE,
+      FETCHING_VELOCITY,
+      AllianceFlipping.apply(Rotation2d.kZero).getDegrees()
+    );
+  }
+
+  /**
+   * 
+   * 
+   * @return a vector that consists of {Hood angle[deg], Flywheel velocity[m/s], Robot angle[deg]}
+   */
+  public Vector<N3> getShootCloseInfo() {
+    return VecBuilder.fill(SHOOT_CLOSE_ANGLE, SHOOT_CLOSE_VELOCITY, getAngleToHub().getDegrees());
   }
 
   public double getFetchingDistance() {

@@ -348,10 +348,8 @@ public class Drive extends SubsystemBase {
     // Update gyro alert
     gyroDisconnectedAlert.set(!gyroInputs.connected && Constants.currentMode != Mode.SIM);
 
-    if(xLockOverrideButton.getAsBoolean()) {
-      setDriveState(DriveStates.X_LOCK);
-    }
-    stateMachine();
+    if(xLockOverrideButton.getAsBoolean()) xLock();
+     else stateMachine();
   }
 
   public void teleopInit() {
@@ -424,10 +422,7 @@ public class Drive extends SubsystemBase {
         break;
       
       case X_LOCK:
-        modules[0].runSetpoint(new SwerveModuleState(0, Rotation2d.fromDegrees(45 + 90 * 0)));
-        modules[1].runSetpoint(new SwerveModuleState(0, Rotation2d.fromDegrees(45 + 90 * 1)));
-        modules[2].runSetpoint(new SwerveModuleState(0, Rotation2d.fromDegrees(45 + 90 * 3)));
-        modules[3].runSetpoint(new SwerveModuleState(0, Rotation2d.fromDegrees(45 + 90 * 2)));
+        xLock();
         break;
         
       default:
@@ -439,6 +434,13 @@ public class Drive extends SubsystemBase {
   public void setDriveState(DriveStates state) {
     if (driveState == state) return;
     driveState = state;
+  }
+
+  private void xLock() {
+    modules[0].runSetpoint(new SwerveModuleState(0, Rotation2d.fromDegrees(45 + 90 * 0)));
+    modules[1].runSetpoint(new SwerveModuleState(0, Rotation2d.fromDegrees(45 + 90 * 1)));
+    modules[2].runSetpoint(new SwerveModuleState(0, Rotation2d.fromDegrees(45 + 90 * 3)));
+    modules[3].runSetpoint(new SwerveModuleState(0, Rotation2d.fromDegrees(45 + 90 * 2)));
   }
 
   private void fieldCentricJoystickDrive(double vx, double vy, double vr) {

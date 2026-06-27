@@ -22,51 +22,56 @@ public class DummyController implements ControllerInterface {
 
   @Override
   public double xVelocityAnalog() {
-    return controller.getRawAxis(0);
+    return -controller.getRawAxis(4);
   }
 
   @Override
   public double yVelocityAnalog() {
-    return -controller.getRawAxis(1);
-  }
-
-  @Override
-  public double rotationVelocityAnalog() {
     return -controller.getRawAxis(2);
   }
 
   @Override
+  public double rotationVelocityAnalog() {
+    return -controller.getRawAxis(0);
+  }
+
+  @Override
   public Trigger intakeButton() {
-    return new Trigger(() -> controller.getRawButton(3));
+    return new Trigger(() -> controller.getRawButton(7));
   }
 
   @Override
   public Trigger closeIntakeButton() {
-    return new Trigger(() -> controller.getRawButton(4));
+    return new Trigger(() -> controller.getRawButton(6));
   }
 
   @Override
   public Trigger shootButton() {
-    return new Trigger(() -> controller.getRawButton(2));
-  }
-
-  @Override
-  public Trigger shootCloseButton() {
     return new Trigger(() -> controller.getRawButton(1));
   }
 
   @Override
+  public Trigger shootCloseButton() {
+    return new Trigger(() -> controller.getRawButton(4));
+  }
+
+  @Override
   public Trigger purgeIntakeButton() {
-    return new Trigger(() -> false);
+    return new Trigger(() -> controller.getRawButton(5));
   }
 
   @Override
   public Trigger fetchButton() {
-    return new Trigger(() -> false);
+    return new Trigger(() -> controller.getRawButton(2));
+  }
+
+  @Override
+  public Trigger fetchManualButton() {
+    return new Trigger(() -> controller.getRawButton(3));
   }
 
   @Override
   public Trigger xLockOverride() {
-    return new Trigger(() -> false);
+    return new Trigger(() -> controller.getRawButton(8));
   }
 }

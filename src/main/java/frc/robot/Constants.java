@@ -64,8 +64,8 @@ public final class Constants {
   // public static final double SHOOT_CLOSE_VELOCITY = 8.5; // m/s
   public static final double SHOOT_CLOSE_ANGLE = 81.0; // deg
 
-  public static final double FETCH_VELOCITY = 13.7; // m/s
-  public static final double FETCH_ANGLE = 52.0; // deg
+  public static final double FETCHING_VELOCITY = 13.7; // m/s
+  public static final double FETCHING_ANGLE = 52.0; // deg
 
   public static final class FieldConstants {
 
@@ -92,7 +92,6 @@ public final class Constants {
             );
     
     public static InterpolatingDoubleTreeMap fetchingTableData = new InterpolatingDoubleTreeMap();
-    public static final double FETCHING_ANGLE = 52.0;
     public static final double FETCHING_TARGET_LINE = 2.0;
     public static final Pose2d HUB_2D_COORDS = new Pose2d(4.62 , 4.035, new Rotation2d());
     public static final Pose3d UPPER_HUB_3D_COORDS = new Pose3d(HUB_2D_COORDS.getX(), HUB_2D_COORDS.getY(), 1.825, Rotation3d.kZero);

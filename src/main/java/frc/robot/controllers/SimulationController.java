@@ -59,6 +59,10 @@ public class SimulationController implements ControllerInterface {
   public Trigger fetchButton() {
     return new Trigger(() -> controller.getRawButton(4));
   }
+  @Override
+  public Trigger fetchManualButton() {
+    return new Trigger(() -> controller.getRawButton(9));
+  }
 
   @Override
   public Trigger xLockOverride() {
