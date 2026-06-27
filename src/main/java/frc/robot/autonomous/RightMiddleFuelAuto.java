@@ -85,16 +85,16 @@ public class RightMiddleFuelAuto extends Command {
             afterBumpPose = AllianceFlipping.mirrorPoseRightLeft(afterBumpPose);
             bumpReturnPose = AllianceFlipping.mirrorPoseRightLeft(bumpReturnPose);
             returnToAlliancePose = AllianceFlipping.mirrorPoseRightLeft(returnToAlliancePose);
-            alignToClimbPose = AllianceFlipping.mirrorPoseRightLeft(alignToClimbPose);
-            climbPose = AllianceFlipping.mirrorPoseRightLeft(climbPose);
+            // alignToClimbPose = AllianceFlipping.mirrorPoseRightLeft(alignToClimbPose);
+            // climbPose = AllianceFlipping.mirrorPoseRightLeft(climbPose);
         }
 
         startingPose = AllianceFlipping.apply(startingPose);
         afterBumpPose = AllianceFlipping.apply(afterBumpPose);
         bumpReturnPose = AllianceFlipping.apply(bumpReturnPose);
         returnToAlliancePose = AllianceFlipping.apply(returnToAlliancePose);
-        alignToClimbPose = AllianceFlipping.apply(alignToClimbPose);
-        climbPose = AllianceFlipping.apply(climbPose);
+        // alignToClimbPose = AllianceFlipping.apply(alignToClimbPose);
+        // climbPose = AllianceFlipping.apply(climbPose);
 
         var yawObservation = RobotState.getInstance().getLimelightYawObservation();
         if(RobotController.getFPGATime() * (1e-6) - yawObservation.timestamp() < 0.5) {
@@ -140,28 +140,28 @@ public class RightMiddleFuelAuto extends Command {
                 hood.setTargetAngle(() -> RobotState.getInstance().getShootOnTheMoveScoringInfo().get(0));
                 shooter.runVelocity(() -> RobotState.getInstance().getShootOnTheMoveScoringInfo().get(1));
                  if(drive.isAtAlignSetpoint(0.10, 2)) {
-                    currentState = AutoSteps.SHOOT_WHILE_TRAVEL;
+                    // currentState = AutoSteps.SHOOT_WHILE_TRAVEL;
                     flag = false;
                 }
                 break;
-            case SHOOT_WHILE_TRAVEL:
-                drive.setStatePathAndShoot(() -> alignToClimbPose.getTranslation(), 1.0, 2 * Math.PI);
-                hood.setTargetAngle(() -> RobotState.getInstance().getShootOnTheMoveScoringInfo().get(0));
-                shooter.runVelocity(() -> RobotState.getInstance().getShootOnTheMoveScoringInfo().get(1));
-                if(!flag) {
-                    if((currentMode == Mode.SIM || (hood.atSetpoint() && shooter.atVelocity())) 
-                        && drive.isAtPathAndShootSetpointTranslation(0.1)) {
-                        flag = true;
-                    }
-                } else {
-                    beltDrive.setState(BeltDriveStates.ACTIVE);
-                    intake.setState(IntakeStates.INTAKE);
-                    leds.setState(ledsStates.FINISH_SCORE);
-                }
-                if(timer.get() >= 20.0 - 5.0) {
-                    currentState = AutoSteps.ALIGN_BEFORE_CLIMB;
-                }
-                break;
+        //     case SHOOT_WHILE_TRAVEL:
+        //         drive.setStatePathAndShoot(() -> alignToClimbPose.getTranslation(), 1.0, 2 * Math.PI);
+        //         hood.setTargetAngle(() -> RobotState.getInstance().getShootOnTheMoveScoringInfo().get(0));
+        //         shooter.runVelocity(() -> RobotState.getInstance().getShootOnTheMoveScoringInfo().get(1));
+        //         if(!flag) {
+        //             if((currentMode == Mode.SIM || (hood.atSetpoint() && shooter.atVelocity())) 
+        //                 && drive.isAtPathAndShootSetpointTranslation(0.1)) {
+        //                 flag = true;
+        //             }
+        //         } else {
+        //             beltDrive.setState(BeltDriveStates.ACTIVE);
+        //             intake.setState(IntakeStates.INTAKE);
+        //             leds.setState(ledsStates.FINISH_SCORE);
+        //         }
+        //         if(timer.get() >= 20.0 - 5.0) {
+        //             currentState = AutoSteps.ALIGN_BEFORE_CLIMB;
+        //         }
+        //         break;
         }
     }
 }
