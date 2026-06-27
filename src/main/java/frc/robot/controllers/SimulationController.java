@@ -6,8 +6,8 @@ import edu.wpi.first.wpilibj2.command.button.Trigger;
 public class SimulationController implements ControllerInterface {
   private final GenericHID controller;
 
-  public SimulationController() {
-    controller = new GenericHID(0);
+  public SimulationController(int port) {
+    controller = new GenericHID(port);
   }
 
   @Override

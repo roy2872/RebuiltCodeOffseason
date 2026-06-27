@@ -7,8 +7,8 @@ public class SingleXboxController implements ControllerInterface {
 
   private final XboxController controller;
 
-  public SingleXboxController() {
-    controller = new XboxController(0);
+  public SingleXboxController(int port) {
+    controller = new XboxController(port);
   }
 
   @Override

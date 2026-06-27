@@ -36,6 +36,7 @@ import frc.robot.SuperStructure.SuperStructureStates;
 import frc.robot.autonomous.DepotAuto;
 import frc.robot.controllers.ControllerInterface;
 import frc.robot.controllers.DummyController;
+import frc.robot.controllers.QXController;
 import frc.robot.controllers.SimulationController;
 import frc.robot.controllers.SingleXboxController;
 import frc.robot.controllers.TwoControllers;
@@ -102,7 +103,7 @@ public class RobotContainer {
       case REAL:
         // Real robot, instantiate hardware IO implementations
         // controller = new twoco();
-        controller = new TwoControllers();
+        controller = new TwoControllers(new QXController(0), new DummyController(1));
         drive =
             new Drive(
                 new GyroIONavX(),
@@ -164,7 +165,7 @@ public class RobotContainer {
                 DriveConstants.mapleSimConfig, new Pose2d(3, 3, new Rotation2d()));
 
         SimulatedArena.getInstance().addDriveTrainSimulation(driveSimulation);
-        controller = new SimulationController();
+        controller = new SimulationController(0);
 
         drive =
             new Drive(
@@ -222,7 +223,7 @@ public class RobotContainer {
 
       default:
         // Replayed robot, disable IO implementations
-        controller = new SimulationController();
+        controller = new SimulationController(0);
         drive =
             new Drive(
                 new GyroIO() {},
