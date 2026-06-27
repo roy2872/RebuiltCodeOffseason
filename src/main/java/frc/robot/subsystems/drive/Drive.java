@@ -683,8 +683,6 @@ public void autoAlign() {
     Pose2d targetPose = autoAlignTarget.get();
     Pose2d currentPose = RobotState.getInstance().getEstimatedPose();
 
-    System.out.println("Auto align target: " + targetPose.toString());
-
     // 2. Calculate distance translation
     Translation2d distance = targetPose.getTranslation().minus(currentPose.getTranslation());
     double currentDistance = Math.hypot(distance.getX(), distance.getY());

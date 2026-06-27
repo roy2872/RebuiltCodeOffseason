@@ -77,9 +77,6 @@ public class SparkMaxIO implements MotorIO {
         motor,
         () -> this.rotorToUnits(encoder.getPosition() - rotorOffset.magnitude()),
         (position) -> inputs.unitPosition = position);
-
-    System.out.println(encoder.getVelocity());
-    System.out.println(velocityRotorToUnits(encoder.getVelocity()));
     ifOk(
         motor,
         () -> velocityRotorToUnits(encoder.getVelocity()),

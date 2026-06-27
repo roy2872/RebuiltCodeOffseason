@@ -91,8 +91,6 @@ public class DepotAuto extends Command {
 
     @Override
   public void execute() {
-    System.out.println(currentState);
-    System.out.println(depotAlignPose);
     switch (currentState) {
       case START:
         RobotState.getInstance().resetPose(startingPose);
