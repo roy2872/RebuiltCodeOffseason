@@ -48,8 +48,8 @@ public class IntakeConstants {
 
     // public static final double INTAKE_OPEN_ANGLE = Units.degreesToRadians(30); // TODO: tune angles
     // public static final double INTAKE_CLOSED_ANGLE = Units.degreesToRadians(80);
-    public static final double INTAKE_OPEN_ANGLE = 0.2;
-    public static final double INTAKE_CLOSED_ANGLE = 0.3; 
+    public static final double INTAKE_OPEN_ANGLE = 0.21;
+    public static final double INTAKE_CLOSED_ANGLE = 0.32; 
 
     // public static final double INTAKE_MIN_ANGLE = Units.degreesToRadians(0);
     // public static final double INTAKE_MAX_ANGLE = Units.degreesToRadians(90);
@@ -89,14 +89,15 @@ public class IntakeConstants {
               ClosedLoopSlot.kSlot0)
             .feedbackSensor(FeedbackSensor.kAbsoluteEncoder)
             .maxMotion
-            .maxVelocity(4.0); // keep velocity ff 0
+            .maxVelocity(40.0)
+            .maxAcceleration(100.0); // keep velocity ff 0
       INTAKE_DEPLOY_CONFIG
           .sparkConfig
           .softLimit
-          .forwardSoftLimitEnabled(true)
-          .forwardSoftLimit(0.3)
-          .reverseSoftLimitEnabled(true)
-          .reverseSoftLimit(0.2); // TODO: may be the other way around
+          .forwardSoftLimitEnabled(false)
+          .forwardSoftLimit(INTAKE_CLOSED_ANGLE+0.05)
+          .reverseSoftLimitEnabled(false)
+          .reverseSoftLimit(INTAKE_OPEN_ANGLE-0.05); // TODO: may be the other way around
 
       INTAKE_DEPLOY_CONFIG.unitToRotorRatio = 1.0; // TODO: set ratio
 

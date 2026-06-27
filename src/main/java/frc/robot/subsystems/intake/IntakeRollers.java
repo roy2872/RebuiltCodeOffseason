@@ -40,7 +40,7 @@ public class IntakeRollers extends MotorSubsystem<MotorInputsAutoLogged, MotorIO
           ROLLER_VOLTAGE_INTAKE + ffController.calculate(super.inputs.velocityUnitsPerSecond));
 
       case PURGE -> super.setVoltageOutput(
-          -12 + ffController.calculate(super.inputs.velocityUnitsPerSecond));
+          -ROLLER_VOLTAGE_INTAKE + ffController.calculate(super.inputs.velocityUnitsPerSecond));
     }
   }
 

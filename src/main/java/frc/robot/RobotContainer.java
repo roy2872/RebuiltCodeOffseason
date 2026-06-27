@@ -297,6 +297,7 @@ public class RobotContainer {
     controller.fetchButton().onTrue(structure.fetchButtonCommand());
     controller.purgeIntakeButton().onTrue(structure.purgeIntakeButtonTrueCommand());
     controller.purgeIntakeButton().onFalse(structure.purgeIntakeButtonFalseCommand());
+
     // controller.intakeButton().onTrue(Commands.run(() ->intake.setState(IntakeStates.SHUFFLE), intake));
     // controller.intakeButton().onFalse(Commands.run(() -> intake.setState(IntakeStates.CLOSED), intake));
     // controller.intakeButton().onTrue(Commands.run(() -> intake.setState(IntakeStates.CLOSED), intake));

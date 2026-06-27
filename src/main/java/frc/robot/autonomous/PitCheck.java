@@ -39,7 +39,6 @@ public class PitCheck {
             // --- STEP 2: STOW INTAKE & PREPARE SUPERSTRUCTURE ---
             Commands.runOnce(() -> System.out.println("Stowing intake. Prepping shooter: 2.0 mps @ 60 degrees...")),
             Commands.runOnce(() -> intake.setState(IntakeStates.IDLE), intake),
-            Commands.runOnce(() -> beltDrive.setState(BeltDriveStates.IDLE), beltDrive),
             // --- STEP 3: SPIN UP & AIM ---
             Commands.parallel(
                 Commands.run(() -> hood.setTargetAngle(() -> 60.0), hood),

@@ -273,8 +273,8 @@ public class ShooterWheel extends MotorSubsystemWithFollowers<MotorInputsAutoLog
       tolerance = 1.0; 
     }
     atGoal = Math.abs(currentVelocity - targetVelocity) <= tolerance;
-    return atGoalTimer.calculate(atGoal);
-    // return atGoal;
+    // return atGoalTimer.calculate(atGoal);
+    return atGoal;
   }
 
   // private void resetHold() {
