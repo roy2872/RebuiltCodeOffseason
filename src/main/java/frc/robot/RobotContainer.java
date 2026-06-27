@@ -115,7 +115,8 @@ public class RobotContainer {
                 controller::xVelocityAnalog,
                 controller::yVelocityAnalog,
                 controller::rotationVelocityAnalog,
-                controller.xLockOverride());
+                controller.xLockOverride(),
+                controller.alignToBumpButton());
 
         beltDrive =
             new BeltDrive(
@@ -178,7 +179,8 @@ public class RobotContainer {
                 controller::xVelocityAnalog,
                 controller::yVelocityAnalog,
                 controller::rotationVelocityAnalog,
-                controller.xLockOverride());
+                controller.xLockOverride(),
+                controller.alignToBumpButton());
 
         beltDrive =
             new BeltDrive(
@@ -235,7 +237,8 @@ public class RobotContainer {
                 controller::xVelocityAnalog,
                 controller::yVelocityAnalog,
                 controller::rotationVelocityAnalog,
-                controller.xLockOverride());
+                controller.xLockOverride(),
+                controller.alignToBumpButton());
         beltDrive = new BeltDrive(
           BeltDriveConstants.BELT_DRIVE_CONFIG, 
           new SimSparkMaxIO(BeltDriveConstants.BELT_DRIVE_CONFIG), 

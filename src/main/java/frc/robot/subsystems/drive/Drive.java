@@ -62,6 +62,7 @@ import edu.wpi.first.wpilibj2.command.button.Trigger;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine;
 import edu.wpi.first.wpilibj2.command.sysid.SysIdRoutine.Config;
 import frc.lib.util.LocalADStarAK;
+import frc.lib.util.SwerveUtils;
 import frc.robot.Constants;
 import frc.robot.Constants.Mode;
 import frc.robot.RobotState;
@@ -155,6 +156,7 @@ public class Drive extends SubsystemBase {
 
   private final DoubleSupplier xJoystickVelocity, yJoystickVelocity, rJoystickVelocity;
   private final Trigger xLockOverrideButton;
+  private final Trigger alignToBumpOverrideButton;
 
   private Supplier<Pose2d> autoAlignTarget;
   private Supplier<Rotation2d> autoAlignAngleTarget;
@@ -190,7 +192,8 @@ public class Drive extends SubsystemBase {
       DoubleSupplier xJoystickVelocity,
       DoubleSupplier yJoystickVelocity,
       DoubleSupplier rJoystickVelocity,
-      Trigger xLockOverrideButton) {
+      Trigger xLockOverrideButton,
+      Trigger alignToBumpOverrideButton) {
 
     rotationController.enableContinuousInput(0, 360);
     rotationController.setTolerance(2);
@@ -253,6 +256,7 @@ public class Drive extends SubsystemBase {
     this.yJoystickVelocity = yJoystickVelocity;
     this.rJoystickVelocity = rJoystickVelocity;
     this.xLockOverrideButton = xLockOverrideButton;
+    this.alignToBumpOverrideButton = alignToBumpOverrideButton;
 
     shootDriveTargetAngle = () -> Rotation2d.fromDegrees(RobotState.getInstance().getShootingInfo().get(2));
     shootMoveDriveTargetAngle = () -> Rotation2d.fromDegrees(RobotState.getInstance().getShootOnTheMoveScoringInfo().get(2));
@@ -443,6 +447,20 @@ public class Drive extends SubsystemBase {
     modules[3].runSetpoint(new SwerveModuleState(0, Rotation2d.fromDegrees(45 + 90 * 2)));
   }
 
+  private double getAlignToBumpVelocity() {
+    double yaw = RobotState.getInstance().getEstimatedPose().getRotation().getDegrees();
+    double closestAngle = 
+      SwerveUtils.getClosestDiagonalAngle(yaw);
+    Rotation2d targetAngle = Rotation2d.fromDegrees(closestAngle);
+    double rot =
+            rotationController.calculate(
+                (yaw % 360 + 360)
+                    % 360,
+                (targetAngle.getDegrees() % 360 + 360) % 360);
+    rot = Math.signum(rot) * Math.min(Math.abs(rot), maxAutoAlignAngularVelocity);
+    return rot;    
+  }
+
   private void fieldCentricJoystickDrive(double vx, double vy, double vr) {
     Translation2d linearVelocity = getLinearVelocityFromJoysticks(vx, vy);
 
@@ -546,6 +564,7 @@ public class Drive extends SubsystemBase {
 
   public void runVelocity(ChassisSpeeds speeds) {
 
+    if(alignToBumpOverrideButton.getAsBoolean()) speeds.omegaRadiansPerSecond = getAlignToBumpVelocity();
     RobotState.getInstance().addDriveSpeeds(speeds);
     // speeds = accelLimitsLib.applyAccLimits(speeds, getChassisSpeeds());
     // // Calculate module setpoints
