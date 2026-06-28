@@ -123,6 +123,7 @@ public class RobotContainer {
 
         beltDrive =
             new BeltDrive(
+                controller.purgeIntakeButton(),
                 BeltDriveConstants.BELT_DRIVE_CONFIG,
                 new SparkMaxIO(BeltDriveConstants.BELT_DRIVE_CONFIG),
                 new SparkMaxIO(BeltDriveConstants.BELT_FOLLOWER_CONFIG.config),
@@ -187,6 +188,7 @@ public class RobotContainer {
 
         beltDrive =
             new BeltDrive(
+          controller.purgeIntakeButton(),
           BeltDriveConstants.BELT_DRIVE_CONFIG, 
           new SimSparkMaxIO(BeltDriveConstants.BELT_DRIVE_CONFIG),
           new SimSparkMaxIO(BeltDriveConstants.BELT_FOLLOWER_CONFIG.config),
@@ -243,6 +245,7 @@ public class RobotContainer {
                 controller.xLockOverride(),
                 controller.alignToBumpButton());
         beltDrive = new BeltDrive(
+          controller.purgeIntakeButton(),
           BeltDriveConstants.BELT_DRIVE_CONFIG, 
           new SimSparkMaxIO(BeltDriveConstants.BELT_DRIVE_CONFIG), 
           new SimSparkMaxIO(BeltDriveConstants.BELT_FOLLOWER_CONFIG.config),
@@ -306,8 +309,8 @@ public class RobotContainer {
     controller.fetchButton().onTrue(structure.fetchButtonCommand());
     controller.purgeIntakeButton().onTrue(structure.purgeIntakeButtonTrueCommand());
     controller.purgeIntakeButton().onFalse(structure.purgeIntakeButtonFalseCommand());
-
-    // controller.intakeButton().onTrue(Commands.run(() ->intake.setState(IntakeStates.SHUFFLE), intake));
+    controller.fetchManualButton().onTrue(structure.fetchManualButtonCommand());
+      // controller.intakeButton().onTrue(Commands.run(() ->intake.setState(IntakeStates.SHUFFLE), intake));
     // controller.intakeButton().onFalse(Commands.run(() -> intake.setState(IntakeStates.CLOSED), intake));
     // controller.intakeButton().onTrue(Commands.run(() -> intake.setState(IntakeStates.CLOSED), intake));
     // controller.().onTrue(shooter.shooterHoodSysidRoutine(true, Direction.kReverse));

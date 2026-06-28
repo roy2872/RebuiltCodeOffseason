@@ -17,12 +17,12 @@ public class QXController implements ControllerInterface {
 
   @Override
   public double xVelocityAnalog() {
-    return controller.getRawAxis(3);
+    return -controller.getRawAxis(3);
   }
 
   @Override
   public double yVelocityAnalog() {
-    return -controller.getRawAxis(2);
+    return controller.getRawAxis(2);
   }
 
   @Override
