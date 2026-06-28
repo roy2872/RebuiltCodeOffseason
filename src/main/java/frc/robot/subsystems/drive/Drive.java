@@ -714,7 +714,7 @@ public void autoAlign() {
     linearVelocity = Math.min(linearVelocity, maxAutoAlignVelocity);
 
     Translation2d linearVelocityTranslation = new Translation2d(
-        linearVelocity, 
+        -linearVelocity, 
         new Rotation2d(Math.atan2(distance.getY(), distance.getX()))
     );
 

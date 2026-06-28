@@ -43,17 +43,17 @@ public class ShootCommand extends SequentialCommandGroup {
         addCommands(
             // Step 1: Spin up and align continuously until target is met
             Commands.parallel(
-                Commands.either(Commands.run(() -> drive.setStateAutoAlignAngle(() -> AllianceFlipping.apply(Rotation2d.kZero)), drive),
+                Commands.either(Commands.run(() -> drive.setStateAutoAlignAngle(() -> Rotation2d.fromDegrees(dataSupplier.get().get(2))), drive),
                 Commands.run(() -> drive.setState(DriveStates.FIELD_DRIVE), drive), shouldAutoAlignToTarget),
                 Commands.run(() -> hood.setTargetAngle(safeHoodAngle), hood),
                 Commands.run(() -> shooter.runVelocity(safeShooterVelocity), shooter)
             ).until(() -> shooter.atVelocity() && hood.atSetpoint() && 
             (drive.isAtAutoAlignAngleSetpoint(2.0) || !shouldAutoAlignToTarget.getAsBoolean()))
-            .withTimeout(6.0),
+            .withTimeout(4.0),
             
             // Step 2: Keep targets active while feeding the system
             Commands.parallel(
-                Commands.either(Commands.run(() -> drive.setStateAutoAlignAngle(() -> AllianceFlipping.apply(Rotation2d.kZero)), drive),
+                Commands.either(Commands.run(() -> drive.setStateAutoAlignAngle(() -> Rotation2d.fromDegrees(dataSupplier.get().get(2))), drive),
                 Commands.run(() -> drive.setState(DriveStates.FIELD_DRIVE), drive), shouldAutoAlignToTarget),
                 Commands.run(() -> hood.setTargetAngle(safeHoodAngle), hood),
                 Commands.run(() -> shooter.runVelocity(safeShooterVelocity), shooter),

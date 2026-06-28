@@ -34,6 +34,9 @@ import frc.lib.util.TableLoader;
 import frc.robot.SuperStructure.StructureIntakeStates;
 import frc.robot.SuperStructure.SuperStructureStates;
 import frc.robot.autonomous.DepotAuto;
+import frc.robot.autonomous.PitCheck;
+import frc.robot.autonomous.RealDepotAuto;
+import frc.robot.commands.ShootCommand;
 import frc.robot.controllers.ControllerInterface;
 import frc.robot.controllers.DummyController;
 import frc.robot.controllers.QXController;
@@ -103,7 +106,7 @@ public class RobotContainer {
       case REAL:
         // Real robot, instantiate hardware IO implementations
         // controller = new twoco();
-        controller = new TwoControllers(new DummyController(0), new DummyController(0));
+        controller = new TwoControllers(new QXController(0), new DummyController(1));
         drive =
             new Drive(
                 new GyroIONavX(),
@@ -274,8 +277,11 @@ public class RobotContainer {
     // Set up auto routines
     autoChooser = new LoggedDashboardChooser<>("Auto Choices");
     autoChooser.addDefaultOption("Do Nothing", Commands.print("Doing nothing"));
-    autoChooser.addOption("Depot Middle Auto", new DepotAuto(beltDrive, drive, hood, intake, leds, shooter));
+    autoChooser.addOption("Depot Middle Auto", new DepotAuto(beltDrive, drive, hood, intake, leds, shooter).andThen(new ShootCommand(beltDrive, drive, hood, leds, shooter, RobotState.getInstance()::getShootCloseInfo, 
+          () -> !SmartDashboard.getBoolean("DriverControlWhenShooting", false))));
+    autoChooser.addOption("Pit Check", PitCheck.getCommand(intake, beltDrive, hood, shooter, leds));
     // Configure the button bindings
+    autoChooser.addOption("Real Depot Middle Auto", new RealDepotAuto(beltDrive, drive, hood, intake, leds, shooter));
     configureButtonBindings();
   }
 
@@ -304,7 +310,7 @@ public class RobotContainer {
     // controller.intakeButton().onTrue(Commands.run(() ->intake.setState(IntakeStates.SHUFFLE), intake));
     // controller.intakeButton().onFalse(Commands.run(() -> intake.setState(IntakeStates.CLOSED), intake));
     // controller.intakeButton().onTrue(Commands.run(() -> intake.setState(IntakeStates.CLOSED), intake));
-    // controller.purgeIntakeButton().onTrue(shooter.shooterHoodSysidRoutine(true, Direction.kReverse));
+    // controller.().onTrue(shooter.shooterHoodSysidRoutine(true, Direction.kReverse));
     // controller.intakeButton().onTrue(drive.driveMotorSysIdCommand(true, Direction.kForward));
   }
 
@@ -320,6 +326,7 @@ public class RobotContainer {
 
   public void periodic() {
     SmartDashboard.putData("Command Scheduler", CommandScheduler.getInstance());
+    robotState.periodic();
     // SmartDashboard.putData(
     //     "rgtrh",
     //     new AlignAlgaeReefCommand(drive, arm, elevator, gripper, false, () -> false, () ->

@@ -53,7 +53,7 @@ public class DepotAuto extends Command {
     private Pose2d depotAlignPose = new Pose2d(1.3, 5.9, Rotation2d.kPi);
     private Pose2d DepotCollectPose = new Pose2d(0.6, 5.9, Rotation2d.kPi);
     private Pose2d depotExitPose = new Pose2d(1.3, 5.9, Rotation2d.kPi);
-    private Pose2d shootingPose = new Pose2d(3.26, 4.0, Rotation2d.kPi);
+    private Pose2d shootingPose = new Pose2d(2.66, 4.0, Rotation2d.kPi);
 
   public DepotAuto(
     BeltDrive beltDrive,
@@ -127,6 +127,8 @@ public class DepotAuto extends Command {
         drive.setStateAutoAlign(()->depotExitPose, 0.2, 2.0);
         if(drive.isAtAlignSetpoint(0.05, 2))
             currentState = AutoStates.ALIGN_TO_SHOOTER;
+            timestamp = RobotController.getFPGATime() * 1e-6;
+
         break;
       case ALIGN_TO_SHOOTER:
         intake.setState(IntakeStates.IDLE);
@@ -134,39 +136,40 @@ public class DepotAuto extends Command {
         beltDrive.setState(BeltDriveStates.IDLE);
         shooter.setState(ShooterStates.IDLE);
         drive.setStateAutoAlign(()->shootingPose, 1.0, 2.0);
-        if(drive.isAtAlignSetpoint(0.05, 2)) {
+        if(drive.isAtAlignSetpoint(0.08, 2) || RobotController.getFPGATime() * 1e-6 - timestamp > 5.0) {
             currentState = AutoStates.PREPARE_TO_SHOOT;
         }
         break;
-      case PREPARE_TO_SHOOT:
-        intake.setState(IntakeStates.OPEN);
-        hood.setState(HoodStates.TRACKING);
-        hood.setTargetAngle(() -> Constants.SHOOT_CLOSE_ANGLE);
-        beltDrive.setState(BeltDriveStates.IDLE);
-        shooter.runVelocity(() -> Constants.SHOOT_CLOSE_VELOCITY);
-        drive.setState(DriveStates.X_LOCK);
-        if(shooter.atVelocity() && hood.atSetpoint())
-        timestamp = RobotController.getFPGATime() * (1e-6);
-            currentState = AutoStates.SHOOT;
-        break;
-      case SHOOT:
-        intake.setState(IntakeStates.OPEN);
-        hood.setState(HoodStates.TRACKING);
-        hood.setTargetAngle(() -> Constants.SHOOT_CLOSE_ANGLE);
-        beltDrive.setState(BeltDriveStates.ACTIVE);
-        shooter.runVelocity(() -> Constants.SHOOT_CLOSE_VELOCITY);
-        drive.setState(DriveStates.X_LOCK);
-        if(RobotController.getFPGATime() * (1e-6) - timestamp > 6.0)
-            currentState = AutoStates.END;
-        break;
-      case END:
-        intake.setState(IntakeStates.OPEN);
-        hood.setState(HoodStates.IDLE);
-        beltDrive.setState(BeltDriveStates.IDLE);
-        shooter.setState(ShooterStates.IDLE);
-        drive.setState(DriveStates.FIELD_DRIVE);
-        break;
-    }
+      }
+    //   case PREPARE_TO_SHOOT:
+    //     intake.setState(IntakeStates.OPEN);
+    //     hood.setState(HoodStates.TRACKING);
+    //     hood.setTargetAngle(() -> Constants.SHOOT_CLOSE_ANGLE);
+    //     beltDrive.setState(BeltDriveStates.IDLE);
+    //     shooter.runVelocity(() -> Constants.SHOOT_CLOSE_VELOCITY);
+    //     drive.setState(DriveStates.X_LOCK);
+    //     if(shooter.atVelocity() && hood.atSetpoint())
+    //     timestamp = RobotController.getFPGATime() * (1e-6);
+    //         currentState = AutoStates.SHOOT;
+    //     break;
+    //   case SHOOT:
+    //     intake.setState(IntakeStates.OPEN);
+    //     hood.setState(HoodStates.TRACKING);
+    //     hood.setTargetAngle(() -> Constants.SHOOT_CLOSE_ANGLE);
+    //     beltDrive.setState(BeltDriveStates.ACTIVE);
+    //     shooter.runVelocity(() -> Constants.SHOOT_CLOSE_VELOCITY);
+    //     drive.setState(DriveStates.X_LOCK);
+    //     if(RobotController.getFPGATime() * (1e-6) - timestamp > 6.0)
+    //         currentState = AutoStates.END;
+    //     break;
+    //   case END:
+    //     intake.setState(IntakeStates.OPEN);
+    //     hood.setState(HoodStates.IDLE);
+    //     beltDrive.setState(BeltDriveStates.IDLE);
+    //     shooter.setState(ShooterStates.IDLE);
+    //     drive.setState(DriveStates.FIELD_DRIVE);
+    //     break;
+    // }
   }
 
     @Override
@@ -180,6 +183,6 @@ public class DepotAuto extends Command {
 
     @Override
     public boolean isFinished() {
-        return currentState == AutoStates.END;
+        return currentState == AutoStates.PREPARE_TO_SHOOT;
     }
 }

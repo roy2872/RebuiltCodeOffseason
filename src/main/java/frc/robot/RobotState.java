@@ -27,6 +27,7 @@ import edu.wpi.first.math.numbers.N2;
 import edu.wpi.first.math.numbers.N3;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.DriverStation.Alliance;
+import edu.wpi.first.wpilibj.smartdashboard.Field2d;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj.RobotController;
 import edu.wpi.first.wpilibj.Timer;
@@ -109,7 +110,12 @@ public class RobotState {
 
   // arm position
 
+  private Field2d field;
+
   private RobotState() {
+    field = new Field2d();
+    SmartDashboard.putData("Field", field);
+    SmartDashboard.putNumber("FlywheelBias", 1.5);
     for (int i = 0; i < 3; i++) {
       qStdDevs.set(i, 0, Math.pow(i, i)); // change this!
     }
@@ -299,13 +305,14 @@ public class RobotState {
   }
 
   public void periodic() {
-    if(bestLimelightYawObservation != null && (lastLimelightYawUpdate - RobotController.getFPGATime() * (1e-6)) < 5.0) {
-      var vel = getFieldVelocity();
-      if(/*(RobotController.getFPGATime() * (1e-6) - bestLimelightYawObservation.timestamp < 0.3)*/ true && 
-        (Math.hypot(vel.vxMetersPerSecond, vel.vyMetersPerSecond) < 1.0) && vel.omegaRadiansPerSecond < 1.0) {
-          resetPose(new Pose2d(estimatedPose.getMeasureX(), estimatedPose.getMeasureY(), bestLimelightYawObservation.yaw));
-        }
-    }
+    field.setRobotPose(estimatedPose);
+    // if(bestLimelightYawObservation != null && (lastLimelightYawUpdate - RobotController.getFPGATime() * (1e-6)) < 5.0) {
+    //   var vel = getFieldVelocity();
+    //   if(/*(RobotController.getFPGATime() * (1e-6) - bestLimelightYawObservation.timestamp < 0.3)*/ true && 
+    //     (Math.hypot(vel.vxMetersPerSecond, vel.vyMetersPerSecond) < 1.0) && vel.omegaRadiansPerSecond < 1.0) {
+    //       resetPose(new Pose2d(estimatedPose.getMeasureX(), estimatedPose.getMeasureY(), bestLimelightYawObservation.yaw));
+    //     }
+    // }
   }
 
   public Vector<N3> getVelocityRelativeToHub(Translation2d pose) {
@@ -326,7 +333,7 @@ public class RobotState {
 
   public Rotation2d getAngleToHub(Translation2d pose) {
     return 
-        AllianceFlipping.apply(HUB_2D_COORDS.getTranslation()).minus(pose).getAngle();
+        AllianceFlipping.apply(HUB_2D_COORDS.getTranslation()).minus(pose).getAngle().plus(Rotation2d.k180deg);
   }
 
   public Rotation2d getAngleToHub() {
@@ -347,8 +354,8 @@ public class RobotState {
     var shootingData = getShootingData.apply(inputVector);
     return VecBuilder.fill(
         shootingData.get(0, 0), // hood angle
-        shootingData.get(1, 0), // flywheel velocity
-        getAngleToHub().plus(Rotation2d.k180deg).getDegrees() // robot angle
+        shootingData.get(1, 0) + SmartDashboard.getNumber("FlywheelBias", 1.5), // flywheel velocity
+        getAngleToHub().getDegrees() // robot angle
     );
   }
 
