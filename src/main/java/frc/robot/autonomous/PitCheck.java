@@ -2,9 +2,9 @@ package frc.robot.autonomous;
 
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.Command;
-import frc.robot.subsystems.beltDrive.BeltDrive;
-import frc.robot.subsystems.beltDrive.BeltDrive.BeltDriveStates;
 import frc.robot.subsystems.drive.Drive;
+import frc.robot.subsystems.feeder.BeltDrive;
+import frc.robot.subsystems.feeder.BeltDrive.BeltDriveStates;
 import frc.robot.subsystems.hood.Hood;
 import frc.robot.subsystems.hood.Hood.HoodStates;
 import frc.robot.subsystems.intake.Intake;

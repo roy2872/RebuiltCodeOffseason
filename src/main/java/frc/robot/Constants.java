@@ -13,9 +13,17 @@
 
 package frc.robot;
 
+import static edu.wpi.first.units.Units.DegreesPerSecond;
+import static edu.wpi.first.units.Units.RadiansPerSecond;
+import static edu.wpi.first.units.Units.Second;
+import static edu.wpi.first.units.Units.Seconds;
+
+import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
 import org.littletonrobotics.junction.Logger;
+
+import com.ctre.phoenix6.CANBus;
 
 import edu.wpi.first.apriltag.AprilTagFieldLayout;
 import edu.wpi.first.apriltag.AprilTagFields;
@@ -31,6 +39,9 @@ import edu.wpi.first.math.interpolation.InterpolatingDoubleTreeMap;
 import edu.wpi.first.math.numbers.N2;
 import edu.wpi.first.math.numbers.N3;
 import edu.wpi.first.math.util.Units;
+import edu.wpi.first.units.measure.AngularVelocity;
+import edu.wpi.first.units.measure.Time;
+import edu.wpi.first.units.measure.Velocity;
 import edu.wpi.first.wpilibj.RobotBase;
 import frc.lib.util.AllianceFlipping;
 import frc.lib.util.NestedInterpolatingTreeMap;
@@ -42,6 +53,7 @@ import frc.lib.util.TableLoader;
  * (log replay from a file).
  */
 public final class Constants {
+  public static final CANBus rio = new CANBus();
   public static final Mode simMode = Mode.SIM;
   public static final Mode currentMode = RobotBase.isReal() ? Mode.REAL : simMode;
 
@@ -54,6 +66,14 @@ public final class Constants {
 
     /** Replaying from a log file. */
     REPLAY
+  }
+
+  public static final class ForceHomeConstants {
+    public static final Time INTAKE_FORCE_DEBOUNCE = Seconds.of(0.2);
+    public static final AngularVelocity INTAKE_MIN_HOME_VELOCITY = RadiansPerSecond.of(0.1);
+    public static final Time HOOD_FORCE_DEBOUNCE = Seconds.of(0.2);
+        public static final AngularVelocity HOOD_MIN_HOME_VELOCITY = RadiansPerSecond.of(0.05);
+
   }
 
   public static final double CYCLE_TIME = 0.02;
