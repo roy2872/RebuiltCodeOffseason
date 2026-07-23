@@ -3,9 +3,12 @@ package frc.robot.subsystems.intakerollers;
 import static edu.wpi.first.units.Units.Volts;
 
 import com.revrobotics.spark.config.SparkMaxConfig;
+
+import edu.wpi.first.math.system.plant.DCMotor;
 import edu.wpi.first.units.measure.Voltage;
 import frc.lib.io.MotorIOSparkMax;
 import frc.lib.io.MotorIOSparkMax.MotorIOSparkMaxConfig;
+import frc.lib.sim.RollerSim.RollerSimConstants;
 import frc.robot.Ports;
 
 public class IntakeRollersConstants {
@@ -25,7 +28,7 @@ public class IntakeRollersConstants {
         return config;
     }
 
-        public static MotorIOSparkMaxConfig getIOConfig() {
+    public static MotorIOSparkMaxConfig getIOConfig() {
         MotorIOSparkMaxConfig config = new MotorIOSparkMaxConfig();
         config.mainID = Ports.INTAKE_ROLLERS_MAIN.id;
         config.mainConfig = getMotorConfig();
@@ -35,5 +38,13 @@ public class IntakeRollersConstants {
 
     public static MotorIOSparkMax getMotorIO() {
         return new MotorIOSparkMax(getIOConfig());
-    }   
+    }
+
+    public static RollerSimConstants getSimConstants() {
+        RollerSimConstants config = new RollerSimConstants();
+        config.gearing = GEARING;
+        config.momentOfInertia = 0.03;
+        config.motor = DCMotor.getNEO(1);
+        return config;
+    }
 }

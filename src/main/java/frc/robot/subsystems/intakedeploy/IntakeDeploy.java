@@ -9,8 +9,8 @@ import frc.lib.io.MotorIOSparkMax;
 
 public class IntakeDeploy extends ServoMotorSubsystem<SparkMaxConfig, MotorIOSparkMax> {
 
-	public static final Setpoint<Angle> STOWED_SETPOINT = Setpoint.withPositionSetpoint(IntakeDeployConstants.INTAKE_STOWED_ANGLE);
-	public static final Setpoint<Angle> DEPLOYED_SETPOINT =
+	public static final Setpoint<Angle> STOWED = Setpoint.withPositionSetpoint(IntakeDeployConstants.INTAKE_STOWED_ANGLE);
+	public static final Setpoint<Angle> DEPLOYED =
 			Setpoint.withPositionSetpoint(IntakeDeployConstants.INTAKE_DEPLOYED_ANGLE);
 	public static final Setpoint<Angle> PARTIAL_IN = Setpoint.withPositionSetpoint(IntakeDeployConstants.INTAKE_PARTIAL_IN_ANGLE);
 

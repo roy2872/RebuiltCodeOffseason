@@ -22,7 +22,7 @@ import frc.robot.Robot;
 
 public class ShooterConstants {
 
-    public static final double kGearing = 1/2.0;
+    public static final double kGearing = 1/1.0;
 
     public static final AngularVelocity kEpsilonThreshold = RPM.of(10.0);
 

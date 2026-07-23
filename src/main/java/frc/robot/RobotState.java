@@ -55,14 +55,7 @@ public class RobotState {
   // private final double minDistanceTagPoseBlend = 0.4; // meters
   // private final double maxDistanceTagPoseBlend = 0.9; // meters
 
-  private static RobotState instance;
-
-  public static RobotState getInstance() {
-    if (instance == null) {
-      instance = new RobotState();
-    }
-    return instance;
-  }
+  public static final RobotState mInstance = new RobotState();
 
   private static final Map<Integer, Pose2d> tagPoses2d = new HashMap<>();
 
@@ -111,6 +104,7 @@ public class RobotState {
   // arm position
 
   private Field2d field;
+  private boolean shootToTowerElseFerry;
 
   private RobotState() {
     field = new Field2d();
@@ -340,12 +334,26 @@ public class RobotState {
     return getAngleToHub(getEstimatedPose().getTranslation());
   }
 
+
   /**
    * 
-   * 
+   * @param shootType true for tower, false for ferry
+   */
+  public void setShootType(boolean shootType) {
+    shootToTowerElseFerry = shootType;
+  }
+
+  /**
    * @return a vector that consists of {Hood angle[deg], Flywheel velocity[m/s], Robot angle[deg]}
    */
-  public edu.wpi.first.math.Vector<N3> getShootingInfo() {
+  public Vector<N3> getShootInfo() {
+    return shootToTowerElseFerry ? getTowerShootingInfo() : getFetchingInfo();
+  }
+
+  /**
+   * @return a vector that consists of {Hood angle[deg], Flywheel velocity[m/s], Robot angle[deg]}
+   */
+  public edu.wpi.first.math.Vector<N3> getTowerShootingInfo() {
     Vector<N3> hubCenteredVelocity = getVelocityRelativeToHub();
     // TODO: could add here a more accurate depiction of distance
     Vector<N2> inputVector = VecBuilder.fill(
@@ -353,8 +361,8 @@ public class RobotState {
         hubCenteredVelocity.get(0, 0));
     var shootingData = getShootingData.apply(inputVector);
     return VecBuilder.fill(
-        shootingData.get(0, 0), // hood angle
-        shootingData.get(1, 0) + SmartDashboard.getNumber("FlywheelBias", 1.5), // flywheel velocity
+        90 - shootingData.get(0, 0), // hood angle
+        shootingData.get(1, 0) + SmartDashboard.getNumber("FlywheelBias", 1.0), // flywheel velocity
         getAngleToHub().getDegrees() // robot angle
     );
   }
@@ -404,8 +412,8 @@ public class RobotState {
     Rotation2d angleToHub = getAngleToHub(effectiveEstimatedPose);
 
     return VecBuilder.fill(
-        shootingData.get(0), // hood angle
-        shootingData.get(1), // flywheel velocity
+        90 - shootingData.get(0), // hood angle
+        shootingData.get(1)+ SmartDashboard.getNumber("FlywheelBias", 1.0), // flywheel velocity
         angleToHub.getDegrees() // robot angle
     );
   }
@@ -419,8 +427,8 @@ public class RobotState {
     double input = getFetchingDistance();
     Double fetchVel = fetchingTableData.get(input);
     return VecBuilder.fill(
-        FETCHING_ANGLE, // hood angle
-        fetchVel == null ? 10.0 : fetchVel.doubleValue(), // flywheel velocity
+        90-FETCHING_ANGLE, // hood angle
+        (fetchVel == null ? 10.0 : fetchVel.doubleValue()) + SmartDashboard.getNumber("FlywheelBias", 1.0), // flywheel velocity
         AllianceFlipping.apply(Rotation2d.kZero).getDegrees() // robot angle
     );
   }

@@ -6,14 +6,18 @@ import static edu.wpi.first.units.Units.Volts;
 import com.ctre.phoenix6.signals.MotorAlignmentValue;
 import com.revrobotics.spark.config.SparkBaseConfig.IdleMode;
 import com.revrobotics.spark.config.SparkMaxConfig;
+
+import edu.wpi.first.math.system.plant.DCMotor;
 import edu.wpi.first.units.measure.AngularVelocity;
 import edu.wpi.first.units.measure.Voltage;
 import frc.lib.io.MotorIOSparkMax;
 import frc.lib.io.MotorIOSparkMax.MotorIOSparkMaxConfig;
+import frc.lib.sim.RollerSim.RollerSimConstants;
 import frc.robot.Ports;
 
 public class FeederConstants {
 
+    public static final double GEARING = 1.0/4;
     // Voltage Setpoints
     public static final Voltage FEED_VOLTAGE = Volts.of(8.0);
     public static final Voltage SLOW_FEED_VOLTAGE = Volts.of(4.0); // TODO: Adjust as needed
@@ -67,5 +71,13 @@ public class FeederConstants {
 
     public static MotorIOSparkMax getMotorIO() {
         return new MotorIOSparkMax(getIOConfig());
+    }
+
+    public static RollerSimConstants getSimConstants() {
+        RollerSimConstants simConstants = new RollerSimConstants();
+        simConstants.motor = DCMotor.getNeo550(3);
+        simConstants.gearing = GEARING;
+        simConstants.momentOfInertia = 0.0166570492;
+        return simConstants;
     }
 }

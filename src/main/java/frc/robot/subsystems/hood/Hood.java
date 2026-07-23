@@ -12,8 +12,7 @@ public class Hood extends ServoMotorSubsystem<SparkMaxConfig, MotorIOSparkMax> {
   // Preset Setpoints
   public static final Setpoint<Voltage> IDLE = Setpoint.withNeutralSetpoint();
   public static final Setpoint<Angle> MAX_ANGLE = Setpoint.withMotionMagicSetpoint(HoodConstants.HOOD_MAX_ANGLE);
-  public static final Setpoint<Angle> STOWED_ANGLE = Setpoint.withMotionMagicSetpoint(HoodConstants.HOOD_MIN_ANGLE);
-  public static final Setpoint<Voltage> BOOT_SEQUENCE = Setpoint.withVoltageSetpoint(HoodConstants.BOOT_SEQUENCE_VOLTAGE);
+  public static final Setpoint<Angle> STOWED= Setpoint.withMotionMagicSetpoint(HoodConstants.HOOD_MIN_ANGLE);
 
   public static final Hood mInstance = new Hood();
 

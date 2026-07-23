@@ -10,12 +10,15 @@ import com.revrobotics.spark.config.SparkBaseConfig.IdleMode;
 import com.revrobotics.spark.config.SparkMaxConfig;
 
 import edu.wpi.first.math.controller.ArmFeedforward;
+import edu.wpi.first.math.system.plant.DCMotor;
+import edu.wpi.first.units.Units;
 import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.units.measure.Time;
 import edu.wpi.first.units.measure.Voltage;
-
+import frc.lib.bases.ServoMotorSubsystem.ServoHomingConfig;
 import frc.lib.io.MotorIOSparkMax;
 import frc.lib.io.MotorIOSparkMax.MotorIOSparkMaxConfig;
+import frc.lib.sim.ServoMechanismSim.ServoMechanismSimConstants;
 import frc.lib.util.ControlGains.PidGains;
 import frc.robot.Constants;
 
@@ -100,4 +103,25 @@ public class HoodConstants {
   public static MotorIOSparkMax getMotorIO() {
     return new MotorIOSparkMax(getIOConfig());
   }
+
+  public static ServoMechanismSimConstants getSimConstants() {
+    ServoMechanismSimConstants config = new ServoMechanismSimConstants();
+    config.gearing = GEAR_RATIO;
+    config.maxAngle = HOOD_MAX_ANGLE;
+    config.minAngle = HOOD_MIN_ANGLE;
+    config.momentOfInertia = 0.05;
+    config.motor = DCMotor.getNeo550(1);
+    config.simulateGravity = false;
+    config.startingAngle = HOOD_MIN_ANGLE;
+    return config;
+  }
+
+  	public static ServoHomingConfig getServoConfig() {
+		  ServoHomingConfig servoConfig = new ServoHomingConfig();
+		  servoConfig.kHomingTimeout = Units.Seconds.of(0.5);
+		  servoConfig.kHomingVoltage = Units.Volts.of(-1.5); // includes direction
+		  servoConfig.kSetHomedVelocity = Units.DegreesPerSecond.of(5.0);
+		  servoConfig.kHomePosition = HOOD_MIN_ANGLE;
+		return servoConfig;
+	}
 }
