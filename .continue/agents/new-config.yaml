@@ -1,0 +1,12 @@
+name: Local Config
+version: 0.0.1
+schema: v1
+models:
+  - name: Qwen 2.5 Coder
+    provider: ollama
+    model: qwen2.5-coder:7b
+    apiBase: http://localhost:11434
+    roles:
+      - chat
+      - edit
+      - apply
