@@ -1,7 +1,5 @@
 package frc.robot;
 
-import java.util.Arrays;
-
 import edu.wpi.first.wpilibj.RobotBase;
 
 public final class Main {

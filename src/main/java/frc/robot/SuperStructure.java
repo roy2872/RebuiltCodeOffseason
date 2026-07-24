@@ -5,6 +5,7 @@
 package frc.robot;
 
 import edu.wpi.first.math.filter.Debouncer;
+import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.units.Units;
 import edu.wpi.first.units.measure.AngularVelocity;
 import edu.wpi.first.units.measure.Dimensionless;
@@ -16,6 +17,7 @@ import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.lib.io.MotorIO.Mode;
 import frc.lib.io.MotorIO.Setpoint;
 import frc.robot.Constants.ForceHomeConstants;
+import frc.robot.commands.DriveCommands;
 import frc.robot.subsystems.drive.Drive;
 import frc.robot.subsystems.feeder.Feeder;
 import frc.robot.subsystems.hood.Hood;
@@ -25,6 +27,7 @@ import frc.robot.subsystems.intakedeploy.IntakeDeployConstants;
 import frc.robot.subsystems.intakerollers.IntakeRollers;
 import frc.robot.subsystems.shooter.Shooter;
 
+import static edu.wpi.first.units.Units.Degrees;
 import static edu.wpi.first.units.Units.DegreesPerSecond;
 import static edu.wpi.first.units.Units.Seconds;
 import static edu.wpi.first.units.Units.Volts;
@@ -115,67 +118,37 @@ public class SuperStructure extends SubsystemBase {
 						}),
 						Shooter.mInstance.followSetpointCommand(
 								() -> Setpoint.withVelocitySetpoint(
-									Units.RotationsPerSecond.of(RobotState.mInstance.getShootInfo().get(1) / (Units.Inches.of(4).magnitude() * Math.PI)))),
+									Units.RotationsPerSecond.of(RobotState.mInstance.getShootInfo().get(1)))),
 						Hood.mInstance.followSetpointCommand(() -> 
 							Setpoint.withPositionSetpoint(
 												// positionInputs.getHoodSetpoint()
 												Units.Degrees.of(RobotState.mInstance.getShootInfo().get(1)))),
+						DriveCommands.autoAlignAngle(Drive.mInstance, () -> Rotation2d.fromDegrees(RobotState.mInstance.getShootInfo().get(1))),
 						Commands.sequence(
 								Commands.waitUntil(() -> {
-									boolean fireReady =  ;
-									// isFerrying() || DriverStation.isAutonomousEnabled()
-									// 		? Shooting.mInstance.shotAligned()
-									// 		: Shooting.mInstance.shotVerified();
+									boolean driveReady = RobotState.mInstance.atAngle(Rotation2d.fromDegrees(RobotState.mInstance.getShootInfo().get(1)), Degrees.of(1));
+									
 									boolean spunUp =
-											isFerrying() ? shooterAndHoodSpunUp(Units.RPM.of(150)) : shooterAndHoodSpunUp();
-									return fireReady
-											&& spunUp
-											// && MathHelpers.hypot(Drive.mInstance.getState().Speeds)
-											// 		.lte(	
-											// 				isFerrying()
-											// 						? SuperstructureConstants.MAX_FOTM_SPEED
-											// 						: SuperstructureConstants.MAX_SOTM_SPEED)
-																	;
-								}),
+											!RobotState.mInstance.getShootType() ? shooterAndHoodSpunUp(Units.RPM.of(150)) : shooterAndHoodSpunUp();
+									return driveReady
+											&& spunUp;
+								}
+								),
 								Commands.parallel(
-										// Cameras.mInstance.setStdDevCommand(CamerasConstants.DEFAULT_STD_DEVIATION),
-										Commands.either(
-												HopperRollers.mInstance.setpointCommand(HopperRollers.SLOW_INTAKE),
-												HopperRollers.mInstance.followSetpointCommand(
-														() -> shotVerifiedDebouncer.calculate(
-																		Shooting.mInstance.shotVerified())
-																? HopperRollers.INTAKE
-																: HopperRollers.IDLE),
-												this::isFarFerrying),
-										Commands.either(
-												Feeder.mInstance.setpointCommand(
-														Feeder.SLOW_FEED_VOLTAGE),
-												Feeder.mInstance.followSetpointCommand(
-														() -> shotVerifiedDebouncer.calculate(
-																		Shooting.mInstance.shotVerified())
-																? FeederRollers.FEED_VOLTAGE
-																: FeederRollers.IDLE),
-												this::isFarFerrying),
-										TunnelRollers.mInstance.followSetpointCommand(() -> {
-											Setpoint tunnelSetpoint = Shooting.mInstance.getLatestTunnelSetpoint();
-											if (isFarFerrying()) {
-												return Setpoint.withVelocitySetpointAndVoltageLimit(
-														AngularVelocity.ofBaseUnits(tunnelSetpoint.baseUnits, RPM),
-														Volts.of(5.0),
-														Volts.zero());
-											} else if (shotVerifiedDebouncer.calculate(
-													Shooting.mInstance.shotVerified())) {
-												return Setpoint.withVelocitySetpointAndVoltageLimit(
-														AngularVelocity.ofBaseUnits(tunnelSetpoint.baseUnits, RPM),
-														Volts.of(12.0),
-														Volts.zero());
-											} else {
-												return TunnelRollers.IDLE;
-											}
-										})
-										)))
+									Feeder.mInstance.setpointCommand(Feeder.FEED_VOLTAGE)
+									// Drive x pose
+
+								)))
 				// .finallyDo(() -> Cameras.mInstance.setSTDDeviations(CamerasConstants.DEFAULT_STD_DEVIATION))
 				.withName("Shoot");
+	}
+
+	public Command stopShooting() {
+		return Commands.parallel(
+			Feeder.mInstance.setpointCommand(Feeder.IDLE),
+			Hood.mInstance.setpointCommand(Hood.STOWED),
+			Shooter.mInstance.setpointCommand(Shooter.IDLE)
+		);
 	}
 
 	public boolean shooterAndHoodSpunUp() {
