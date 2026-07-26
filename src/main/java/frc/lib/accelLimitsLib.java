@@ -37,7 +37,7 @@ public class accelLimitsLib {
         wantedVelocityRobotOriented.minus(
             currentVelocityRobotOriented.div(currentVelocityForward).times(wantedVelocityForward));
 
-    double maxForwardAccel = MAX_ACCELERATION * (1 - currentVelocityForward / maxSpeedMetersPerSec);
+    double maxForwardAccel = MAX_ACCELERATION * (1 - currentVelocityForward / 5.2);
     double maxVelocityForward = currentVelocityForward + maxForwardAccel * CYCLE_TIME;
     double minVelocityForward = currentVelocityForward - maxForwardAccel * CYCLE_TIME;
     wantedVelocityForward =

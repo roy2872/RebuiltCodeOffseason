@@ -13,11 +13,16 @@
 
 package frc.robot;
 
+import edu.wpi.first.util.sendable.Sendable;
 import edu.wpi.first.wpilibj.DriverStation;
+import edu.wpi.first.wpilibj.RobotController;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import frc.lib.util.CANBusStatusLogger;
+
+import static edu.wpi.first.units.Units.Volts;
+
 import org.littletonrobotics.junction.LogFileUtil;
 import org.littletonrobotics.junction.LoggedRobot;
 import org.littletonrobotics.junction.Logger;
@@ -71,7 +76,7 @@ public class Robot extends LoggedRobot {
       case SIM:
         // Running a physics simulator, log to NT
         Logger.addDataReceiver(new NT4Publisher());
-        Logger.addDataReceiver(new WPILOGWriter());
+        // Logger.addDataReceiver(new WPILOGWriter());
         break;
 
       case REPLAY:
@@ -87,6 +92,15 @@ public class Robot extends LoggedRobot {
     robotContainer = new RobotContainer();
 
     SmartDashboard.putData(CommandScheduler.getInstance());
+  }
+
+  @Override
+  public void robotInit() {
+    RobotController.setBrownoutVoltage(Volts.of(5.5));
+
+		for (Sendable sendable : Constants.LOGGED_SENDABLES) {
+			SmartDashboard.putData(sendable);
+		}
   }
 
   /** This function is called periodically during all modes. */

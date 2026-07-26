@@ -2,6 +2,7 @@ package frc.robot.subsystems.drive;
 
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.geometry.Twist2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
 import edu.wpi.first.math.kinematics.SwerveModulePosition;
@@ -10,16 +11,19 @@ import edu.wpi.first.wpilibj.Alert;
 import edu.wpi.first.wpilibj.Alert.AlertType;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.robot.Constants;
-import frc.robot.RobotState;
 import frc.robot.Constants.Mode;
+import frc.robot.RobotState;
+import frc.robot.RobotState.OdometryObservation;
 import frc.robot.generated.TunerConstants;
 import edu.wpi.first.wpilibj.DriverStation;
+import edu.wpi.first.wpilibj.RobotController;
 import edu.wpi.first.wpilibj.Timer;
-import java.util.Arrays;
+
 import java.util.Optional;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
+import org.ironmaple.simulation.SimulatedArena;
 import org.ironmaple.simulation.drivesims.SwerveDriveSimulation;
 import org.littletonrobotics.junction.AutoLogOutput;
 import org.littletonrobotics.junction.Logger;
@@ -32,24 +36,17 @@ public class Drive extends SubsystemBase {
   private final GyroIO gyroIO;
   private final GyroIOInputsAutoLogged gyroInputs = new GyroIOInputsAutoLogged();
   private final Module[] modules = new Module[4]; // FL, FR, BL, BR
-  private final Alert gyroDisconnectedAlert =
-      new Alert("Disconnected gyro, using backup gyro as fallback.", AlertType.kError);
-  private final Alert backupGyroDisconnectedAlert =
-      new Alert("Disconnected backup gyro, using primary.", AlertType.kInfo);
-  private final Alert gyroAndBackupGyroDisconnectedAlert =
-      new Alert(
-          "Disconnected gyro and backup gyro, using kinematics as fallback.", AlertType.kError);
-
+  private final Alert gyroDisconnectedAlert = new Alert("Disconnected gyro, using backup gyro as fallback.",
+      AlertType.kError);
   // private static final TunableNumber coastWaitTime =
-  //     new TunableNumber("Drive/CoastWaitTimeSeconds", 0.5);
+  // new TunableNumber("Drive/CoastWaitTimeSeconds", 0.5);
   // private static final TunableNumber coastMetersPerSecondThreshold =
-  //     new TunableNumber("Drive/CoastMetersPerSecThreshold", .05);
+  // new TunableNumber("Drive/CoastMetersPerSecThreshold", .05);
 
   private final Timer lastMovementTimer = new Timer();
   private boolean lastEnabled = false;
 
-  private SwerveDriveKinematics kinematics =
-      new SwerveDriveKinematics(DriveConstants.moduleTranslations);
+  private SwerveDriveKinematics kinematics = new SwerveDriveKinematics(DriveConstants.moduleTranslations);
 
   public enum CoastRequest {
     AUTOMATIC,
@@ -60,55 +57,52 @@ public class Drive extends SubsystemBase {
   @AutoLogOutput(key = "Drive/CoastRequest")
   private CoastRequest coastRequest = CoastRequest.AUTOMATIC;
 
+    private Rotation2d rawGyroRotation = new Rotation2d();
+  private SwerveModulePosition[] lastModulePositions = // For delta tracking
+      new SwerveModulePosition[] {
+        new SwerveModulePosition(),
+        new SwerveModulePosition(),
+        new SwerveModulePosition(),
+        new SwerveModulePosition()
+      };
+      
   private Drive() {
-    switch(Constants.currentMode) {
+    switch (Constants.currentMode) {
       case REAL -> {
-          buildDriveSubsystem(
-                new GyroIONavX(),
-                new ModuleIOTalonFX(TunerConstants.FrontLeft),
-                new ModuleIOTalonFX(TunerConstants.FrontRight),
-                new ModuleIOTalonFX(TunerConstants.BackLeft),
-                new ModuleIOTalonFX(TunerConstants.BackRight));
+        this.gyroIO = new GyroIONavX();
+        modules[0] = new Module(new ModuleIOTalonFX(TunerConstants.FrontLeft), 0);
+        modules[1] = new Module(new ModuleIOTalonFX(TunerConstants.FrontRight), 1);
+        modules[2] = new Module(new ModuleIOTalonFX(TunerConstants.BackLeft), 2);
+        modules[3] = new Module(new ModuleIOTalonFX(TunerConstants.BackRight), 3);
       }
-      case SIM ->{
-        driveSimulation =
-            new SwerveDriveSimulation(
-                DriveConstants.mapleSimConfig, new Pose2d(3, 3, new Rotation2d()));
-          buildDriveSubsystem(
-                new GyroIOSim(driveSimulation.getGyroSimulation()),
-                new ModuleIOSim(driveSimulation.getModules()[0]),
-                new ModuleIOSim(driveSimulation.getModules()[1]),
-                new ModuleIOSim(driveSimulation.getModules()[2]),
-                new ModuleIOSim(driveSimulation.getModules()[3]));
+      case SIM -> {
+        driveSimulation = new SwerveDriveSimulation(
+            DriveConstants.mapleSimConfig, new Pose2d(3, 3, new Rotation2d()));
+        SimulatedArena.getInstance().addDriveTrainSimulation(driveSimulation);
+        this.gyroIO = new GyroIOSim(driveSimulation.getGyroSimulation());
+        modules[0] = new Module(new ModuleIOSim(driveSimulation.getModules()[0]), 0);
+        modules[1] = new Module(new ModuleIOSim(driveSimulation.getModules()[1]), 1);
+        modules[2] = new Module(new ModuleIOSim(driveSimulation.getModules()[2]), 2);
+        modules[3] = new Module(new ModuleIOSim(driveSimulation.getModules()[3]), 3);
       }
       default -> {
-          buildDriveSubsystem(
-                new GyroIO() {},
-                new ModuleIO() {},
-                new ModuleIO() {},
-                new ModuleIO() {},
-                new ModuleIO() {});
+        this.gyroIO = new GyroIO() {
+        };
+        modules[0] = new Module(new ModuleIO() {
+        }, 0);
+        modules[1] = new Module(new ModuleIO() {
+        }, 1);
+        modules[2] = new Module(new ModuleIO() {
+        }, 2);
+        modules[3] = new Module(new ModuleIO() {
+        }, 3);
       }
-
-
     }
-  }
 
-  public void buildDriveSubsystem(
-      GyroIO gyroIO,
-      ModuleIO flModuleIO,
-      ModuleIO frModuleIO,
-      ModuleIO blModuleIO,
-      ModuleIO brModuleIO) {
-    this.gyroIO = gyroIO;
-      modules[0] = new Module(flModuleIO, 0);
-      modules[1] = new Module(frModuleIO, 1);
-      modules[2] = new Module(blModuleIO, 2);
-      modules[3] = new Module(brModuleIO, 3);
-      lastMovementTimer.start();
-      for (var module : modules) {
-        module.stop();
-      }
+    lastMovementTimer.start();
+    for (var module : modules) {
+      module.stop();
+    }
   }
 
   @Override
@@ -127,33 +121,47 @@ public class Drive extends SubsystemBase {
       Logger.recordOutput("SwerveStates/SetpointsOptimized", new SwerveModuleState[] {});
     }
 
-    // Update odometry
-    boolean driveConnected = true;
-    for (var module : modules) {
-      driveConnected &= module.isConnected();
+    // // Update odometry
+    // boolean driveConnected = true;
+    // for (var module : modules) {
+    //   driveConnected &= module.isConnected();
+    // }
+
+    SwerveModulePosition[] modulePositions = new SwerveModulePosition[4];
+    SwerveModulePosition[] moduleDeltas = new SwerveModulePosition[4];
+    for (int moduleIndex = 0; moduleIndex < 4; moduleIndex++) { // can add here skid detection
+      modulePositions[moduleIndex] = modules[moduleIndex].getPosition();
+      moduleDeltas[moduleIndex] =
+          new SwerveModulePosition(
+              modulePositions[moduleIndex].distanceMeters
+                  - lastModulePositions[moduleIndex].distanceMeters,
+              modulePositions[moduleIndex].angle);
+      lastModulePositions[moduleIndex] = modulePositions[moduleIndex];
     }
-    if (driveConnected) {
-      // RobotState.getInstance()
-      //     .addOdometryObservation(
-      //         new OdometryObservation(
-      //             Timer.getTimestamp(),
-      //             getModulePositions(),
-      //             Optional.ofNullable(gyroInputs.connected ? gyroInputs.rollPosition : null),
-      //             Optional.ofNullable(gyroInputs.connected ? gyroInputs.pitchPosition : null),
-      //             Optional.ofNullable(gyroInputs.connected ? gyroInputs.yawPosition : null),
-      //             Optional.ofNullable(
-      //                 backupGyroInputs.connected ? backupGyroInputs.rollPosition : null),
-      //             Optional.ofNullable(
-      //                 backupGyroInputs.connected ? backupGyroInputs.pitchPosition : null),
-      //             Optional.ofNullable(
-      //                 backupGyroInputs.connected ? backupGyroInputs.yawPosition : null)));
+
+    // Update gyro angle
+    if (gyroInputs.connected) {
+      // Use the real gyro angle
+      rawGyroRotation = gyroInputs.yawPosition;
+    } else {
+      // Use the angle delta from the kinematics and module deltas
+      Twist2d twist = kinematics.toTwist2d(moduleDeltas);
+      rawGyroRotation = rawGyroRotation.plus(new Rotation2d(twist.dtheta));
     }
+
+    //   // Apply update
+    //   poseEstimator.updateWithTime(sampleTimestamps[i], rawGyroRotation, modulePositions);
+    // }
+
+    RobotState.mInstance
+        .addOdometryObservation(
+            new OdometryObservation(
+                modulePositions, Optional.of(rawGyroRotation), RobotController.getFPGATime() * 1e-6));
+
+    // Update gyro alert
+    gyroDisconnectedAlert.set(!gyroInputs.connected && Constants.currentMode != Mode.SIM);
+
     RobotState.mInstance.setRobotVelocity(getChassisSpeeds());
-
-    // Update gyro alerts
-    gyroDisconnectedAlert.set(
-        !gyroInputs.connected);
-
 
     if (DriverStation.isEnabled() && !lastEnabled) {
       coastRequest = CoastRequest.AUTOMATIC;
@@ -162,9 +170,9 @@ public class Drive extends SubsystemBase {
 
   // @Override
   // public void periodicAfterScheduler() {
-  //   for (var module : modules) {
-  //     module.periodicAfterScheduler();
-  //   }
+  // for (var module : modules) {
+  // module.periodicAfterScheduler();
+  // }
   // }
 
   /**
@@ -208,8 +216,10 @@ public class Drive extends SubsystemBase {
   }
 
   /**
-   * Stops the drive and turns the modules to an X arrangement to resist movement. The modules will
-   * return to their normal orientations the next time a nonzero velocity is requested.
+   * Stops the drive and turns the modules to an X arrangement to resist movement.
+   * The modules will
+   * return to their normal orientations the next time a nonzero velocity is
+   * requested.
    */
   public void stopWithX() {
     Rotation2d[] headings = new Rotation2d[4];
@@ -220,7 +230,9 @@ public class Drive extends SubsystemBase {
     stop();
   }
 
-  /** Stops the drive and turns the modules to an O arrangement to resist movement. */
+  /**
+   * Stops the drive and turns the modules to an O arrangement to resist movement.
+   */
   public void stopWithO() {
     Rotation2d[] headings = new Rotation2d[4];
     for (int i = 0; i < 4; i++) {
@@ -230,7 +242,10 @@ public class Drive extends SubsystemBase {
     stop();
   }
 
-  /** Returns the module states (turn angles and drive velocities) for all of the modules. */
+  /**
+   * Returns the module states (turn angles and drive velocities) for all of the
+   * modules.
+   */
   @AutoLogOutput(key = "SwerveStates/Measured")
   private SwerveModuleState[] getModuleStates() {
     SwerveModuleState[] states = new SwerveModuleState[4];
@@ -240,7 +255,10 @@ public class Drive extends SubsystemBase {
     return states;
   }
 
-  /** Returns the module positions (turn angles and drive positions) for all of the modules. */
+  /**
+   * Returns the module positions (turn angles and drive positions) for all of the
+   * modules.
+   */
   private SwerveModulePosition[] getModulePositions() {
     SwerveModulePosition[] states = new SwerveModulePosition[4];
     for (int i = 0; i < 4; i++) {
@@ -264,7 +282,10 @@ public class Drive extends SubsystemBase {
     return values;
   }
 
-  /** Returns the average velocity of the modules in rotations/sec (Phoenix native units). */
+  /**
+   * Returns the average velocity of the modules in rotations/sec (Phoenix native
+   * units).
+   */
   public double getFFCharacterizationVelocity() {
     double output = 0.0;
     for (int i = 0; i < 4; i++) {

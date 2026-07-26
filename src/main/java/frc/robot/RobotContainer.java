@@ -24,6 +24,7 @@ import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import edu.wpi.first.wpilibj2.command.Commands;
 import frc.lib.util.AllianceFlipping;
 import frc.lib.util.TableLoader;
+import frc.robot.commands.DriveCommands;
 import frc.robot.controllers.ControllerInterface;
 import frc.robot.controllers.DummyController;
 import frc.robot.controllers.QXController;
@@ -80,6 +81,10 @@ public class RobotContainer {
                         new Pose2d(
                             RobotState.mInstance.getEstimatedPose().getTranslation(),
                             AllianceFlipping.apply(Rotation2d.fromDegrees(0))));
+
+    Drive.mInstance.setDefaultCommand(
+      DriveCommands.joystickDrive(Drive.mInstance, 
+        controller::xVelocityAnalog, controller::yVelocityAnalog, controller::rotationVelocityAnalog, () -> false));
 
     controller.resetGyroButton().onTrue(Commands.runOnce(resetGyro).ignoringDisable(true).alongWith(
     Commands.print("reset gyro")

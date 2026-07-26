@@ -6,6 +6,9 @@ import edu.wpi.first.math.kinematics.SwerveModuleState;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.Alert;
 import edu.wpi.first.wpilibj.Alert.AlertType;
+
+import static edu.wpi.first.units.Units.Meters;
+
 import org.littletonrobotics.junction.Logger;
 
 public class Module {
@@ -68,7 +71,7 @@ public class Module {
     // state.cosineScale(inputs.turnPosition);
 
     // Apply setpoints
-    io.setDriveVelocity(state.speedMetersPerSecond / DriveConstants.WHEEL_RADIUS);
+    io.setDriveVelocity(state.speedMetersPerSecond / DriveConstants.WHEEL_RADIUS.in(Meters));
     io.setTurnPosition(state.angle);
   }
 
@@ -96,12 +99,12 @@ public class Module {
 
   /** Returns the current drive position of the module in meters. */
   public double getPositionMeters() {
-    return inputs.drivePositionRad * DriveConstants.WHEEL_RADIUS;
+    return inputs.drivePositionRad * DriveConstants.WHEEL_RADIUS.in(Meters);
   }
 
   /** Returns the current drive velocity of the module in meters per second. */
   public double getVelocityMetersPerSec() {
-    return inputs.driveVelocityRadPerSec * DriveConstants.WHEEL_RADIUS;
+    return inputs.driveVelocityRadPerSec * DriveConstants.WHEEL_RADIUS.in(Meters);
   }
 
   /** Returns the module position (turn angle and drive position). */

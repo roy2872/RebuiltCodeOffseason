@@ -1,29 +1,21 @@
 package frc.robot.subsystems.drive;
 
-import static edu.wpi.first.units.Units.Inches;
-import static edu.wpi.first.units.Units.Kilogram;
-import static edu.wpi.first.units.Units.KilogramSquareMeters;
-import static edu.wpi.first.units.Units.Meters;
-import static edu.wpi.first.units.Units.MetersPerSecond;
-import static edu.wpi.first.units.Units.RadiansPerSecond;
-import static edu.wpi.first.units.Units.Volts;
+import static edu.wpi.first.units.Units.*;
 
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.system.plant.DCMotor;
-import edu.wpi.first.math.util.Units;
+import edu.wpi.first.units.Units;
 import edu.wpi.first.units.measure.AngularVelocity;
 import edu.wpi.first.units.measure.Distance;
 import edu.wpi.first.units.measure.LinearVelocity;
 import edu.wpi.first.units.measure.Mass;
-import edu.wpi.first.units.measure.Velocity;
-
 import org.ironmaple.simulation.drivesims.COTS;
 import org.ironmaple.simulation.drivesims.configs.DriveTrainSimulationConfig;
 import org.ironmaple.simulation.drivesims.configs.SwerveModuleSimulationConfig;
 
 public class DriveConstants {
 
-  public static final double robotMassKg = 53.0; // Mass of the robot in kg
+  public static final double robotMassKg = 52.0; // Mass of the robot in kg
   public static final double robotMOI = 6.883; // TODO: calculate MOI
   public static final double wheelCOF = 1.0;
 
@@ -47,7 +39,7 @@ public class DriveConstants {
         new Translation2d(-wheelBase / 2.0, -trackWidth / 2.0)
       };
 
-  public static final Distance WHEEL_RADIUS = Inches.of(1.5);
+  public static final Distance WHEEL_RADIUS = Units.Inches.of(1.5);
 
   public static final LinearVelocity MAX_SPEED = MetersPerSecond.of(5.2);
   public static final AngularVelocity MAX_ANGULAR_VELOCITY = RadiansPerSecond.of(MAX_SPEED.magnitude() / Math.hypot(moduleTranslations[0].getX(), moduleTranslations[0].getY()));

@@ -38,8 +38,15 @@ import edu.wpi.first.math.numbers.N3;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.units.measure.AngularVelocity;
 import edu.wpi.first.units.measure.Time;
+import edu.wpi.first.util.sendable.Sendable;
 import edu.wpi.first.wpilibj.RobotBase;
 import frc.lib.util.NestedInterpolatingTreeMap;
+import frc.robot.subsystems.drive.Drive;
+import frc.robot.subsystems.feeder.Feeder;
+import frc.robot.subsystems.hood.Hood;
+import frc.robot.subsystems.intakedeploy.IntakeDeploy;
+import frc.robot.subsystems.intakerollers.IntakeRollers;
+import frc.robot.subsystems.shooter.Shooter;
 
 /**
  * This class defines the runtime mode used by AdvantageKit. The mode is always "real" when running
@@ -61,6 +68,19 @@ public final class Constants {
     /** Replaying from a log file. */
     REPLAY
   }
+
+  	public static Sendable LOGGED_SENDABLES[] = new Sendable[] {
+		Drive.mInstance,
+		// Cameras.mInstance,
+		IntakeRollers.mInstance,
+		// TunnelRollers.mInstance,
+		Feeder.mInstance,
+		IntakeDeploy.mInstance,
+		Shooter.mInstance,
+		Hood.mInstance
+		// LEDs.mInstance,
+		// Superstructure.mInstance
+	};
 
   public static final class ForceHomeConstants {
     public static final Time INTAKE_FORCE_DEBOUNCE = Seconds.of(0.2);
