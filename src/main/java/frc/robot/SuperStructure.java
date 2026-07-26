@@ -106,7 +106,7 @@ public class SuperStructure extends SubsystemBase {
 	}
 
 	public Command shoot() {
-		return Commands.print("this").andThen(Commands.parallel(
+		return Commands.parallel(
 						// Cameras.mInstance.setStdDevCommand(CamerasConstants.ALIGN_STD_DEVATION),
 						Commands.runOnce(() -> {
 							Feeder.mInstance.applySetpoint(Feeder.IDLE);
@@ -117,11 +117,11 @@ public class SuperStructure extends SubsystemBase {
 						Hood.mInstance.followSetpointCommand(() -> 
 							Setpoint.withPositionSetpoint(
 												// positionInputs.getHoodSetpoint()
-												Units.Degrees.of(RobotState.mInstance.getShootInfo().get(1)))),
-						DriveCommands.autoAlignAngle(Drive.mInstance, () -> Rotation2d.fromDegrees(RobotState.mInstance.getShootInfo().get(1))),
+												Units.Degrees.of(RobotState.mInstance.getShootInfo().get(0)))),
+						DriveCommands.autoAlignAngle(Drive.mInstance, () -> Rotation2d.fromDegrees(RobotState.mInstance.getShootInfo().get(2))),
 						Commands.sequence(
 								Commands.waitUntil(() -> {
-									boolean driveReady = RobotState.mInstance.atAngle(Rotation2d.fromDegrees(RobotState.mInstance.getShootInfo().get(1)), Degrees.of(1));
+									boolean driveReady = RobotState.mInstance.atAngle(Rotation2d.fromDegrees(RobotState.mInstance.getShootInfo().get(2)), Degrees.of(1));
 									
 									boolean spunUp =
 											!RobotState.mInstance.getShootType() ? shooterAndHoodSpunUp(Units.RPM.of(150)) : shooterAndHoodSpunUp();
@@ -133,7 +133,7 @@ public class SuperStructure extends SubsystemBase {
 									Feeder.mInstance.setpointCommand(Feeder.FEED_VOLTAGE)
 									// Drive x pose
 
-								))))
+								)))
 				// .finallyDo(() -> Cameras.mInstance.setSTDDeviations(CamerasConstants.DEFAULT_STD_DEVIATION))
 				.withName("Shoot");
 	}

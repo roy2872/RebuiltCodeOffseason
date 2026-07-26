@@ -48,10 +48,10 @@ public class ShooterConstants {
         // Converting kV calculation format safely over to method chaining parameters
         double kV = ((12.0) / (5676.0) * kGearing) * 0.995;
                 
-        config.closedLoop.pid(kP, kI, kD, ClosedLoopSlot.kSlot1).feedForward.apply(new FeedForwardConfig().kS(0.0).kV(kV).kA(0.0));
+        config.closedLoop.pid(kP, kI, kD, ClosedLoopSlot.kSlot0).feedForward.apply(new FeedForwardConfig().kS(0.0).kV(kV).kA(0.0));
 
         // Slot 0: Flatlined defaults matching your Talon template
-        config.closedLoop.pidf(0.0, 0.0, 0.0, 0.0, ClosedLoopSlot.kSlot0);
+        config.closedLoop.pid(0.0, 0.0, 0.0, ClosedLoopSlot.kSlot1);
 
         // Max Motion constraints maps over from MotionMagic parameters
         config.closedLoop.maxMotion.cruiseVelocity(5676.0 * kGearing)

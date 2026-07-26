@@ -73,7 +73,7 @@ public class HoodConstants {
         .velocityConversionFactor(GEAR_RATIO);
 
     config.closedLoop
-        .pidf(HOOD_PID.kP, HOOD_PID.kI, HOOD_PID.kD, 0.0, ClosedLoopSlot.kSlot0);
+        .pid(HOOD_PID.kP, HOOD_PID.kI, HOOD_PID.kD, ClosedLoopSlot.kSlot0);
 
     config.closedLoop.maxMotion
         .cruiseVelocity(10000)
