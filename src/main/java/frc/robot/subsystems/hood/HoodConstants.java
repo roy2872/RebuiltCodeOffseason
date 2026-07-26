@@ -17,10 +17,13 @@ import edu.wpi.first.units.measure.Time;
 import edu.wpi.first.units.measure.Voltage;
 import frc.lib.bases.ServoMotorSubsystem.ServoHomingConfig;
 import frc.lib.io.MotorIOSparkMax;
+import frc.lib.io.MotorIOSparkMaxSim;
 import frc.lib.io.MotorIOSparkMax.MotorIOSparkMaxConfig;
+import frc.lib.sim.ServoMechanismSim;
 import frc.lib.sim.ServoMechanismSim.ServoMechanismSimConstants;
 import frc.lib.util.ControlGains.PidGains;
 import frc.robot.Constants;
+import frc.robot.Robot;
 
 public class HoodConstants {
 
@@ -101,7 +104,10 @@ public class HoodConstants {
    * Factory method to instantiate the motor IO instance used directly by Hood.java.
    */
   public static MotorIOSparkMax getMotorIO() {
-    return new MotorIOSparkMax(getIOConfig());
+    if(Robot.isReal())
+      return new MotorIOSparkMax(getIOConfig());
+    else
+      return new MotorIOSparkMaxSim(getIOConfig(), new ServoMechanismSim(getSimConstants()));
   }
 
   public static ServoMechanismSimConstants getSimConstants() {

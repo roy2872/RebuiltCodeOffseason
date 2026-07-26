@@ -6,7 +6,6 @@ import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.units.measure.AngularVelocity;
 import edu.wpi.first.units.measure.Time;
 import edu.wpi.first.units.measure.Voltage;
-import edu.wpi.first.util.sendable.SendableBuilder;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj2.command.*;
@@ -228,16 +227,6 @@ public class ServoMotorSubsystem<C, IO extends MotorIO<C>> extends MotorSubsyste
      */
     public void setCurrentPosition(Angle position) {
         io.setCurrentPosition(position);
-    }
-
-    @Override
-    public void initSendable(SendableBuilder builder) {
-        super.initSendable(builder);
-        io.initSendable(builder);
-        if (isHomingSubsystem) {
-            builder.addBooleanProperty("Homing", () -> mHoming, null);
-            builder.addBooleanProperty("Needs to Home", () -> mNeedsToHome, null);
-        }
     }
 
     /**

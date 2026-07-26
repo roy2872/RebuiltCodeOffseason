@@ -53,8 +53,8 @@ public class RobotState {
           FieldConstants.aprilTagLayout.getTagPose(i).map(Pose3d::toPose2d).orElse(Pose2d.kZero));
     }
   }
-
-  @Getter @AutoLogOutput private Pose2d odometryPose = Pose2d.kZero;
+  @AutoLogOutput
+  @Getter  private Pose2d odometryPose = Pose2d.kZero;
   @Getter @AutoLogOutput private Pose2d estimatedPose = Pose2d.kZero;
 
   // private double lastLimelightYawUpdate = 0.0;

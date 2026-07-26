@@ -8,19 +8,19 @@ import edu.wpi.first.units.TimeUnit;
 import edu.wpi.first.units.Units;
 import edu.wpi.first.units.VoltageUnit;
 import edu.wpi.first.units.measure.*;
-import edu.wpi.first.util.sendable.Sendable;
-import edu.wpi.first.util.sendable.SendableBuilder;
 import java.util.function.UnaryOperator;
+import org.littletonrobotics.junction.AutoLog;
+import org.littletonrobotics.junction.Logger;
 
 /**
  * Abstract class used to control a main motor and any number of followers for a mechanism.
  * * @param <C> The configuration object type specific to the motor controller vendor (e.g., TalonFXConfiguration or SparkMaxConfig).
  */
-public abstract class MotorIO<C> implements Sendable {
+public abstract class MotorIO<C> {
   public final AngleUnit unitType;
   public final TimeUnit time;
-  protected final Inputs inputs;
-  protected final Inputs[] followerInputs;
+  protected final InputsAutoLogged inputs;
+  protected final InputsAutoLogged[] followerInputs;
   // Use a wildcard to decouple Setpoint initialization from strict configuration binding details
   private Setpoint<?> setpoint = Setpoint.withNeutralSetpoint();
   private boolean enabled = true;
@@ -197,15 +197,19 @@ public abstract class MotorIO<C> implements Sendable {
   protected MotorIO(AngleUnit unit, TimeUnit time, int numFollowers) {
     this.unitType = unit;
     this.time = time;
-    inputs = new Inputs();
-
-// Suppress the unchecked warning caused by the generic array cast
-    @SuppressWarnings("unchecked")
-    Inputs[] tempFollowers = (Inputs[]) new MotorIO.Inputs[numFollowers];
-    followerInputs = tempFollowers;
+    inputs = new InputsAutoLogged();
+    followerInputs = new InputsAutoLogged[numFollowers];
 
     for (int i = 0; i < numFollowers; i++) {
-        followerInputs[i] = new Inputs();
+        followerInputs[i] = new InputsAutoLogged();
+    }
+  }
+
+  /** Logs the motor sensor values using AdvantageKit after they have been refreshed. */
+  public final void logInputs(String key) {
+    Logger.processInputs(key, inputs);
+    for (int i = 0; i < followerInputs.length; i++) {
+      Logger.processInputs(key + "/Followers/" + i, followerInputs[i]);
     }
   }
 
@@ -290,78 +294,8 @@ public abstract class MotorIO<C> implements Sendable {
     }
   }
 
-  @Override
-  public void initSendable(SendableBuilder builder) {
-    builder.addBooleanProperty("Enabled", () -> getEnabled(), null);
-    builder.addStringProperty("Setpoint Type:", () -> getSetpoint().mode.toString(), null);
-    builder.addDoubleProperty("Setpoint Value as Double:", () -> getSetpointDoubleInUnits(), null);
-    inputs.initSendable(builder);
-    if (followerInputs.length > 0) {
-      builder.addDoubleArrayProperty(
-          "Followers/Velocity " + unitType.name() + " per " + time.name() + ":",
-          () -> {
-            double[] velocitiesUnits = new double[followerInputs.length];
-            for (int i = 0; i < followerInputs.length; i++) {
-              velocitiesUnits[i] = followerInputs[i].velocity.in(unitType.per(time));
-            }
-            return velocitiesUnits;
-          },
-          null);
-      builder.addDoubleArrayProperty(
-          "Followers/Position " + unitType.name() + ":",
-          () -> {
-            double[] positionsUnits = new double[followerInputs.length];
-            for (int i = 0; i < followerInputs.length; i++) {
-              positionsUnits[i] = followerInputs[i].position.in(unitType);
-            }
-            return positionsUnits;
-          },
-          null);
-      builder.addDoubleArrayProperty(
-          "Followers/Stator Current:",
-          () -> {
-            double[] statorCurrents = new double[followerInputs.length];
-            for (int i = 0; i < followerInputs.length; i++) {
-              statorCurrents[i] = followerInputs[i].statorCurrent.in(Units.Amps);
-            }
-            return statorCurrents;
-          },
-          null);
-      builder.addDoubleArrayProperty(
-          "Followers/Supply Current:",
-          () -> {
-            double[] supplyCurrents = new double[followerInputs.length];
-            for (int i = 0; i < followerInputs.length; i++) {
-              supplyCurrents[i] = followerInputs[i].supplyCurrent.in(Units.Amps);
-            }
-            return supplyCurrents;
-          },
-          null);
-      builder.addDoubleArrayProperty(
-          "Followers/Motor Voltage:",
-          () -> {
-            double[] motorVoltages = new double[followerInputs.length];
-            for (int i = 0; i < followerInputs.length; i++) {
-              motorVoltages[i] = followerInputs[i].motorVoltage.in(Units.Volts);
-            }
-            return motorVoltages;
-          },
-          null);
-      builder.addDoubleArrayProperty(
-          "Followers/Motor Temperature Celsius:",
-          () -> {
-            double[] motorTemperatures = new double[followerInputs.length];
-            for (int i = 0; i < followerInputs.length; i++) {
-              motorTemperatures[i] = followerInputs[i].motorTemperature.in(Units.Celsius);
-            }
-            return motorTemperatures;
-          },
-          null);
-      builder.addBooleanProperty("ConfigFailed", () -> getConfigFailed(), null);
-    }
-  }
-
-  public class Inputs implements Sendable {
+  @AutoLog
+  public static class Inputs {
     public AngularVelocity velocity = BaseUnits.AngleUnit.of(0.0).per(Units.Second);
     public Angle position = BaseUnits.AngleUnit.of(0.0);
     public Current statorCurrent = BaseUnits.CurrentUnit.of(0.0);
@@ -370,24 +304,6 @@ public abstract class MotorIO<C> implements Sendable {
     public Voltage pidVoltage = BaseUnits.VoltageUnit.of(0.0);
     public Temperature motorTemperature = BaseUnits.TemperatureUnit.of(0.0);
     public AngularAcceleration acceleration = BaseUnits.AngleUnit.of(0.0).per(Units.Seconds).per(Units.Seconds);
-
-    @Override
-    public void initSendable(SendableBuilder builder) {
-      builder.addDoubleProperty(
-          "Velocity " + unitType.name() + " per " + time.name() + ":",
-          () -> velocity.in(unitType.per(time)),
-          null);
-      builder.addDoubleProperty("Position " + unitType.name() + ":", () -> position.in(unitType), null);
-      builder.addDoubleProperty("Stator Current Amps:", () -> statorCurrent.in(Units.Amps), null);
-      builder.addDoubleProperty("Supply Current Amps:", () -> supplyCurrent.in(Units.Amps), null);
-      builder.addDoubleProperty("Motor Voltage:", () -> motorVoltage.in(Units.Volts), null);
-      builder.addDoubleProperty("PID Voltage:", () -> pidVoltage.in(Units.Volts), null);
-      builder.addDoubleProperty("Motor Temperature Celsius:", () -> motorTemperature.in(Units.Celsius), null);
-      builder.addDoubleProperty(
-          "Acceleration" + unitType.name() + " per " + time.name() + " per " + time.name() + ":",
-          () -> acceleration.in(unitType.per(time).per(time)),
-          null);
-    }
   }
 
   public enum Mode {

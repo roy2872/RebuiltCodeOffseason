@@ -11,9 +11,12 @@ import edu.wpi.first.math.system.plant.DCMotor;
 import edu.wpi.first.units.measure.AngularVelocity;
 import edu.wpi.first.units.measure.Voltage;
 import frc.lib.io.MotorIOSparkMax;
+import frc.lib.io.MotorIOSparkMaxSim;
 import frc.lib.io.MotorIOSparkMax.MotorIOSparkMaxConfig;
+import frc.lib.sim.RollerSim;
 import frc.lib.sim.RollerSim.RollerSimConstants;
 import frc.robot.Ports;
+import frc.robot.Robot;
 
 public class FeederConstants {
 
@@ -70,7 +73,10 @@ public class FeederConstants {
     }
 
     public static MotorIOSparkMax getMotorIO() {
-        return new MotorIOSparkMax(getIOConfig());
+        if(Robot.isReal())
+            return new MotorIOSparkMax(getIOConfig());
+        else
+            return new MotorIOSparkMaxSim(getIOConfig(), new RollerSim(getSimConstants()));
     }
 
     public static RollerSimConstants getSimConstants() {

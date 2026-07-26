@@ -8,12 +8,19 @@ import com.revrobotics.spark.config.SparkBaseConfig.IdleMode;
 import com.revrobotics.spark.config.SparkMaxConfig;
 
 import edu.wpi.first.math.controller.ArmFeedforward;
+import edu.wpi.first.math.system.plant.DCMotor;
+import edu.wpi.first.units.Units;
 import edu.wpi.first.units.measure.Angle;
+import frc.lib.bases.ServoMotorSubsystem.ServoHomingConfig;
 import frc.lib.io.MotorIOSparkMax;
+import frc.lib.io.MotorIOSparkMaxSim;
 import frc.lib.io.MotorIOSparkMax.MotorIOSparkMaxConfig;
+import frc.lib.sim.ServoMechanismSim;
+import frc.lib.sim.ServoMechanismSim.ServoMechanismSimConstants;
 import frc.lib.util.ControlGains.PidGains;
 import frc.robot.Constants;
 import frc.robot.Ports;
+import frc.robot.Robot;
 
 public class IntakeDeployConstants {
 
@@ -93,6 +100,21 @@ public class IntakeDeployConstants {
   }
 
   public static MotorIOSparkMax getMotorIO() {
-    return new MotorIOSparkMax(getIOConfig());
+    if(Robot.isReal())
+      return new MotorIOSparkMax(getIOConfig());
+    else 
+      return new MotorIOSparkMaxSim(getIOConfig(), new ServoMechanismSim(getSimConstants()));
+  }
+
+  public static ServoMechanismSimConstants getSimConstants() {
+    ServoMechanismSimConstants config = new ServoMechanismSimConstants();
+    config.gearing = GEAR_RATIO;
+    config.maxAngle = INTAKE_DEPLOYED_ANGLE;
+    config.minAngle = INTAKE_STOWED_ANGLE;
+    config.momentOfInertia = 0.05;
+    config.motor = DCMotor.getNEO(1);
+    config.simulateGravity = false;
+    config.startingAngle = INTAKE_STOWED_ANGLE;
+    return config;
   }
 }

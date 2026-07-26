@@ -20,6 +20,6 @@ public class Feeder extends MotorSubsystem<SparkMaxConfig, MotorIOSparkMax> {
 	public static final Feeder mInstance = new Feeder();
 
 	private Feeder() {
-		super(FeederConstants.getMotorIO(), "Belt Drive");
+		super(FeederConstants.getMotorIO(), "Feeder");
 	}
 }

@@ -106,7 +106,7 @@ public class SuperStructure extends SubsystemBase {
 	}
 
 	public Command shoot() {
-		return Commands.parallel(
+		return Commands.print("this").andThen(Commands.parallel(
 						// Cameras.mInstance.setStdDevCommand(CamerasConstants.ALIGN_STD_DEVATION),
 						Commands.runOnce(() -> {
 							Feeder.mInstance.applySetpoint(Feeder.IDLE);
@@ -133,7 +133,7 @@ public class SuperStructure extends SubsystemBase {
 									Feeder.mInstance.setpointCommand(Feeder.FEED_VOLTAGE)
 									// Drive x pose
 
-								)))
+								))))
 				// .finallyDo(() -> Cameras.mInstance.setSTDDeviations(CamerasConstants.DEFAULT_STD_DEVIATION))
 				.withName("Shoot");
 	}

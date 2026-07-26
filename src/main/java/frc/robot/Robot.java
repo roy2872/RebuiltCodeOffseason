@@ -23,6 +23,7 @@ import frc.lib.util.CANBusStatusLogger;
 
 import static edu.wpi.first.units.Units.Volts;
 
+import org.littletonrobotics.junction.AutoLogOutputManager;
 import org.littletonrobotics.junction.LogFileUtil;
 import org.littletonrobotics.junction.LoggedRobot;
 import org.littletonrobotics.junction.Logger;
@@ -96,6 +97,7 @@ public class Robot extends LoggedRobot {
 
   @Override
   public void robotInit() {
+    AutoLogOutputManager.addObject(RobotState.mInstance);
     RobotController.setBrownoutVoltage(Volts.of(5.5));
 
 		for (Sendable sendable : Constants.LOGGED_SENDABLES) {

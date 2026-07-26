@@ -4,7 +4,6 @@ import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.units.measure.AngularVelocity;
 import edu.wpi.first.units.measure.Current;
 import edu.wpi.first.units.measure.Voltage;
-import edu.wpi.first.util.sendable.SendableBuilder;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
@@ -15,6 +14,7 @@ import frc.lib.logging.LoggedTracer;
 import frc.lib.util.TunableNumber;
 import java.util.function.Supplier;
 import java.util.function.UnaryOperator;
+import org.littletonrobotics.junction.Logger;
 
 /**
  * Base subsystem for any subsystem that uses motors.
@@ -121,6 +121,10 @@ public class MotorSubsystem<C, IO extends MotorIO<C>> extends SubsystemBase {
     @Override
     public void periodic() {
         io.updateInputs();
+        io.logInputs(name + "/Inputs");
+        Logger.recordOutput(name + "/Enabled", io.getEnabled());
+        Logger.recordOutput(name + "/Setpoint/Mode", io.getSetpoint().mode);
+        Logger.recordOutput(name + "/Setpoint/Value", io.getSetpointDoubleInUnits());
         outputTelemetry();
         if (DriverStation.isDisabled() && tuningMode) {
             if (kP0.hasChanged()
@@ -148,12 +152,6 @@ public class MotorSubsystem<C, IO extends MotorIO<C>> extends SubsystemBase {
 
     public void outputTelemetry() {
         LoggedTracer.record(name);
-    }
-
-    @Override
-    public void initSendable(SendableBuilder builder) {
-        super.initSendable(builder);
-        io.initSendable(builder);
     }
 
     public Angle getPosition() {
