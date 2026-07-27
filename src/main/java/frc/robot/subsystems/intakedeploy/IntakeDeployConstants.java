@@ -31,7 +31,7 @@ public class IntakeDeployConstants {
   public static final Angle INTAKE_STOWED_ANGLE = Degrees.of(82.0);
   public static final Angle INTAKE_ANGLE_TOLERANCE = Degrees.of(0.3);
 
-  public static final int INTAKE_MOTOR_ID = 60;
+  public static final int INTAKE_MOTOR_ID = Ports.INTAKE_DEPLOY.id;
 
   // Conversion ratio (mechanism rotations / motor rotations)
   public static final double GEAR_RATIO = (360.0 / 269.84127) / 360.0;

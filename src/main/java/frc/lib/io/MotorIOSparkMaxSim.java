@@ -27,7 +27,7 @@ public class MotorIOSparkMaxSim extends MotorIOSparkMax {
     public MotorIOSparkMaxSim(MotorIOSparkMaxConfig config, MechanismSim simObject) {
         super(config);
         this.sim = simObject;
-
+        
         // Initialize simulation handles using a standard motor profile (e.g., NEO)
         this.mainSim = new SparkMaxSim(main, DCMotor.getNEO(1));
         this.followerSims = new SparkMaxSim[followers.length];

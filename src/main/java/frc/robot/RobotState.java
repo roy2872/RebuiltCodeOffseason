@@ -284,7 +284,7 @@ public class RobotState {
   }
 
   /**
-   * @return a vector that consists of {Hood angle[deg], Flywheel velocity[m/s], Robot angle[deg]}
+   * @return a vector that consists of {Hood angle[deg], Flywheel velocity[rps], Robot angle[deg]}
    */
   public edu.wpi.first.math.Vector<N3> getHubShootingInfo() {
     Vector<N3> hubCenteredVelocity = getVelocityRelativeToHub();
@@ -296,7 +296,7 @@ public class RobotState {
     return VecBuilder.fill(
         90 - shootingData.get(0, 0), // hood angle
         (shootingData.get(1, 0) + SmartDashboard.getNumber("FlywheelBias", 1.0)
-          / (Units.Inches.of(4).magnitude() * Math.PI)), // flywheel velocity
+          / (Units.Inches.of(4).in(Units.Meters) * Math.PI)), // flywheel velocity
         getAngleToHub().getDegrees() // robot angle
     );
   }

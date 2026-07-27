@@ -39,7 +39,7 @@ public class ShooterConstants {
         config.idleMode(IdleMode.kCoast)
               .inverted(false) // Equivalent to CounterClockwise_Positive assuming right-hand configuration
               .smartCurrentLimit(30)
-              .secondaryCurrentLimit(80); 
+              .secondaryCurrentLimit(50); 
 
         // Slot 1: Active Velocity control slots
         double kP = 1;
@@ -48,14 +48,15 @@ public class ShooterConstants {
         // Converting kV calculation format safely over to method chaining parameters
         double kV = ((12.0) / (5676.0) * kGearing) * 0.995;
                 
-        config.closedLoop.pid(kP, kI, kD, ClosedLoopSlot.kSlot0).feedForward.apply(new FeedForwardConfig().kS(0.0).kV(kV).kA(0.0));
+        config.closedLoop.pid(kP, kI, kD, ClosedLoopSlot.kSlot1).feedForward.apply(new FeedForwardConfig().kS(0.0).kV(kV).kA(0.0));
 
         // Slot 0: Flatlined defaults matching your Talon template
-        config.closedLoop.pid(0.0, 0.0, 0.0, ClosedLoopSlot.kSlot1);
+        config.closedLoop.pid(0.0, 0.0, 0.0, ClosedLoopSlot.kSlot0);
 
         // Max Motion constraints maps over from MotionMagic parameters
-        config.closedLoop.maxMotion.cruiseVelocity(5676.0 * kGearing)
-              .maxAcceleration(5676.0 * kGearing);
+        // config.closedLoop.maxMotion
+        // .cruiseVelocity(5676.0 * kGearing)
+        //       .maxAcceleration(5676.0 * kGearing);
 
         return config;
     }
@@ -97,7 +98,7 @@ public class ShooterConstants {
         // Updated to NEO/NeoVortex variants if using SparkMax infrastructure 
         simConstants.motor = DCMotor.getNEO(4); 
         simConstants.gearing = kGearing;
-        simConstants.momentOfInertia = 0.0166570492;
+        simConstants.momentOfInertia = 0.0066570492;
         return simConstants;
     }
 }

@@ -277,7 +277,7 @@ public class MotorIOSparkMax extends MotorIO<SparkMaxConfig> {
         public void setVelocity(SparkMax spark, AngularVelocity mechanismVelocity, int slot) {
             spark.getClosedLoopController().setSetpoint(
                     mechanismVelocity.in(AngularVelocityUnit.combine(Rotation, Minute)), 
-                    ControlType.kMAXMotionVelocityControl, 
+                    ControlType.kVelocity, 
                     getClosedLoopSlot(slot)
             );
         }

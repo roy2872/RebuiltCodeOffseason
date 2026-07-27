@@ -23,6 +23,7 @@ import frc.lib.sim.ServoMechanismSim;
 import frc.lib.sim.ServoMechanismSim.ServoMechanismSimConstants;
 import frc.lib.util.ControlGains.PidGains;
 import frc.robot.Constants;
+import frc.robot.Ports;
 import frc.robot.Robot;
 
 public class HoodConstants {
@@ -37,7 +38,7 @@ public class HoodConstants {
   public static final Time BOOT_SEQUENCE_TIME = Seconds.of(2.0);
   public static final Voltage BOOT_SEQUENCE_VOLTAGE = Volts.of(0.5);
 
-  public static final int HOOD_MOTOR_ID = 60;
+  public static final int HOOD_MOTOR_ID = Ports.HOOD.id;
 
   // Conversion ratio (mechanism rotations / motor rotations)
   public static final double GEAR_RATIO = (360.0 / 269.84127) / 360.0;
