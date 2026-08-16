@@ -18,8 +18,8 @@ public class IntakeDeploy extends ServoMotorSubsystem<SparkMaxConfig, MotorIOSpa
 
 	private IntakeDeploy() {
 		super(
-				IntakeDeployConstants.getMotorIO(), "Intake Deploy", IntakeDeployConstants.INTAKE_ANGLE_TOLERANCE
-				// IntakeDeployConstants.getServoHomingConfig()
+				IntakeDeployConstants.getMotorIO(), "Intake Deploy", IntakeDeployConstants.INTAKE_ANGLE_TOLERANCE,
+				IntakeDeployConstants.getServoHomingConfig()
 				);
 		setCurrentPosition(IntakeDeployConstants.INTAKE_STOWED_ANGLE);
 	}

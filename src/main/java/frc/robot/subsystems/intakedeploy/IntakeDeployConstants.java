@@ -1,6 +1,7 @@
 package frc.robot.subsystems.intakedeploy;
 
 import static edu.wpi.first.units.Units.Degrees;
+import static edu.wpi.first.units.Units.Seconds;
 
 import com.revrobotics.spark.ClosedLoopSlot;
 import com.revrobotics.spark.FeedbackSensor;
@@ -8,7 +9,10 @@ import com.revrobotics.spark.config.SparkBaseConfig.IdleMode;
 import com.revrobotics.spark.config.SparkMaxConfig;
 import edu.wpi.first.math.controller.ArmFeedforward;
 import edu.wpi.first.math.system.plant.DCMotor;
+import edu.wpi.first.units.Units;
 import edu.wpi.first.units.measure.Angle;
+import edu.wpi.first.units.measure.Voltage;
+import frc.lib.bases.ServoMotorSubsystem.ServoHomingConfig;
 import frc.lib.io.MotorIOSparkMax;
 import frc.lib.io.MotorIOSparkMaxSim;
 import frc.lib.io.MotorIOSparkMax.MotorIOSparkMaxConfig;
@@ -43,7 +47,7 @@ public class IntakeDeployConstants {
         default -> new ArmFeedforward(0.0, 0.0, 0.0);
       };
 
-  protected static final PidGains HOOD_PID =
+  protected static final PidGains INTAKE_PID =
       switch (Constants.currentMode) {
         case REAL -> new PidGains(1.5, 0.0, 0.2);
         case SIM -> new PidGains(0.1, 0.0, 0.0);
@@ -71,8 +75,8 @@ public class IntakeDeployConstants {
 
     // 2. Direct Closed-Loop Control to use the Absolute Encoder
     config.closedLoop
-        .feedbackSensor(FeedbackSensor.kAbsoluteEncoder) // Overrides default internal motor encoder
-        .pid(HOOD_PID.kP, HOOD_PID.kI, HOOD_PID.kD, ClosedLoopSlot.kSlot0);
+        .feedbackSensor(FeedbackSensor.kPrimaryEncoder) // Overrides default internal motor encoder
+        .pid(INTAKE_PID.kP, INTAKE_PID.kI, INTAKE_PID.kD, ClosedLoopSlot.kSlot0);
 
     config.closedLoop.maxMotion
         .cruiseVelocity(40)
@@ -80,9 +84,9 @@ public class IntakeDeployConstants {
         .allowedProfileError(20);
 
     config.softLimit
-        .forwardSoftLimitEnabled(true)
+        .forwardSoftLimitEnabled(false)
         .forwardSoftLimit(INTAKE_DEPLOYED_ANGLE.in(Degrees))
-        .reverseSoftLimitEnabled(true)
+        .reverseSoftLimitEnabled(false)
         .reverseSoftLimit(INTAKE_STOWED_ANGLE.in(Degrees));
 
     return config;
@@ -112,6 +116,14 @@ public class IntakeDeployConstants {
     config.motor = DCMotor.getNEO(1);
     config.simulateGravity = false;
     config.startingAngle = INTAKE_STOWED_ANGLE;
+    return config;
+  }
+
+  public static ServoHomingConfig getServoHomingConfig() {
+    ServoHomingConfig config = new ServoHomingConfig();
+    config.kHomePosition = INTAKE_STOWED_ANGLE;
+    config.kHomingTimeout = Seconds.of(2);
+    config.kHomingVoltage = Units.Volt.of(4);
     return config;
   }
 }

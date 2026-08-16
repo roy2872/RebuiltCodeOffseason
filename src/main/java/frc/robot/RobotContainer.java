@@ -29,6 +29,7 @@ import frc.robot.controllers.ControllerInterface;
 import frc.robot.controllers.DummyController;
 import frc.robot.controllers.QXController;
 import frc.robot.controllers.SimulationController;
+import frc.robot.controllers.SingleXboxController;
 import frc.robot.controllers.TwoControllers;
 import frc.robot.subsystems.drive.Drive;
 
@@ -52,7 +53,7 @@ public class RobotContainer {
       case REAL:
         // Real robot, instantiate hardware IO implementations
         // controller = new twoco();
-        controller = new TwoControllers(new QXController(0), new DummyController(1));
+        controller = new SingleXboxController(0);
         break;
       case SIM:
         controller = new SimulationController(0);
@@ -91,16 +92,17 @@ public class RobotContainer {
     ));
 
     controller.shootButton()
-      .whileTrue(Commands.runOnce(() -> RobotState.mInstance.setShootType(true))
-      .andThen(SuperStructure.mInstance.shoot())).onFalse(SuperStructure.mInstance.stopShooting());
+      .onTrue(Commands.runOnce(() -> RobotState.mInstance.setShootType(true)))
+      .whileTrue(SuperStructure.mInstance.shoot())
+      .onFalse(SuperStructure.mInstance.stopShooting());
 
     controller.intakeButton()
       .onTrue(SuperStructure.mInstance.intakeCommand())
       .onFalse(SuperStructure.mInstance.idleIntakeRollers());
 
     controller.fetchButton()
-      .whileTrue(Commands.runOnce(() -> RobotState.mInstance.setShootType(false))
-      .andThen(SuperStructure.mInstance.shoot()))
+      .onTrue(Commands.runOnce(() -> RobotState.mInstance.setShootType(false)))
+      .whileTrue(SuperStructure.mInstance.shoot())
       .onFalse(SuperStructure.mInstance.stopShooting());
 
     controller.purgeIntakeButton().onTrue(SuperStructure.mInstance.intakeExhaustCommand())

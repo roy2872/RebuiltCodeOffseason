@@ -52,12 +52,12 @@ public class FeederConstants {
      */
     public static MotorIOSparkMaxConfig getIOConfig() {
         MotorIOSparkMaxConfig config = new MotorIOSparkMaxConfig();
-        config.mainID = Ports.FEEDER_ROLLERS.id;
+        config.mainID = Ports.FEEDER_ROLLERS_MAIN.id;
         config.mainConfig = getMainConfig();
 
         config.followerIDs = new int[] {
-            BOTTOM_FOLLOWER_ID, 
-            LEFT_FOLLOWER_ID
+            Ports.FEEDER_ROLLERS_FOLLOWER1.id, 
+            Ports.FEEDER_ROLLERS_FOLLOWER2.id
         };
 
         // Bottom follower (54) follow(55) -> Aligned
