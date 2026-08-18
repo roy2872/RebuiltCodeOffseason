@@ -95,7 +95,7 @@ public class VisionIOLimelight implements VisionIO {
 
               
       if(rawResult.value[9] <= 6.0 && rawResult.value[7] > 1) {
-        RobotState.getInstance().addLimelightYawObservation(
+        RobotState.mInstance.addLimelightYawObservation(
           new LimelightYawObservation(
             parsePose(rawResult.value).getRotation().toRotation2d(), 
             rawResult.timestamp * (1.0e-6)

@@ -1,19 +1,16 @@
-package frc.robot.subsystems.hood;
+package frc.robot.subsystems.intakedeploy;
 
 import static edu.wpi.first.units.Units.Degrees;
-import static edu.wpi.first.units.Units.Rotations;
 import static edu.wpi.first.units.Units.Seconds;
-import static edu.wpi.first.units.Units.Volts;
 
 import com.revrobotics.spark.ClosedLoopSlot;
+import com.revrobotics.spark.FeedbackSensor;
 import com.revrobotics.spark.config.SparkBaseConfig.IdleMode;
 import com.revrobotics.spark.config.SparkMaxConfig;
-
 import edu.wpi.first.math.controller.ArmFeedforward;
 import edu.wpi.first.math.system.plant.DCMotor;
 import edu.wpi.first.units.Units;
 import edu.wpi.first.units.measure.Angle;
-import edu.wpi.first.units.measure.Time;
 import edu.wpi.first.units.measure.Voltage;
 import frc.lib.bases.ServoMotorSubsystem.ServoHomingConfig;
 import frc.lib.io.MotorIOSparkMax;
@@ -26,31 +23,31 @@ import frc.robot.Constants;
 import frc.robot.Ports;
 import frc.robot.Robot;
 
-public class HoodConstants {
+public class IntakeDeployConstants {
+
+  // Absolute encoder zero offset (in mechanism rotations or degrees depending on factor)
+  public static final double ABSOLUTE_ENCODER_OFFSET = 0.0; // TODO: Measure with deploy at hard stop/stowed
+  public static final boolean ABSOLUTE_ENCODER_INVERTED = false;
 
   // Strong-typed angle, voltage, and time units
-  public static final Angle HOOD_STARTING_ANGLE = Degrees.of(84.0);
-  public static final Angle HOOD_MIN_ANGLE = HOOD_STARTING_ANGLE;
-  public static final Angle HOOD_MAX_ANGLE = HOOD_STARTING_ANGLE.minus(Degrees.of(30.0));
-  public static final Angle HOOD_CLOSE_ANGLE = Degrees.of(82.0);
-  public static final Angle HOOD_ANGLE_TOLERANCE = Degrees.of(0.3);
+  public static final Angle INTAKE_DEPLOYED_ANGLE = Degrees.of(84.0);
+  public static final Angle INTAKE_PARTIAL_IN_ANGLE = INTAKE_DEPLOYED_ANGLE.minus(Degrees.of(30.0));
+  public static final Angle INTAKE_STOWED_ANGLE = Degrees.of(82.0);
+  public static final Angle INTAKE_ANGLE_TOLERANCE = Degrees.of(0.3);
 
-  public static final Time BOOT_SEQUENCE_TIME = Seconds.of(2.0);
-  public static final Voltage BOOT_SEQUENCE_VOLTAGE = Volts.of(0.5);
-
-  public static final int HOOD_MOTOR_ID = Ports.HOOD.id;
+  public static final int INTAKE_MOTOR_ID = Ports.INTAKE_DEPLOY.id;
 
   // Conversion ratio (mechanism rotations / motor rotations)
   public static final double GEAR_RATIO = (360.0 / 269.84127) / 360.0;
 
-  public static final ArmFeedforward HOOD_FF =
+  public static final ArmFeedforward INTAKE_FF =
       switch (Constants.currentMode) {
         case REAL -> new ArmFeedforward(0.0, 0.0, 0.0);
         case SIM -> new ArmFeedforward(0.0, 0.0, 0.0);
         default -> new ArmFeedforward(0.0, 0.0, 0.0);
       };
 
-  protected static final PidGains HOOD_PID =
+  protected static final PidGains INTAKE_PID =
       switch (Constants.currentMode) {
         case REAL -> new PidGains(1.5, 0.0, 0.2);
         case SIM -> new PidGains(0.1, 0.0, 0.0);
@@ -65,70 +62,68 @@ public class HoodConstants {
 
     config
         .idleMode(IdleMode.kCoast)
-        .smartCurrentLimit(10)
-        .secondaryCurrentLimit(20)
+        .smartCurrentLimit(30)
+        .secondaryCurrentLimit(40)
         .inverted(true);
 
-    config.encoder
-        .positionConversionFactor(GEAR_RATIO) // Encodes directly to rotations at the mechanism
-        .velocityConversionFactor(GEAR_RATIO);
+    // 1. Configure Absolute Encoder Settings
+    config.absoluteEncoder
+        .positionConversionFactor(360.0) // Convert native rotations (0.0 to 1.0) directly to degrees
+        .velocityConversionFactor(360.0 / 60.0) // RPM to Degrees per second
+        .zeroOffset(ABSOLUTE_ENCODER_OFFSET)
+        .inverted(ABSOLUTE_ENCODER_INVERTED);
 
+    // 2. Direct Closed-Loop Control to use the Absolute Encoder
     config.closedLoop
-        .pid(HOOD_PID.kP, HOOD_PID.kI, HOOD_PID.kD, ClosedLoopSlot.kSlot0);
+        .feedbackSensor(FeedbackSensor.kPrimaryEncoder) // Overrides default internal motor encoder
+        .pid(INTAKE_PID.kP, INTAKE_PID.kI, INTAKE_PID.kD, ClosedLoopSlot.kSlot0);
 
     config.closedLoop.maxMotion
-        .cruiseVelocity(10000)
-        .maxAcceleration(12000)
+        .cruiseVelocity(40)
+        .maxAcceleration(100)
         .allowedProfileError(20);
 
     config.softLimit
         .forwardSoftLimitEnabled(false)
-        .forwardSoftLimit(HOOD_MAX_ANGLE.in(Rotations))
+        .forwardSoftLimit(INTAKE_DEPLOYED_ANGLE.in(Degrees))
         .reverseSoftLimitEnabled(false)
-        .reverseSoftLimit(HOOD_MIN_ANGLE.in(Rotations));
+        .reverseSoftLimit(INTAKE_STOWED_ANGLE.in(Degrees));
 
     return config;
   }
 
-  /**
-   * Builds the MotorIOSparkMaxConfig structure for hardware IO construction.
-   */
   public static MotorIOSparkMaxConfig getIOConfig() {
     MotorIOSparkMaxConfig ioConfig = new MotorIOSparkMaxConfig();
-    ioConfig.mainID = HOOD_MOTOR_ID;
+    ioConfig.mainID = Ports.INTAKE_DEPLOY.id;
     ioConfig.mainConfig = getSparkConfig();
     ioConfig.unit = Degrees;
     return ioConfig;
   }
 
-  /**
-   * Factory method to instantiate the motor IO instance used directly by Hood.java.
-   */
   public static MotorIOSparkMax getMotorIO() {
     if(Robot.isReal())
       return new MotorIOSparkMax(getIOConfig());
-    else
+    else 
       return new MotorIOSparkMaxSim(getIOConfig(), new ServoMechanismSim(getSimConstants()));
   }
 
   public static ServoMechanismSimConstants getSimConstants() {
     ServoMechanismSimConstants config = new ServoMechanismSimConstants();
     config.gearing = GEAR_RATIO;
-    config.maxAngle = HOOD_MAX_ANGLE;
-    config.minAngle = HOOD_MIN_ANGLE;
+    config.maxAngle = INTAKE_DEPLOYED_ANGLE;
+    config.minAngle = INTAKE_STOWED_ANGLE;
     config.momentOfInertia = 0.05;
-    config.motor = DCMotor.getNeo550(1);
+    config.motor = DCMotor.getNEO(1);
     config.simulateGravity = false;
-    config.startingAngle = HOOD_MIN_ANGLE;
+    config.startingAngle = INTAKE_STOWED_ANGLE;
     return config;
   }
 
-  	public static ServoHomingConfig getServoConfig() {
-		  ServoHomingConfig servoConfig = new ServoHomingConfig();
-		  servoConfig.kHomingTimeout = Units.Seconds.of(0.5);
-		  servoConfig.kHomingVoltage = Units.Volts.of(-1.5); // includes direction
-		  servoConfig.kSetHomedVelocity = Units.DegreesPerSecond.of(5.0);
-		  servoConfig.kHomePosition = HOOD_MIN_ANGLE;
-		return servoConfig;
-	}
+  public static ServoHomingConfig getServoHomingConfig() {
+    ServoHomingConfig config = new ServoHomingConfig();
+    config.kHomePosition = INTAKE_STOWED_ANGLE;
+    config.kHomingTimeout = Seconds.of(2);
+    config.kHomingVoltage = Units.Volt.of(4);
+    return config;
+  }
 }

@@ -1,111 +1,104 @@
 package frc.robot.subsystems.shooter;
 
-import com.revrobotics.spark.ClosedLoopSlot;
-import com.revrobotics.spark.config.SparkBaseConfig.IdleMode;
+import static edu.wpi.first.units.Units.RPM;
+import static edu.wpi.first.units.Units.Seconds;
 
-import edu.wpi.first.math.util.Units;
-import frc.lib.subsystems.MotorSubsystemConfig;
-import frc.lib.subsystems.MotorSubsystemWithFollowersConfig;
-import frc.lib.subsystems.MotorSubsystemWithFollowersConfig.FollowerConfig;
-import frc.lib.util.ControlGains.PidGains;
-import frc.lib.util.ControlGains.SimpleFFConstants;
-import frc.robot.Constants;
+import com.ctre.phoenix6.signals.MotorAlignmentValue;
+import com.revrobotics.spark.ClosedLoopSlot;
+import com.revrobotics.spark.config.FeedForwardConfig;
+import com.revrobotics.spark.config.SparkMaxConfig;
+import com.revrobotics.spark.config.SparkBaseConfig.IdleMode;
+import edu.wpi.first.math.system.plant.DCMotor;
+import edu.wpi.first.units.Units;
+import edu.wpi.first.units.measure.AngularVelocity;
+import edu.wpi.first.units.measure.Time;
+import frc.lib.io.MotorIOSparkMax;
+import frc.lib.io.MotorIOSparkMax.MotorIOSparkMaxConfig; // Assuming this wrapper exists similarly to your Talon setup
+import frc.lib.io.MotorIOSparkMaxSim; // Assuming your simulator interface exists for Spark Max
+import frc.lib.sim.RollerSim;
+import frc.lib.sim.RollerSim.RollerSimConstants;
+import frc.robot.Ports;
+import frc.robot.Robot;
 
 public class ShooterConstants {
 
-  public static final SimpleFFConstants MAIN_WHEEL_FF_CONSTANTS =
-      switch (Constants.currentMode) {
-        case REAL -> new SimpleFFConstants(0.35, 0.127, 0.012); // native units rps
-        case SIM -> new SimpleFFConstants(0.0, 0.0, 0.0);
-        default -> new SimpleFFConstants(0.0, 0.0, 0.0);
-      };
+    public static final double kGearing = 1/1.0;
 
-  public static final SimpleFFConstants HOOD_WHEEL_FF_CONSTANTS =
-      switch (Constants.currentMode) {
-        case REAL -> new SimpleFFConstants(0.25, 0.125, 0.006);
-        case SIM -> new SimpleFFConstants(0.0, 0.0, 0.0);
-        default -> new SimpleFFConstants(0.0, 0.0, 0.0);
-      };
+    public static final AngularVelocity kEpsilonThreshold = RPM.of(10.0);
 
-  protected static final PidGains MAIN_PID =
-      switch (Constants.currentMode) {
-        case REAL -> new PidGains(0.000605, 0.0, 0.1); 
-        case SIM -> new PidGains(0.1, 0.0, 0.0);
-        default -> new PidGains(0.1, 0.0, 0.0);
-      };
+    public static final Time VELOCITY_THRESHOLD_DEBOUNCE_TIME = Seconds.of(0.0);
 
-  protected static final PidGains HOOD_PID =
-      switch (Constants.currentMode) {
-        case REAL -> new PidGains(0.0003, 0.0, 0.1);
-        case SIM -> new PidGains(0.1, 0.0, 0.0);
-        default -> new PidGains(0.1, 0.0, 0.0);
-      };
+    public static final AngularVelocity kTestShot = RPM.of(4000.0);
+    public static final AngularVelocity kFerry = RPM.of(3000.0);
+    public static final AngularVelocity kSlow = RPM.of(2100.0);
 
-  public static final MotorSubsystemWithFollowersConfig MAIN_WHEEL_MOTOR_CONFIG = new MotorSubsystemWithFollowersConfig();
-  public static final MotorSubsystemWithFollowersConfig HOOD_WHEEL_MOTOR_CONFIG = new MotorSubsystemWithFollowersConfig();
-
-  public static final FollowerConfig MAIN_WHEEL_MOTOR_FOLLOWER_CONFIG = new FollowerConfig();
-  public static final FollowerConfig HOOD_WHEEL_MOTOR_FOLLOWER_CONFIG = new FollowerConfig();
-
-  public static final double MAIN_WHEEL_DIAMETER = Units.inchesToMeters(4); // meter
-  public static final double HOOD_WHEEL_DIAMETER = Units.inchesToMeters(2); // meter
-
-  public static final double COMPENSATION_FACTOR = 1.0;
-  public static final double BACKSPIN_FACTOR = 1.0; 
-
-  public static final double ACTIVATE_MAX_POWER_PERCENTAGE = 0.88;
-
-  static {
-    MAIN_WHEEL_MOTOR_CONFIG.name = "ShooterMainWheel";
-    MAIN_WHEEL_MOTOR_FOLLOWER_CONFIG.config.name = "ShooterMainWheelFollower";
-    HOOD_WHEEL_MOTOR_CONFIG.name = "ShooterHoodWheel";
-    HOOD_WHEEL_MOTOR_FOLLOWER_CONFIG.config.name = "ShooterHoodWheelFollower";
-    MAIN_WHEEL_MOTOR_CONFIG.id = 56;
-    MAIN_WHEEL_MOTOR_FOLLOWER_CONFIG.config.id = 57;
-    HOOD_WHEEL_MOTOR_CONFIG.id = 58;
-    HOOD_WHEEL_MOTOR_FOLLOWER_CONFIG.config.id = 59;
-
-    MAIN_WHEEL_MOTOR_CONFIG
-        .sparkConfig
-        .idleMode(IdleMode.kCoast)
-        .smartCurrentLimit(70)
-        .inverted(false)
-        .secondaryCurrentLimit(80)
-        .closedLoop
-        .pidf(
-            MAIN_PID.kP, MAIN_PID.kI, MAIN_PID.kD, 0, ClosedLoopSlot.kSlot0)
-        .maxMotion
-        .cruiseVelocity(5600)
-        .maxAcceleration(15000); // keep velocity ff 0
+    public static SparkMaxConfig ShooterSparkConfig() {
+        SparkMaxConfig config = new SparkMaxConfig();
         
-    HOOD_WHEEL_MOTOR_CONFIG
-        .sparkConfig
-        .idleMode(IdleMode.kCoast)
-        .smartCurrentLimit(70)
-        .inverted(false)
-        .secondaryCurrentLimit(80)
-        .closedLoop
-        .pidf(
-            HOOD_PID.kP, HOOD_PID.kI, HOOD_PID.kD, 0, ClosedLoopSlot.kSlot0)
-        .maxMotion
-        .cruiseVelocity(5600)
-        .maxAcceleration(15000); // keep velocity ff 0
+        // Handle physical variables & limits
+        config.idleMode(IdleMode.kCoast)
+              .inverted(false) // Equivalent to CounterClockwise_Positive assuming right-hand configuration
+              .smartCurrentLimit(30)
+              .secondaryCurrentLimit(50); 
 
-    MAIN_WHEEL_MOTOR_FOLLOWER_CONFIG.config.sparkConfig.apply(MAIN_WHEEL_MOTOR_CONFIG.sparkConfig).follow(56, true);
-    // MAIN_WHEEL_MOTOR_FOLLOWER_CONFIG.inverted = true;`````
-    HOOD_WHEEL_MOTOR_FOLLOWER_CONFIG.config.sparkConfig.apply(HOOD_WHEEL_MOTOR_CONFIG.sparkConfig).follow(58);
-    HOOD_WHEEL_MOTOR_FOLLOWER_CONFIG.inverted = true;
+        // Slot 1: Active Velocity control slots
+        double kP = 1;
+        double kI = 0.0;
+        double kD = 0.0;
+        // Converting kV calculation format safely over to method chaining parameters
+        double kV = ((12.0) / (5676.0) * kGearing) * 0.995;
+                
+        config.closedLoop.pid(kP, kI, kD, ClosedLoopSlot.kSlot1).feedForward.apply(new FeedForwardConfig().kS(0.0).kV(kV).kA(0.0));
 
-    MAIN_WHEEL_MOTOR_CONFIG.unitToRotorRatio = 1.0;//0.319; // TODO: set ratio
-    HOOD_WHEEL_MOTOR_CONFIG.unitToRotorRatio = 1.0;//(0.319 / 2);
+        // Slot 0: Flatlined defaults matching your Talon template
+        config.closedLoop.pid(0.0, 0.0, 0.0, ClosedLoopSlot.kSlot0);
 
-    MAIN_WHEEL_MOTOR_CONFIG.usingAbsoluteEncoder = false;
-    HOOD_WHEEL_MOTOR_CONFIG.usingAbsoluteEncoder = false;
+        // Max Motion constraints maps over from MotionMagic parameters
+        // config.closedLoop.maxMotion
+        // .cruiseVelocity(5676.0 * kGearing)
+        //       .maxAcceleration(5676.0 * kGearing);
 
-    MAIN_WHEEL_MOTOR_CONFIG.momentOfInertia = 0.01; // TODO: set MOI
-    HOOD_WHEEL_MOTOR_CONFIG.momentOfInertia = 0.0096;
-    // HOOD_WHEEL_MOTOR_CONFIG.inverted = true;
-    MAIN_WHEEL_MOTOR_CONFIG.followerConfigs = new FollowerConfig[]{MAIN_WHEEL_MOTOR_FOLLOWER_CONFIG};
-    HOOD_WHEEL_MOTOR_CONFIG.followerConfigs = new FollowerConfig[]{HOOD_WHEEL_MOTOR_FOLLOWER_CONFIG};
-  }
+        return config;
+    }
+
+    public static MotorIOSparkMaxConfig getIOconfig() {
+        MotorIOSparkMaxConfig config = new MotorIOSparkMaxConfig();
+        config.mainConfig = ShooterSparkConfig();
+        config.followerConfig = ShooterSparkConfig();
+        config.time = Units.Minutes;
+        config.unit = Units.Rotations;
+        config.mainID = Ports.SHOOTER_MAIN.id;
+        
+        // SparkMax followers require explicit IDs. 
+        // We look at your original alignment array (Aligned, Opposed, Opposed) to map inversions
+        config.followerIDs = new int[] {
+            Ports.SHOOTER_FOLLOWER_1.id, 
+            Ports.SHOOTER_FOLLOWER_2.id, 
+            Ports.SHOOTER_FOLLOWER_3.id
+        };
+        config.followerAlignment = new MotorAlignmentValue[] {
+            MotorAlignmentValue.Aligned, // Aligned
+            MotorAlignmentValue.Opposed,  // Opposed
+            MotorAlignmentValue.Opposed   // Opposed
+        };
+
+        return config;
+    }
+
+    public static MotorIOSparkMax getMotorIO() {
+        if (Robot.isReal()) {
+            return new MotorIOSparkMax(getIOconfig());
+        } else {
+            return new MotorIOSparkMaxSim(getIOconfig(), new RollerSim(getSimConstants()));
+        }
+    }
+
+    public static RollerSimConstants getSimConstants() {
+        RollerSimConstants simConstants = new RollerSimConstants();
+        // Updated to NEO/NeoVortex variants if using SparkMax infrastructure 
+        simConstants.motor = DCMotor.getNEO(4); 
+        simConstants.gearing = kGearing;
+        simConstants.momentOfInertia = 0.0066570492;
+        return simConstants;
+    }
 }

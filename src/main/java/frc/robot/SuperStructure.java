@@ -4,330 +4,162 @@
 
 package frc.robot;
 
+import edu.wpi.first.math.filter.Debouncer;
 import edu.wpi.first.math.geometry.Rotation2d;
-import edu.wpi.first.wpilibj.Timer;
+import edu.wpi.first.units.Units;
+import edu.wpi.first.units.measure.AngularVelocity;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
-import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import edu.wpi.first.wpilibj2.command.Commands;
-import edu.wpi.first.wpilibj2.command.InstantCommand;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
-import frc.robot.commands.FetchCommand;
-import frc.robot.commands.ShootCloseCommand;
-import frc.robot.commands.ShootCommand;
-import frc.robot.commands.ShootOnTheMoveCommand;
-import frc.robot.subsystems.beltDrive.BeltDrive;
-import frc.robot.subsystems.beltDrive.BeltDrive.BeltDriveStates;
+import frc.lib.io.MotorIO.Mode;
+import frc.lib.io.MotorIO.Setpoint;
+import frc.robot.Constants.ForceHomeConstants;
+import frc.robot.commands.DriveCommands;
 import frc.robot.subsystems.drive.Drive;
-import frc.robot.subsystems.drive.Drive.DriveStates;
+import frc.robot.subsystems.feeder.Feeder;
 import frc.robot.subsystems.hood.Hood;
-import frc.robot.subsystems.hood.Hood.HoodStates;
-import frc.robot.subsystems.hopper.Hopper;
-import frc.robot.subsystems.hopper.Hopper.HopperStates;
-import frc.robot.subsystems.intake.Intake;
-import frc.robot.subsystems.intake.Intake.IntakeStates;
-import frc.robot.subsystems.leds.Leds;
-import frc.robot.subsystems.leds.Leds.ledsStates;
+import frc.robot.subsystems.hood.HoodConstants;
+import frc.robot.subsystems.intakedeploy.IntakeDeploy;
+import frc.robot.subsystems.intakedeploy.IntakeDeployConstants;
+import frc.robot.subsystems.intakerollers.IntakeRollers;
 import frc.robot.subsystems.shooter.Shooter;
-import frc.robot.subsystems.shooter.Shooter.ShooterStates;
-import frc.robot.subsystems.vision.Vision;
-import org.littletonrobotics.junction.AutoLogOutput;
+
+import static edu.wpi.first.units.Units.*;
 
 public class SuperStructure extends SubsystemBase {
 
-  public enum SuperStructureStates {
-    AUTO,
-    TRAVEL,
-    SHOOT,
-    SHOOT_CLOSE,
-    FETCH,
-    FETCH_MANUAL,
-    PURGE_INTAKE
-  }
+  public static final SuperStructure mInstance = new SuperStructure();
 
-  public enum StructureIntakeStates {
-    INTAKING,
-    IDLE,
-    PURGE,
-    CLOSED
-  }
+  private final Debouncer intakeForceHomeDebouncer =
+		new Debouncer(ForceHomeConstants.INTAKE_FORCE_DEBOUNCE.in(Seconds));
 
-  @AutoLogOutput(key = "SuperStructure/intakeState")
-  private StructureIntakeStates intakeState =  StructureIntakeStates.IDLE;
-
-  @AutoLogOutput(key = "SuperStructure/currentState")
-  private SuperStructureStates currentState = SuperStructureStates.TRAVEL;
-
-  @AutoLogOutput(key = "SuperStructure/wantedState")
-  private SuperStructureStates wantedState = SuperStructureStates.TRAVEL;
-
-  @AutoLogOutput(key = "SuperStructure/previousState")
-  private SuperStructureStates previousState = SuperStructureStates.TRAVEL;
-
-  public Command currentCommand = null;
-
-  private final BeltDrive beltDrive;
-  private final Drive drive;
-  private final Hood hood;
-  // private final Hopper hopper;
-  private final Intake intake;
-  private final Leds leds;
-  private final Shooter shooter;
-  private final Vision vision;
-
-  private boolean shouldPurgeIntake = false;
-
-  public SuperStructure(
-      BeltDrive beltDrive,
-      Drive drive,
-      Hood hood,
-      // Hopper hopper,
-      Intake intake,
-      Leds leds,
-      Shooter shooter,
-      Vision vision) {
-    this.beltDrive = beltDrive;
-    this.drive = drive;
-    this.hood = hood;
-    // this.hopper = hopper;
-    this.intake = intake;
-    this.leds = leds;
-    this.shooter = shooter;
-    this.vision = vision;
-    SmartDashboard.putBoolean("DriverControlWhenShooting", false);
-  }
+  private final Debouncer hoodForceHomeDebouncer =
+    new Debouncer(ForceHomeConstants.HOOD_FORCE_DEBOUNCE.in(Seconds));
 
   @Override
   public void periodic() {
-    previousState = currentState;
-    if (wantedState != currentState) currentState = handleStateTransition(wantedState);
-    wantedState = currentState;
-    intakeStateMachine();
-    stateMachine();
   }
 
-  private SuperStructureStates handleStateTransition(SuperStructureStates wantedState) {
-    return switch (wantedState) {
-      case AUTO -> {
-        yield SuperStructureStates.AUTO;
-      }
+  public Command intakeForceHomeCommand() {
+		return Commands.sequence(
+						Commands.deadline(
+								Commands.waitUntil(() -> intakeForceHomeDebouncer.calculate(
+										IntakeDeploy.mInstance.getVelocity().abs(DegreesPerSecond)
+														<= ForceHomeConstants.INTAKE_MIN_HOME_VELOCITY.in(
+																DegreesPerSecond)
+												&& IntakeDeploy.mInstance.getSetpoint().mode == Mode.VOLTAGE)),
+								IntakeDeploy.mInstance.setpointCommand(Setpoint.withVoltageSetpoint(Volts.of(5.0)))),
+						IntakeDeploy.mInstance.setpointCommand(Setpoint.withNeutralSetpoint()),
+						IntakeDeploy.mInstance.runOnce(
+								() -> IntakeDeploy.mInstance.setCurrentPosition(IntakeDeployConstants.INTAKE_STOWED_ANGLE)))
+				.ignoringDisable(true)
+				.withName("Force Intake Home");
+	}
 
-      case TRAVEL -> {
-          yield SuperStructureStates.TRAVEL;
-      }
+  public Command hoodForceHomeCommand() {
+		return Commands.sequence(
+						Commands.deadline(
+								Commands.waitUntil(() -> hoodForceHomeDebouncer.calculate(
+										Hood.mInstance.getVelocity().abs(DegreesPerSecond)
+														<= ForceHomeConstants.HOOD_MIN_HOME_VELOCITY.in(
+																DegreesPerSecond)
+												&& Hood.mInstance.getSetpoint().mode == Mode.VOLTAGE)),
+								Hood.mInstance.setpointCommand(Setpoint.withVoltageSetpoint(Volts.of(5.0).unaryMinus()))),
+						Hood.mInstance.setpointCommand(Setpoint.withNeutralSetpoint()),
+						Hood.mInstance.runOnce(
+								() -> Hood.mInstance.setCurrentPosition(HoodConstants.HOOD_MIN_ANGLE)))
+				.ignoringDisable(true)
+				.withName("Force Hood Home");
+	}
 
-      case SHOOT -> {
-          yield SuperStructureStates.SHOOT;
-      }
+	public Command stopCommand() {
+		return Commands.parallel(
+			Feeder.mInstance.setpointCommand(Feeder.IDLE),
+			Hood.mInstance.setpointCommand(Hood.STOWED),
+			IntakeDeploy.mInstance.setpointCommand(IntakeDeploy.STOWED),
+			IntakeRollers.mInstance.setpointCommand(IntakeRollers.IDLE),
+			Shooter.mInstance.setpointCommand(Shooter.IDLE)
+		);
+	}
 
-      case SHOOT_CLOSE -> {
-        yield SuperStructureStates.SHOOT_CLOSE;
-      }
+	public Command intakeExhaustCommand() {
+		return Commands.sequence(
+			IntakeDeploy.mInstance.setpointCommandWithWait(IntakeDeploy.DEPLOYED),
+			Commands.parallel(
+				IntakeRollers.mInstance.setpointCommand(IntakeRollers.OUTTAKE),
+				Feeder.mInstance.setpointCommand(Feeder.SLOW_REVERSE)
+			)
+		);
+	}
 
-      // case SHOOT_ON_THE_MOVE -> {
-      //     yield SuperStructureStates.SHOOT_ON_THE_MOVE;
-      // }
+	public Command intakeCommand() {
+		return Commands.sequence(
+			IntakeDeploy.mInstance.setpointCommandWithWait(IntakeDeploy.DEPLOYED),
+			IntakeRollers.mInstance.setpointCommand(IntakeRollers.OUTTAKE)
+		).withName("Intake");
+	}
 
-      case FETCH_MANUAL -> {
-        yield SuperStructureStates.FETCH_MANUAL;
-      }
+	public Command idleIntakeRollers() {
+		return IntakeRollers.mInstance.setpointCommand(IntakeRollers.IDLE)
+			.withName("Idle Intake");
+	}
 
-      case FETCH -> {
-          yield SuperStructureStates.FETCH;
-      }
+	public Command shoot() {
+		return Commands.parallel(
+						// Cameras.mInstance.setStdDevCommand(CamerasConstants.ALIGN_STD_DEVATION),
+						Commands.runOnce(() -> {
+							Feeder.mInstance.applySetpoint(Feeder.IDLE);
+						}),
+						Shooter.mInstance.followSetpointCommand(
+								() -> Setpoint.withVelocitySetpoint(
+									Units.RotationsPerSecond.of(RobotState.mInstance.getShootInfo().get(1)))),
+						Hood.mInstance.followSetpointCommand(() -> 
+							Setpoint.withPositionSetpoint(
+												// positionInputs.getHoodSetpoint()
+												Units.Degrees.of(RobotState.mInstance.getShootInfo().get(0)))),
+						DriveCommands.autoAlignAngle(Drive.mInstance, () -> Rotation2d.fromDegrees(RobotState.mInstance.getShootInfo().get(2))),
+						Commands.sequence(
+								Commands.waitUntil(() -> {
+									boolean driveReady = RobotState.mInstance.atAngle(Rotation2d.fromDegrees(RobotState.mInstance.getShootInfo().get(2)), Degrees.of(1));
+									
+									boolean spunUp =
+											!RobotState.mInstance.getShootType() ? shooterAndHoodSpunUp(Units.RPM.of(150)) : shooterAndHoodSpunUp();
+									return driveReady
+											&& spunUp;
+								}
+								),
+								Commands.parallel(
+									Feeder.mInstance.setpointCommand(Feeder.FEED_VOLTAGE)
+									// Drive x pose
 
-      case PURGE_INTAKE -> {
-          yield SuperStructureStates.PURGE_INTAKE;
-      }
+								)))
+				// .finallyDo(() -> Cameras.mInstance.setSTDDeviations(CamerasConstants.DEFAULT_STD_DEVIATION))
+				.withName("Shoot");
+	}
 
-      default -> {
-        System.out.println("SuperStructure: Invalid state transition requested: " + wantedState);
-        yield currentState;
-      }
-    };
-  }
+	public Command stopShooting() {
+		return Commands.parallel(
+			Feeder.mInstance.setpointCommand(Feeder.IDLE),
+			Hood.mInstance.setpointCommand(Hood.STOWED),
+			Shooter.mInstance.setpointCommand(Shooter.IDLE)
+		);
+	}
 
-  private void stateMachine() {
-    switch (currentState) {
-      case AUTO -> auto();
+	public boolean shooterAndHoodSpunUp() {
+		boolean shooterReady = Shooter.mInstance.spunUpDebounced();
+		boolean hoodReady = Hood.mInstance.nearPositionSetpoint();
+		SmartDashboard.putBoolean("Shooter Spun Up", shooterReady);
+		SmartDashboard.putBoolean("Hood In Position", hoodReady);
+		return shooterReady && hoodReady;
+	}
 
-      case TRAVEL -> travel();
+	public boolean shooterAndHoodSpunUp(AngularVelocity epsilon) {
+		boolean shooterReady = Shooter.mInstance.spunUpDebounced(epsilon);
+		boolean hoodReady = Hood.mInstance.nearPositionSetpoint();
+		SmartDashboard.putBoolean("Shooter Spun Up", shooterReady);
+		SmartDashboard.putBoolean("Hood In Position", hoodReady);
+		return shooterReady && hoodReady;
+	}
 
-      case SHOOT -> shoot();
-
-      // case SHOOT_ON_THE_MOVE -> shootOnTheMove();
-
-      case SHOOT_CLOSE -> shootClose();
-
-      case FETCH -> fetch();
-
-      case FETCH_MANUAL -> fetchManual();
-
-      case PURGE_INTAKE -> purgeIntake();
-        
-      default -> {}
-    }
-  }
-
-  private void intakeStateMachine() {
-    switch (intakeState) {
-      case INTAKING -> {
-        if (shouldPurgeIntake) intake.setState(Intake.IntakeStates.PURGE);
-        else intake.setState(Intake.IntakeStates.INTAKE);
-      }
-
-      case IDLE -> {
-        if(shouldPurgeIntake) intake.setState(Intake.IntakeStates.PURGE);
-        else intake.setState(Intake.IntakeStates.OPEN);
-      }
-
-      case CLOSED -> {
-        if(shouldPurgeIntake) intake.setState(Intake.IntakeStates.SHUFFLE);
-        else intake.setState(Intake.IntakeStates.CLOSED);
-      }
-
-      default -> System.out.println("SuperStructure: Invalid intake state requested: " + intakeState);
-    }
-  }
-
-  private void auto() {
-    if (currentState != previousState) {
-      // if (currentCommand != null) currentCommand.cancel();
-      // currentCommand.schedule();
-    }
-  }
-
-  private void travel() {
-    if (currentState != previousState) {
-      if (currentCommand != null) currentCommand.cancel();
-    }
-    drive.setState(DriveStates.FIELD_DRIVE);
-    hood.setState(HoodStates.IDLE);
-    beltDrive.setState(BeltDriveStates.IDLE);
-    // hopper.setState(HopperStates.IDLE);
-    shooter.setState(ShooterStates.IDLE);
-    leds.setState(ledsStates.OFF);
-    // intake function
-  }
-
-  private void shoot() {
-    if (currentState != previousState) {
-      if (currentCommand != null) currentCommand.cancel();
-      currentCommand = 
-          new ShootCommand(beltDrive, drive, hood, leds, shooter, () -> RobotState.getInstance().getShootingInfo(), ()->true);
-      CommandScheduler.getInstance().schedule(currentCommand);
-    }
-  }
-
-  private void shootClose() {
-    if (currentState != previousState) {
-      if (currentCommand != null) currentCommand.cancel();
-        currentCommand = new ShootCommand(beltDrive, drive, hood, leds, shooter, RobotState.getInstance()::getShootCloseInfo, 
-          () -> !SmartDashboard.getBoolean("DriverControlWhenShooting", false));
-        CommandScheduler.getInstance().schedule(currentCommand);
-    }
-  }
-
-  // private void shootOnTheMove() {
-  //   if (currentState != previousState) {
-  //     if (currentCommand != null) currentCommand.cancel();
-  //     currentCommand = 
-  //         new ShootOnTheMoveCommand(beltDrive, drive, hood, leds, shooter);
-  //     CommandScheduler.getInstance().schedule(currentCommand);
-  //   }
-  // }
-
-  private void fetch() {
-    if (currentState != previousState) {
-      if (currentCommand != null) currentCommand.cancel();
-      currentCommand = 
-          new ShootCommand(beltDrive, drive, hood, leds, shooter, RobotState.getInstance()::getFetchingInfo, ()->true);
-      CommandScheduler.getInstance().schedule(currentCommand);
-    }
-  }
-
-  private void fetchManual() {
-        if (currentState != previousState) {
-      if (currentCommand != null) currentCommand.cancel();
-      currentCommand = 
-          new ShootCommand(beltDrive, drive, hood, leds, shooter, RobotState.getInstance()::getManualFetchingInfo, ()->true);
-      CommandScheduler.getInstance().schedule(currentCommand);
-    }
-  }
-
-  private void purgeIntake() {
-    if (currentState != previousState) {
-      if (currentCommand != null) currentCommand.cancel();
-    }
-    intake.setState(IntakeStates.PURGE);
-    hood.setState(HoodStates.IDLE);
-    beltDrive.setState(BeltDriveStates.PURGE);
-    // hopper.setState(HopperStates.PURGE);
-    shooter.setState(ShooterStates.IDLE);
-    drive.setState(DriveStates.FIELD_DRIVE);
-  }
-
-  public void setWantedState(SuperStructureStates wantedState) {
-    this.wantedState = wantedState;
-  }
-
-  public void teleopInit() {
-    if (currentCommand != null) currentCommand.cancel();
-    else wantedState = SuperStructureStates.TRAVEL;
-  }
-
-  public void setIntakeState(StructureIntakeStates intakeState) {
-    this.intakeState = intakeState;
-  }
-
-  public Command setWantedStateCommand(SuperStructureStates wantedState) {
-    return new InstantCommand(() -> setWantedState(wantedState));
-  }
-
-  public Command setIntakeStateCommand(StructureIntakeStates intakeState) {
-    return new InstantCommand(() -> setIntakeState(intakeState));
-  }
-
-  public Command shootButtonCommand() {
-    return Commands.either(setWantedStateCommand(SuperStructureStates.TRAVEL), 
-      setWantedStateCommand(SuperStructureStates.SHOOT), () -> currentState == SuperStructureStates.SHOOT);
-  }
-
-  public Command shootCloseButtonCommand() {
-    return Commands.either(setWantedStateCommand(SuperStructureStates.TRAVEL), 
-      setWantedStateCommand(SuperStructureStates.SHOOT_CLOSE), () -> currentState == SuperStructureStates.SHOOT_CLOSE);
-  }
-  
-  // public Command shootOnTheMoveButtonCommand() {
-  //   return Commands.either(setWantedStateCommand(SuperStructureStates.TRAVEL), 
-  //     setWantedStateCommand(SuperStructureStates.SHOOT_ON_THE_MOVE), () -> currentState == SuperStructureStates.SHOOT_ON_THE_MOVE);
-  // }
-
-  public Command intakeButtonCommand() {
-    return Commands.either(setIntakeStateCommand(StructureIntakeStates.IDLE), 
-      setIntakeStateCommand(StructureIntakeStates.INTAKING), () -> intakeState == StructureIntakeStates.INTAKING);
-  }
-
-  public Command closeIntakeButtonCommand() {
-    return Commands.either(setIntakeStateCommand(StructureIntakeStates.IDLE), 
-      setIntakeStateCommand(StructureIntakeStates.CLOSED), () -> intakeState == StructureIntakeStates.CLOSED);
-  }
-
-  public Command fetchButtonCommand() {
-    return Commands.either(setWantedStateCommand(SuperStructureStates.TRAVEL), 
-      setWantedStateCommand(SuperStructureStates.FETCH), () -> currentState == SuperStructureStates.FETCH);
-  }
-
-  public Command fetchManualButtonCommand() {
-    return Commands.either(setWantedStateCommand(SuperStructureStates.TRAVEL), 
-      setWantedStateCommand(SuperStructureStates.FETCH_MANUAL), () -> currentState == SuperStructureStates.FETCH_MANUAL);
-  }
-
-  public Command purgeIntakeButtonTrueCommand() {
-    return Commands.runOnce(() -> {shouldPurgeIntake = true;});
-  }
-
-  public Command purgeIntakeButtonFalseCommand() {
-    return Commands.runOnce(() -> {shouldPurgeIntake = false;});
-  }
 }

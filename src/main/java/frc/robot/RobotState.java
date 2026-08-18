@@ -3,10 +3,8 @@ package frc.robot;
 import static frc.robot.Constants.*;
 import static frc.robot.Constants.RobotState.*;
 
-import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.Matrix;
 import edu.wpi.first.math.Nat;
-import edu.wpi.first.math.Pair;
 import edu.wpi.first.math.VecBuilder;
 import edu.wpi.first.math.Vector;
 import edu.wpi.first.math.geometry.Pose2d;
@@ -14,7 +12,6 @@ import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Rotation3d;
 import edu.wpi.first.math.geometry.Transform2d;
-import edu.wpi.first.math.geometry.Transform3d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.geometry.Translation3d;
 import edu.wpi.first.math.geometry.Twist2d;
@@ -25,44 +22,27 @@ import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.math.numbers.N1;
 import edu.wpi.first.math.numbers.N2;
 import edu.wpi.first.math.numbers.N3;
-import edu.wpi.first.wpilibj.DriverStation;
-import edu.wpi.first.wpilibj.DriverStation.Alliance;
+import edu.wpi.first.units.Units;
+import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.wpilibj.smartdashboard.Field2d;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj.RobotController;
-import edu.wpi.first.wpilibj.Timer;
 import frc.lib.util.AllianceFlipping;
 import frc.robot.Constants.FieldConstants;
-import frc.robot.subsystems.drive.Drive;
-import frc.robot.subsystems.vision.VisionConstants;
+import frc.robot.subsystems.drive.DriveConstants;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Optional;
-import java.util.Set;
-import java.util.stream.Collectors;
-
-import org.dyn4j.geometry.Matrix22;
-import org.dyn4j.geometry.Rotation;
-import org.ejml.simple.SimpleMatrix;
 import org.littletonrobotics.junction.AutoLogOutput;
 import org.littletonrobotics.junction.Logger;
 
+import lombok.Getter;
+import lombok.Setter;
+
 public class RobotState {
 
-  // private final double txTyObservationStaleSecs = 0.2; // seconds
-  // private final double minDistanceTagPoseBlend = 0.4; // meters
-  // private final double maxDistanceTagPoseBlend = 0.9; // meters
-
-  private static RobotState instance;
-
-  public static RobotState getInstance() {
-    if (instance == null) {
-      instance = new RobotState();
-    }
-    return instance;
-  }
+  public static final RobotState mInstance = new RobotState();
 
   private static final Map<Integer, Pose2d> tagPoses2d = new HashMap<>();
 
@@ -73,18 +53,23 @@ public class RobotState {
           FieldConstants.aprilTagLayout.getTagPose(i).map(Pose3d::toPose2d).orElse(Pose2d.kZero));
     }
   }
+  @AutoLogOutput
+  @Getter  private Pose2d odometryPose = Pose2d.kZero;
+  @Getter @AutoLogOutput private Pose2d estimatedPose = Pose2d.kZero;
 
-  @AutoLogOutput private Pose2d odometryPose = Pose2d.kZero;
-  @AutoLogOutput private Pose2d estimatedPose = Pose2d.kZero;
+  // private double lastLimelightYawUpdate = 0.0;
 
-  private double lastLimelightYawUpdate = 0.0;
+  @AutoLogOutput(key = "RobotState/RobotVelocity")
+  @Getter @Setter private ChassisSpeeds robotVelocity = new ChassisSpeeds();
+  @Getter @Setter private ChassisSpeeds robotSetpointVelocity = new ChassisSpeeds();
 
   private final TimeInterpolatableBuffer<Pose2d> poseBuffer =
       TimeInterpolatableBuffer.createBuffer(POSE_BUFFER_SIZE);
 
   private final Matrix<N3, N1> qStdDevs = new Matrix<>(Nat.N3(), Nat.N1());
 
-  private final SwerveDriveKinematics kinematics;
+  private final SwerveDriveKinematics kinematics
+   = new SwerveDriveKinematics(DriveConstants.moduleTranslations);
   private SwerveModulePosition[] lastWheelPosition =
       new SwerveModulePosition[] {
         new SwerveModulePosition(),
@@ -95,22 +80,11 @@ public class RobotState {
 
   private Rotation2d gyroOffset = new Rotation2d();
 
-  private final Map<Integer, TxTyPoseRecord> txTyPoses = new HashMap<>();
-  // private Set<fuelPoseRecord> fuelPoses = new HashSet<>();
-
-  @AutoLogOutput(key = "RobotState/RobotVelocity")
-  private ChassisSpeeds robotVelocity = new ChassisSpeeds();
-
   @AutoLogOutput
-  public LimelightYawObservation bestLimelightYawObservation = new LimelightYawObservation(new Rotation2d(), -500.0);
-
-  // elevator extension
-
-  // intake extension
-
-  // arm position
+  public LimelightYawObservation bestLimelightYawObservation = new LimelightYawObservation(new Rotation2d(), 0.0);
 
   private Field2d field;
+  private boolean shootToHubElseFerry;
 
   private RobotState() {
     field = new Field2d();
@@ -119,20 +93,6 @@ public class RobotState {
     for (int i = 0; i < 3; i++) {
       qStdDevs.set(i, 0, Math.pow(i, i)); // change this!
     }
-
-    kinematics = new SwerveDriveKinematics(Drive.getModuleTranslations());
-  }
-
-  public Pose2d getOdometryPose() {
-    return odometryPose;
-  }
-
-  public Pose2d getEstimatedPose() {
-    return estimatedPose;
-  }
-
-  public ChassisSpeeds getRobotVelocity() {
-    return robotVelocity;
   }
 
   public void resetPose(Pose2d pose) {
@@ -231,75 +191,19 @@ public class RobotState {
     estimatedPose = estimateAtTime.plus(scaledTransform).plus(sampleToOdometryTransform);
   }
 
-  public void addTxTyObservation(
-      TxTyObservation observation) { // TODO: change this to our calculation if doesn't work well
-    // Skip if current data for tag is newer
-    if (txTyPoses.containsKey(observation.tagId())
-        && txTyPoses.get(observation.tagId()).timestamp() >= observation.timestamp()) {
-      return;
-    }
-
-    // Get rotation at timestamp
-    var sample = poseBuffer.getSample(observation.timestamp());
-    if (sample.isEmpty()) {
-      // exit if not there
-      return;
-    }
-    Rotation2d robotRotation =
-        estimatedPose.transformBy(new Transform2d(odometryPose, sample.get())).getRotation();
-
-    // Average tx's and ty's
-    double tx = 0.0;
-    double ty = 0.0;
-    for (int i = 0; i < 4; i++) {
-      tx += observation.tx()[i];
-      ty += observation.ty()[i];
-    }
-    tx /= 4.0;
-    ty /= 4.0;
-
-    Pose3d cameraPose = new Pose3d().plus(VisionConstants.robotToCameras[observation.camera()]);
-
-    // Use 3D distance and tag angles to find robot pose
-    Translation2d camToTagTranslation =
-        new Pose3d(Translation3d.kZero, new Rotation3d(0, ty, -tx))
-            .transformBy(
-                new Transform3d(new Translation3d(observation.distance(), 0, 0), Rotation3d.kZero))
-            .getTranslation()
-            .rotateBy(new Rotation3d(0, cameraPose.getRotation().getY(), 0))
-            .toTranslation2d();
-
-    Rotation2d camToTagRotation =
-        robotRotation.plus(
-            cameraPose.toPose2d().getRotation().plus(camToTagTranslation.getAngle()));
-    var tagPose2d = tagPoses2d.get(observation.tagId());
-    if (tagPose2d == null) return;
-    Translation2d fieldToCameraTranslation =
-        new Pose2d(tagPose2d.getTranslation(), camToTagRotation.plus(Rotation2d.kPi))
-            .transformBy(new Transform2d(camToTagTranslation.getNorm(), 0.0, new Rotation2d()))
-            .getTranslation();
-    Pose2d robotPose =
-        new Pose2d(
-                fieldToCameraTranslation, robotRotation.plus(cameraPose.toPose2d().getRotation()))
-            .transformBy(new Transform2d(cameraPose.toPose2d(), Pose2d.kZero));
-    // Use gyro angle at time for robot rotation
-    robotPose = new Pose2d(robotPose.getTranslation(), robotRotation);
-
-    // Add transform to current odometry based pose for latency correction
-    txTyPoses.put(
-        observation.tagId(),
-        new TxTyPoseRecord(robotPose, camToTagTranslation.getNorm(), observation.timestamp()));
-  }
 
   public void addDriveSpeeds(ChassisSpeeds speeds) {
     robotVelocity = speeds;
   }
 
-  @AutoLogOutput(key = "RobotState/FieldVelocity")
   public ChassisSpeeds getFieldVelocity() {
     return ChassisSpeeds.fromRobotRelativeSpeeds(robotVelocity, getRotation());
   }
 
+  public ChassisSpeeds getFieldSetpointVelocity() {
+    return ChassisSpeeds.fromRobotRelativeSpeeds(robotSetpointVelocity, getRotation());
+  }
+  
   public Rotation2d getRotation() {
     return estimatedPose.getRotation();
   }
@@ -340,12 +244,49 @@ public class RobotState {
     return getAngleToHub(getEstimatedPose().getTranslation());
   }
 
+    public Optional<Pose2d> getEstimatedPoseAtTimestamp(double timestamp) {
+    var oldOdometryPose = poseBuffer.getSample(timestamp);
+    if (oldOdometryPose.isEmpty()) {
+      return Optional.empty();
+    }
+    return Optional.of(
+        this
+            .getEstimatedPose()
+            .transformBy(
+                new Transform2d(
+                    this.getOdometryPose(), oldOdometryPose.get())));
+  }
+
+
   /**
    * 
-   * 
+   * @param shootType true for hub, false for ferry
+   */
+  public void setShootType(boolean shootType) {
+    shootToHubElseFerry = shootType;
+  }
+
+    /** @param shootType true for hub, false for ferry */
+  public boolean getShootType() {
+    return shootToHubElseFerry;
+  }
+
+  public boolean atAngle(Rotation2d targetRotation, Angle epsilon) {
+    return Math.abs(getRotation().minus(targetRotation).getDegrees()) < epsilon.magnitude();
+  }
+
+
+  /**
    * @return a vector that consists of {Hood angle[deg], Flywheel velocity[m/s], Robot angle[deg]}
    */
-  public edu.wpi.first.math.Vector<N3> getShootingInfo() {
+  public Vector<N3> getShootInfo() {
+    return shootToHubElseFerry ? getHubShootingInfo() : getFetchingInfo();
+  }
+
+  /**
+   * @return a vector that consists of {Hood angle[deg], Flywheel velocity[rps], Robot angle[deg]}
+   */
+  public edu.wpi.first.math.Vector<N3> getHubShootingInfo() {
     Vector<N3> hubCenteredVelocity = getVelocityRelativeToHub();
     // TODO: could add here a more accurate depiction of distance
     Vector<N2> inputVector = VecBuilder.fill(
@@ -353,8 +294,9 @@ public class RobotState {
         hubCenteredVelocity.get(0, 0));
     var shootingData = getShootingData.apply(inputVector);
     return VecBuilder.fill(
-        shootingData.get(0, 0), // hood angle
-        shootingData.get(1, 0) + SmartDashboard.getNumber("FlywheelBias", 1.5), // flywheel velocity
+        90 - shootingData.get(0, 0), // hood angle
+        (shootingData.get(1, 0) + SmartDashboard.getNumber("FlywheelBias", 1.0)
+          / (Units.Inches.of(4).in(Units.Meters) * Math.PI)), // flywheel velocity
         getAngleToHub().getDegrees() // robot angle
     );
   }
@@ -404,8 +346,8 @@ public class RobotState {
     Rotation2d angleToHub = getAngleToHub(effectiveEstimatedPose);
 
     return VecBuilder.fill(
-        shootingData.get(0), // hood angle
-        shootingData.get(1), // flywheel velocity
+        90 - shootingData.get(0), // hood angle
+        shootingData.get(1)+ SmartDashboard.getNumber("FlywheelBias", 1.0), // flywheel velocity
         angleToHub.getDegrees() // robot angle
     );
   }
@@ -419,8 +361,9 @@ public class RobotState {
     double input = getFetchingDistance();
     Double fetchVel = fetchingTableData.get(input);
     return VecBuilder.fill(
-        FETCHING_ANGLE, // hood angle
-        fetchVel == null ? 10.0 : fetchVel.doubleValue(), // flywheel velocity
+        90-FETCHING_ANGLE, // hood angle
+        ((fetchVel == null ? 10.0 : fetchVel.doubleValue()) + SmartDashboard.getNumber("FlywheelBias", 1.0)) 
+        / (Units.Inches.of(4).magnitude() * Math.PI), // flywheel velocity
         AllianceFlipping.apply(Rotation2d.kZero).getDegrees() // robot angle
     );
   }
