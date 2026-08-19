@@ -76,7 +76,7 @@ public class DriveCommands {
   public static Translation2d getLinearVelocityFromJoysticks(double x, double y) {
     // Apply deadband
     double linearMagnitude = MathUtil.applyDeadband(Math.hypot(x, y), deadband);
-    Rotation2d linearDirection = new Rotation2d(x, y);
+    Rotation2d linearDirection = (linearMagnitude == 0.0) ? new Rotation2d() : new Rotation2d(x, y);
 
     // Square magnitude for more precise control
     linearMagnitude = linearMagnitude * linearMagnitude;
@@ -166,7 +166,7 @@ public class DriveCommands {
               .setRobotSetpointVelocity(
                   ChassisSpeeds.discretize(
                       new ChassisSpeeds(speeds.vxMetersPerSecond, speeds.vyMetersPerSecond, 0.0),
-                      Constants.CYCLE_TIME));
+                      Constants.CYCLE_TIME.baseUnitMagnitude()));
         },
         drive);
   }

@@ -28,7 +28,7 @@ public class SingleXboxController implements ControllerInterface {
 
   @Override
   public double rotationVelocityAnalog() {
-    return -controller.getRightX();
+    return controller.getRightX();
   }
 
   @Override

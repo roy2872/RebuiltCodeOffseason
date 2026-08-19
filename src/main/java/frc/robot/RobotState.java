@@ -293,10 +293,11 @@ public class RobotState {
         getEstimatedPose().getTranslation().getDistance(AllianceFlipping.apply(HUB_2D_COORDS.getTranslation())) + SHOOTER_DISTANCE_FROM_CENTER, 
         hubCenteredVelocity.get(0, 0));
     var shootingData = getShootingData.apply(inputVector);
+    System.out.println(shootingData.get(1, 0) + SmartDashboard.getNumber("FlywheelBias", 1.0));
     return VecBuilder.fill(
         90 - shootingData.get(0, 0), // hood angle
-        (shootingData.get(1, 0) + SmartDashboard.getNumber("FlywheelBias", 1.0)
-          / (Units.Inches.of(4).in(Units.Meters) * Math.PI)), // flywheel velocity
+        (shootingData.get(1, 0) + SmartDashboard.getNumber("FlywheelBias", 1.0))
+          / (Units.Inches.of(4).in(Units.Meters) * Math.PI), // flywheel velocity
         getAngleToHub().getDegrees() // robot angle
     );
   }

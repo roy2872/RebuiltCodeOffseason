@@ -14,11 +14,11 @@ import edu.wpi.first.wpilibj.DriverStation;
 public class AllianceFlipping {
 
   public static double applyX(double x) {
-    return shouldFlip() ? FIELD_LENGTH - x : x;
+    return shouldFlip() ? FIELD_LENGTH.baseUnitMagnitude() - x : x;
   }
 
   public static double applyY(double y) {
-    return shouldFlip() ? FIELD_WIDTH - y : y;
+    return shouldFlip() ? FIELD_WIDTH.baseUnitMagnitude() - y : y;
   }
 
   public static Translation2d apply(Translation2d translation) {
@@ -55,6 +55,6 @@ public class AllianceFlipping {
 
   public static Pose2d mirrorPoseRightLeft(Pose2d pose) {
     return new Pose2d(
-        new Translation2d(pose.getX(), FIELD_WIDTH - pose.getY()), pose.getRotation().unaryMinus());
+        new Translation2d(pose.getX(), FIELD_WIDTH.baseUnitMagnitude() - pose.getY()), pose.getRotation().unaryMinus());
   }
 }

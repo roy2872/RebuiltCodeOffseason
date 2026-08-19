@@ -249,6 +249,7 @@ public class MotorIOTalonSRX extends MotorIO<TalonSRXConfiguration> {
     public static class ControlModeSetter {
         public void setVoltage(TalonSRX talon, Voltage voltage) {
             // Converts voltage setpoint relative to current bus voltage
+            System.out.println("voltage");
             double busVoltage = talon.getBusVoltage();
             if (busVoltage > 0.0) {
                 talon.set(ControlMode.PercentOutput, voltage.in(Units.Volts) / busVoltage);
@@ -287,5 +288,10 @@ public class MotorIOTalonSRX extends MotorIO<TalonSRXConfiguration> {
 
     public TalonSRX getMain() {
         return main;
+    }
+
+    public MotorIOTalonSRX invert(boolean isInverted) {
+        if(isInverted) main.setInverted(isInverted);
+        return this;
     }
 }
