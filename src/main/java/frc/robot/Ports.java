@@ -5,10 +5,10 @@ import com.ctre.phoenix6.CANBus;
 public enum Ports {
 	INTAKE_ROLLERS_MAIN(51, Constants.rio),
 	INTAKE_ROLLERS_FOLLOWER(52, Constants.rio),
-	INTAKE_DEPLOY(53, Constants.rio),
+	INTAKE_DEPLOY(45, Constants.rio),
 	FEEDER_ROLLERS_MAIN(54, Constants.rio),
-	FEEDER_ROLLERS_FOLLOWER1(55, Constants.rio),
-	FEEDER_ROLLERS_FOLLOWER2(56, Constants.rio),
+	FEEDER_ROLLERS_FOLLOWER1(16, Constants.rio),
+	FEEDER_ROLLERS_FOLLOWER2(15, Constants.rio),
 	SHOOTER_MAIN(57, Constants.rio),
 	SHOOTER_FOLLOWER_1(58, Constants.rio),
 	SHOOTER_FOLLOWER_2(59, Constants.rio),

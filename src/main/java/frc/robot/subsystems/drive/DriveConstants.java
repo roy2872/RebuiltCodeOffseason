@@ -19,10 +19,11 @@ public class DriveConstants {
   public static final double robotMOI = 6.883; // TODO: calculate MOI
   public static final double wheelCOF = 1.0;
 
-  public static final double MAX_ACCELERATION = 2.0; // m/s^2
-  public static final double MAX_FRONT_ACCEL = 10.0; // m/s^2
-  public static final double MAX_SIDE_ACCEL = 10.0; // m/s^2
-  public static final double MAX_SKID_ACCEL = 10.0;
+  public static final double MAX_ACCELERATION = 10.0; // m/s^2
+  public static final double MAX_FRONT_ACCEL = 8.0; // m/s^2
+  public static final double MAX_SIDE_ACCEL = 8.0; // m/s^2
+  public static final double MAX_SKID_ACCEL = 7.0;
+  public static final double MAX_ROTATIONAL_ACCEL = 12.0;
 
   public static final double MAX_SHOOT_ON_THE_MOVE_SKID_ACCEL = 5.0;
   public static final double MAX_SHOOT_ON_THE_MOVE_ROTATION_ACCEL = 7.0; // [rad/s^2]

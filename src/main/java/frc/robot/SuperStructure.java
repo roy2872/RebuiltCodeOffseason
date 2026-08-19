@@ -94,7 +94,7 @@ public class SuperStructure extends SubsystemBase {
 	}
 
 	public Command intakeCommand() {
-		return Commands.sequence(
+		return Commands.parallel( // TODO: CHANGE BACK!!!!!!!!!!!!!!!!!! (SEQUENCE)
 			IntakeDeploy.mInstance.setpointCommandWithWait(IntakeDeploy.DEPLOYED),
 			IntakeRollers.mInstance.setpointCommand(IntakeRollers.OUTTAKE)
 		).withName("Intake");

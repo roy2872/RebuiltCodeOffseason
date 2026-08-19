@@ -7,9 +7,12 @@ import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
 import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.math.kinematics.SwerveModuleState;
+import edu.wpi.first.math.system.plant.DCMotor;
+import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.Alert;
 import edu.wpi.first.wpilibj.Alert.AlertType;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
+import frc.lib.accelLimitsLib;
 import frc.robot.Constants;
 import frc.robot.Constants.Mode;
 import frc.robot.RobotState;
@@ -18,6 +21,8 @@ import frc.robot.generated.TunerConstants;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.RobotController;
 import edu.wpi.first.wpilibj.Timer;
+
+import static edu.wpi.first.units.Units.MetersPerSecond;
 
 import java.util.Optional;
 import java.util.concurrent.locks.Lock;
@@ -28,17 +33,39 @@ import org.ironmaple.simulation.drivesims.SwerveDriveSimulation;
 import org.littletonrobotics.junction.AutoLogOutput;
 import org.littletonrobotics.junction.Logger;
 
+import com.pathplanner.lib.config.ModuleConfig;
+import com.pathplanner.lib.config.RobotConfig;
+import com.pathplanner.lib.util.DriveFeedforwards;
+import com.pathplanner.lib.util.swerve.SwerveSetpoint;
+import com.pathplanner.lib.util.swerve.SwerveSetpointGenerator;
+
 public class Drive extends SubsystemBase {
 
   public SwerveDriveSimulation driveSimulation = null;
-  public static final Drive mInstance = new Drive();
   static final Lock odometryLock = new ReentrantLock();
   private final GyroIO gyroIO;
   private final GyroIOInputsAutoLogged gyroInputs = new GyroIOInputsAutoLogged();
   private final Module[] modules = new Module[4]; // FL, FR, BL, BR
   private final Alert gyroDisconnectedAlert = new Alert("Disconnected gyro, using backup gyro as fallback.",
       AlertType.kError);
-  // private static final TunableNumber coastWaitTime =
+  private final SwerveSetpointGenerator setpointGenerator;
+    private static final double ROBOT_MASS_KG = 55;
+  private static final double ROBOT_MOI = 1.2;
+  private static final double WHEEL_COF = 1.5;
+  private static final RobotConfig PP_CONFIG =
+      new RobotConfig(
+          ROBOT_MASS_KG,
+          ROBOT_MOI,
+          new ModuleConfig(
+              TunerConstants.FrontLeft.WheelRadius,
+              TunerConstants.kSpeedAt12Volts.in(MetersPerSecond),
+              WHEEL_COF,
+              DCMotor.getFalcon500(1).withReduction(TunerConstants.FrontLeft.DriveMotorGearRatio),
+              TunerConstants.FrontLeft.SlipCurrent,
+              1),
+          DriveConstants.moduleTranslations);
+  private SwerveSetpoint previousSetpoint;
+    // private static final TunableNumber coastWaitTime =
   // new TunableNumber("Drive/CoastWaitTimeSeconds", 0.5);
   // private static final TunableNumber coastMetersPerSecondThreshold =
   // new TunableNumber("Drive/CoastMetersPerSecThreshold", .05);
@@ -65,7 +92,7 @@ public class Drive extends SubsystemBase {
         new SwerveModulePosition(),
         new SwerveModulePosition()
       };
-      
+  public static final Drive mInstance = new Drive();
   private Drive() {
     switch (Constants.currentMode) {
       case REAL -> {
@@ -103,6 +130,16 @@ public class Drive extends SubsystemBase {
     for (var module : modules) {
       module.stop();
     }
+    setpointGenerator =
+        new SwerveSetpointGenerator(
+            PP_CONFIG, // The robot configuration. This is the same config used for generating
+            // trajectories and running path following commands.
+            Units.rotationsToRadians(
+                5.0) 
+            );
+                previousSetpoint =
+    new SwerveSetpoint(
+      getChassisSpeeds(), getModuleStates(), DriveFeedforwards.zeros(PP_CONFIG.numModules));
   }
 
   @Override
@@ -182,8 +219,15 @@ public class Drive extends SubsystemBase {
    */
   public void runVelocity(ChassisSpeeds speeds) {
     // Calculate module setpoints
-    ChassisSpeeds discreteSpeeds = ChassisSpeeds.discretize(speeds, Constants.CYCLE_TIME);
-    SwerveModuleState[] setpointStates = kinematics.toSwerveModuleStates(discreteSpeeds);
+    ChassisSpeeds discreteSpeeds = ChassisSpeeds.discretize(speeds, Constants.CYCLE_TIME.baseUnitMagnitude());
+    // SwerveModuleState[] setpointStates = kinematics.toSwerveModuleStates(discreteSpeeds);
+        previousSetpoint =
+        setpointGenerator.generateSetpoint(
+            previousSetpoint, // The previous setpoint
+            speeds, // The desired target speeds
+            0.02 // The loop time of the robot code, in seconds
+            );
+    SwerveModuleState[] setpointStates = previousSetpoint.moduleStates(); 
     SwerveDriveKinematics.desaturateWheelSpeeds(setpointStates, DriveConstants.MAX_SPEED);
 
     // Log unoptimized setpoints and setpoint speeds

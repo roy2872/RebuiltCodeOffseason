@@ -29,10 +29,6 @@ public class FeederConstants {
     // Velocity Setpoint
     public static final AngularVelocity REVERSE_VELOCITY = RPM.of(-1500.0); // TODO: Adjust as needed
 
-    // CAN IDs
-    public static final int BOTTOM_FOLLOWER_ID = 54;
-    public static final int LEFT_FOLLOWER_ID = 53;
-
     /**
      * Creates the master SparkMaxConfig for the main Belt Drive motor.
      */
@@ -40,8 +36,8 @@ public class FeederConstants {
         SparkMaxConfig config = new SparkMaxConfig();
         config
             .idleMode(IdleMode.kCoast)
-            .smartCurrentLimit(30)
-            .secondaryCurrentLimit(40)
+            .smartCurrentLimit(50)
+            .secondaryCurrentLimit(60)
             .inverted(true);
 
         return config;
@@ -64,7 +60,7 @@ public class FeederConstants {
         // Left follower (53) follow(55, true) -> Opposed
         config.followerAlignment = new MotorAlignmentValue[] {
             MotorAlignmentValue.Aligned,
-            MotorAlignmentValue.Opposed
+            MotorAlignmentValue.Aligned
         };
 
         config.followerConfig = getMainConfig();
