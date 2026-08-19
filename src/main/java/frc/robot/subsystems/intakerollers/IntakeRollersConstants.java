@@ -1,8 +1,6 @@
 package frc.robot.subsystems.intakerollers;
 
 import static edu.wpi.first.units.Units.Volts;
-
-import com.ctre.phoenix.motorcontrol.can.TalonSRX;
 import com.ctre.phoenix.motorcontrol.can.TalonSRXConfiguration;
 import com.revrobotics.spark.config.SparkMaxConfig;
 import edu.wpi.first.math.system.plant.DCMotor;
