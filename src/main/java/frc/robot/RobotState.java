@@ -295,8 +295,9 @@ public class RobotState {
     var shootingData = getShootingData.apply(inputVector);
     return VecBuilder.fill(
         90 - shootingData.get(1, 0), // hood angle
-        (shootingData.get(0, 0) + SmartDashboard.getNumber("FlywheelBias", 1.0))
-          / (Units.Inches.of(4).in(Units.Meters) * Math.PI), // flywheel velocity
+        // (shootingData.get(0, 0) + SmartDashboard.getNumber("FlywheelBias", 1.0))
+        //   / (Units.Inches.of(4).in(Units.Meters) * Math.PI), // flywheel velocity
+        20,
         getAngleToHub().getDegrees() // robot angle
     );
   }

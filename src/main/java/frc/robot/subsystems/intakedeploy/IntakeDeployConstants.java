@@ -1,6 +1,7 @@
 package frc.robot.subsystems.intakedeploy;
 
 import static edu.wpi.first.units.Units.Degrees;
+import static edu.wpi.first.units.Units.Rotations;
 import static edu.wpi.first.units.Units.Seconds;
 
 import com.revrobotics.spark.ClosedLoopSlot;
@@ -26,19 +27,19 @@ import frc.robot.Robot;
 public class IntakeDeployConstants {
 
   // Absolute encoder zero offset (in mechanism rotations or degrees depending on factor)
-  public static final double ABSOLUTE_ENCODER_OFFSET = 0.0; // TODO: Measure with deploy at hard stop/stowed
-  public static final boolean ABSOLUTE_ENCODER_INVERTED = false;
+  // public static final double ABSOLUTE_ENCODER_OFFSET = 0.0; // TODO: Measure with deploy at hard stop/stowed
+  // public static final boolean ABSOLUTE_ENCODER_INVERTED = false;
 
   // Strong-typed angle, voltage, and time units
-  public static final Angle INTAKE_DEPLOYED_ANGLE = Degrees.of(84.0);
-  public static final Angle INTAKE_PARTIAL_IN_ANGLE = INTAKE_DEPLOYED_ANGLE.minus(Degrees.of(30.0));
-  public static final Angle INTAKE_STOWED_ANGLE = Degrees.of(82.0);
-  public static final Angle INTAKE_ANGLE_TOLERANCE = Degrees.of(0.3);
+  public static final Angle INTAKE_DEPLOYED_ANGLE = Rotations.of(18.0);
+  public static final Angle INTAKE_PARTIAL_IN_ANGLE = Rotations.of(7.0);
+  public static final Angle INTAKE_STOWED_ANGLE = Rotations.of(0);
+  public static final Angle INTAKE_ANGLE_TOLERANCE = Rotations.of(0.1);
 
   public static final int INTAKE_MOTOR_ID = Ports.INTAKE_DEPLOY.id;
 
   // Conversion ratio (mechanism rotations / motor rotations)
-  public static final double GEAR_RATIO = (360.0 / 269.84127) / 360.0;
+  public static final double GEAR_RATIO = 1;
 
   public static final ArmFeedforward INTAKE_FF =
       switch (Constants.currentMode) {
@@ -49,7 +50,7 @@ public class IntakeDeployConstants {
 
   protected static final PidGains INTAKE_PID =
       switch (Constants.currentMode) {
-        case REAL -> new PidGains(1.5, 0.0, 0.2);
+        case REAL -> new PidGains(0.3, 0.0, 0.0);
         case SIM -> new PidGains(0.1, 0.0, 0.0);
         default -> new PidGains(0.1, 0.0, 0.0);
       };
@@ -62,21 +63,24 @@ public class IntakeDeployConstants {
 
     config
         .idleMode(IdleMode.kCoast)
-        .smartCurrentLimit(30)
-        .secondaryCurrentLimit(40)
-        .inverted(true);
+        .smartCurrentLimit(20)
+        .secondaryCurrentLimit(30)
+        .inverted(false);
 
-    // 1. Configure Absolute Encoder Settings
-    config.absoluteEncoder
-        .positionConversionFactor(360.0) // Convert native rotations (0.0 to 1.0) directly to degrees
-        .velocityConversionFactor(360.0 / 60.0) // RPM to Degrees per second
-        .zeroOffset(ABSOLUTE_ENCODER_OFFSET)
-        .inverted(ABSOLUTE_ENCODER_INVERTED);
+    // // 1. Configure Absolute Encoder Settings
+    // config.absoluteEncoder
+    //     .positionConversionFactor(360.0) // Convert native rotations (0.0 to 1.0) directly to degrees
+    //     .velocityConversionFactor(360.0 / 60.0) // RPM to Degrees per second
+    //     .zeroOffset(ABSOLUTE_ENCODER_OFFSET)
+    //     .inverted(ABSOLUTE_ENCODER_INVERTED);
 
     // 2. Direct Closed-Loop Control to use the Absolute Encoder
     config.closedLoop
         .feedbackSensor(FeedbackSensor.kPrimaryEncoder) // Overrides default internal motor encoder
-        .pid(INTAKE_PID.kP, INTAKE_PID.kI, INTAKE_PID.kD, ClosedLoopSlot.kSlot0);
+        .pid(INTAKE_PID.kP, INTAKE_PID.kI, INTAKE_PID.kD, ClosedLoopSlot.kSlot0)
+        .pid(INTAKE_PID.kP, INTAKE_PID.kI, INTAKE_PID.kD, ClosedLoopSlot.kSlot1)
+        .pid(INTAKE_PID.kP, INTAKE_PID.kI, INTAKE_PID.kD, ClosedLoopSlot.kSlot2)
+        .pid(INTAKE_PID.kP, INTAKE_PID.kI, INTAKE_PID.kD, ClosedLoopSlot.kSlot3);
 
     config.closedLoop.maxMotion
         .cruiseVelocity(40)
@@ -96,7 +100,7 @@ public class IntakeDeployConstants {
     MotorIOSparkMaxConfig ioConfig = new MotorIOSparkMaxConfig();
     ioConfig.mainID = Ports.INTAKE_DEPLOY.id;
     ioConfig.mainConfig = getSparkConfig();
-    ioConfig.unit = Degrees;
+    ioConfig.unit = Rotations;
     return ioConfig;
   }
 
@@ -123,7 +127,7 @@ public class IntakeDeployConstants {
     ServoHomingConfig config = new ServoHomingConfig();
     config.kHomePosition = INTAKE_STOWED_ANGLE;
     config.kHomingTimeout = Seconds.of(2);
-    config.kHomingVoltage = Units.Volt.of(4);
+    config.kHomingVoltage = Units.Volt.of(-4);
     return config;
   }
 }

@@ -18,6 +18,11 @@ public interface ControllerInterface {
 
   public Trigger closeIntakeButton();
 
+  /** Starts the intake homing routine. Override this for controllers that expose the control. */
+  public default Trigger intakeForceHomeButton() {
+    return new Trigger(() -> false);
+  }
+
   public Trigger shootButton();
 
   public Trigger shootCloseButton();

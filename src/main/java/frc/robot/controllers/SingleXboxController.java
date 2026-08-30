@@ -47,6 +47,11 @@ public class SingleXboxController implements ControllerInterface {
   }
 
   @Override
+  public Trigger intakeForceHomeButton() {
+    return new Trigger(() -> controller.getRawButton(10));
+  }
+
+  @Override
   public Trigger shootButton() {
     return new Trigger(() -> controller.getYButton());
   }

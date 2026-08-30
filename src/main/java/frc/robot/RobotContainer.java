@@ -96,17 +96,18 @@ public class RobotContainer {
       .whileTrue(SuperStructure.mInstance.shoot())
       .onFalse(SuperStructure.mInstance.stopShooting());
 
-    controller.intakeButton()
-      .onTrue(SuperStructure.mInstance.intakeCommand())
-      .onFalse(SuperStructure.mInstance.idleIntakeRollers());
+    controller.intakeButton().whileTrue(SuperStructure.mInstance.intakeCommand());
+
+    controller.closeIntakeButton().onTrue(SuperStructure.mInstance.stopCommand());
+
+    controller.intakeForceHomeButton().onTrue(SuperStructure.mInstance.intakeForceHomeCommand());
 
     controller.fetchButton()
       .onTrue(Commands.runOnce(() -> RobotState.mInstance.setShootType(false)))
       .whileTrue(SuperStructure.mInstance.shoot())
       .onFalse(SuperStructure.mInstance.stopShooting());
 
-    controller.purgeIntakeButton().onTrue(SuperStructure.mInstance.intakeExhaustCommand())
-      .onFalse(SuperStructure.mInstance.idleIntakeRollers());
+    controller.purgeIntakeButton().whileTrue(SuperStructure.mInstance.intakeExhaustCommand());
 
     // controller.alignToBumpButton().
 

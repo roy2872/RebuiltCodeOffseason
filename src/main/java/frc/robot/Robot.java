@@ -99,6 +99,7 @@ public class Robot extends LoggedRobot {
   public void robotInit() {
     AutoLogOutputManager.addObject(RobotState.mInstance);
     RobotController.setBrownoutVoltage(Volts.of(5.5));
+    SmartDashboard.putData("Intake Force Home and Zero", SuperStructure.mInstance.intakeForceHomeCommand());
 
 		for (Sendable sendable : Constants.LOGGED_SENDABLES) {
 			SmartDashboard.putData(sendable);

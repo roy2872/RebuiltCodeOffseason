@@ -26,6 +26,8 @@ import frc.robot.subsystems.intakerollers.IntakeRollers;
 import frc.robot.subsystems.shooter.Shooter;
 
 import static edu.wpi.first.units.Units.*;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.BooleanSupplier;
 
 public class SuperStructure extends SubsystemBase {
 
@@ -42,20 +44,22 @@ public class SuperStructure extends SubsystemBase {
   }
 
   public Command intakeForceHomeCommand() {
-		return Commands.sequence(
-						Commands.deadline(
-								Commands.waitUntil(() -> intakeForceHomeDebouncer.calculate(
-										IntakeDeploy.mInstance.getVelocity().abs(DegreesPerSecond)
-														<= ForceHomeConstants.INTAKE_MIN_HOME_VELOCITY.in(
-																DegreesPerSecond)
-												&& IntakeDeploy.mInstance.getSetpoint().mode == Mode.VOLTAGE)),
-								IntakeDeploy.mInstance.setpointCommand(Setpoint.withVoltageSetpoint(Volts.of(5.0)))),
-						IntakeDeploy.mInstance.setpointCommand(Setpoint.withNeutralSetpoint()),
-						IntakeDeploy.mInstance.runOnce(
-								() -> IntakeDeploy.mInstance.setCurrentPosition(IntakeDeployConstants.INTAKE_STOWED_ANGLE)))
-				.ignoringDisable(true)
-				.withName("Force Intake Home");
-	}
+    return IntakeDeploy.mInstance.runEnd(
+            // Drive toward the stow hard stop for a bounded time.
+            () -> IntakeDeploy.mInstance.applySetpoint(Setpoint.withVoltageSetpoint(Volts.of(-7.0))),
+            // Always neutral the motor first, including when canceled.
+            () -> IntakeDeploy.mInstance.applySetpoint(Setpoint.withNeutralSetpoint())
+        )
+        // runEnd() does not finish by itself; make this command end after one second.
+        .withTimeout(1.0)
+        // finallyDo runs both after the timeout and after scheduler cancellation.
+        .finallyDo(
+            () ->
+                IntakeDeploy.mInstance.setCurrentPosition(
+                    IntakeDeployConstants.INTAKE_STOWED_ANGLE))
+        .ignoringDisable(true)
+        .withName("Force Intake Home and Zero");
+  }
 
   public Command hoodForceHomeCommand() {
 		return Commands.sequence(
@@ -87,16 +91,22 @@ public class SuperStructure extends SubsystemBase {
 		return Commands.sequence(
 			IntakeDeploy.mInstance.setpointCommandWithWait(IntakeDeploy.DEPLOYED),
 			Commands.parallel(
-				IntakeRollers.mInstance.setpointCommand(IntakeRollers.OUTTAKE),
-				Feeder.mInstance.setpointCommand(Feeder.SLOW_REVERSE)
+				IntakeRollers.mInstance.runEnd(
+					() -> IntakeRollers.mInstance.applySetpoint(IntakeRollers.OUTTAKE),
+					() -> IntakeRollers.mInstance.applySetpoint(IntakeRollers.IDLE)),
+				Feeder.mInstance.runEnd(
+					() -> Feeder.mInstance.applySetpoint(Feeder.SLOW_REVERSE),
+					() -> Feeder.mInstance.applySetpoint(Feeder.IDLE))
 			)
 		);
 	}
 
 	public Command intakeCommand() {
-		return Commands.parallel( // TODO: CHANGE BACK!!!!!!!!!!!!!!!!!! (SEQUENCE)
+		return Commands.sequence(
 			IntakeDeploy.mInstance.setpointCommandWithWait(IntakeDeploy.DEPLOYED),
-			IntakeRollers.mInstance.setpointCommand(IntakeRollers.OUTTAKE)
+			IntakeRollers.mInstance.runEnd(
+				() -> IntakeRollers.mInstance.applySetpoint(IntakeRollers.INTAKE),
+				() -> IntakeRollers.mInstance.applySetpoint(IntakeRollers.IDLE))
 		).withName("Intake");
 	}
 

@@ -62,7 +62,7 @@ public class ServoMotorSubsystem<C, IO extends MotorIO<C>> extends MotorSubsyste
         this(io, name, epsilonThreshold, tuningMode);
         this.isHomingSubsystem = true;
         homingConfig = config;
-        mHomingDelay = new DelayedBoolean(Timer.getFPGATimestamp(), homingConfig.kHomingTimeout.in(Units.Seconds));
+        mHomingDelay = new DelayedBoolean(0.1, homingConfig.kHomingTimeout.in(Units.Seconds));
     }
 
     public ServoMotorSubsystem(IO io, String name, Angle epsilonThreshold, ServoHomingConfig config) {
