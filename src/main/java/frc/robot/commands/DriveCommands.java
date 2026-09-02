@@ -89,7 +89,7 @@ public class DriveCommands {
 
   public static double getOmegaFromJoysticks(double driverOmega) {
     double omega = MathUtil.applyDeadband(driverOmega, deadband);
-    return omega * omega * Math.signum(omega);
+    return omega * omega * Math.signum(omega) * 0.6;
   }
 
   public static ChassisSpeeds getSpeedsFromJoysticks(

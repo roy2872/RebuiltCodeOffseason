@@ -46,7 +46,7 @@ public class SuperStructure extends SubsystemBase {
   public Command intakeForceHomeCommand() {
     return IntakeDeploy.mInstance.runEnd(
             // Drive toward the stow hard stop for a bounded time.
-            () -> IntakeDeploy.mInstance.applySetpoint(Setpoint.withVoltageSetpoint(Volts.of(-7.0))),
+            () -> IntakeDeploy.mInstance.applySetpoint(Setpoint.withVoltageSetpoint(Volts.of(-9.0))),
             // Always neutral the motor first, including when canceled.
             () -> IntakeDeploy.mInstance.applySetpoint(Setpoint.withNeutralSetpoint())
         )
@@ -88,7 +88,7 @@ public class SuperStructure extends SubsystemBase {
 	}
 
 	public Command intakeExhaustCommand() {
-		return Commands.sequence(
+		return Commands.parallel(
 			IntakeDeploy.mInstance.setpointCommandWithWait(IntakeDeploy.DEPLOYED),
 			Commands.parallel(
 				IntakeRollers.mInstance.runEnd(
@@ -102,7 +102,7 @@ public class SuperStructure extends SubsystemBase {
 	}
 
 	public Command intakeCommand() {
-		return Commands.sequence(
+		return Commands.parallel(
 			IntakeDeploy.mInstance.setpointCommandWithWait(IntakeDeploy.DEPLOYED),
 			IntakeRollers.mInstance.runEnd(
 				() -> IntakeRollers.mInstance.applySetpoint(IntakeRollers.INTAKE),

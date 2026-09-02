@@ -29,10 +29,10 @@ public class IntakeRollersConstants {
     public static SparkMaxConfig getMotorConfig() {
         SparkMaxConfig config = new SparkMaxConfig();
         config
-            .inverted(false)
+            .inverted(true)
             .idleMode(SparkMaxConfig.IdleMode.kCoast)
-            .smartCurrentLimit(40)
-            .secondaryCurrentLimit(70);
+            .smartCurrentLimit(30)
+            .secondaryCurrentLimit(40);
         
         return config;
     }
@@ -82,7 +82,7 @@ public class IntakeRollersConstants {
     }
 
     public static MotorIOTalonSRX getMotorIOTalonSRX() {
-        return new MotorIOTalonSRX(getIOConfigTalonSRX()).invert(true);
+        return new MotorIOTalonSRX(getIOConfigTalonSRX()).invert(false);
     }
 
     public static RollerSimConstants getSimConstantsTalonSRX() {

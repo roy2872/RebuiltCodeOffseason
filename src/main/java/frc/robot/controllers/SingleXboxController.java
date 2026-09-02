@@ -43,7 +43,7 @@ public class SingleXboxController implements ControllerInterface {
 
   @Override
   public Trigger closeIntakeButton() {
-    return new Trigger(() -> controller.getRightBumperButton());
+    return new Trigger(() -> controller.getYButton());
   }
 
   @Override
@@ -53,7 +53,7 @@ public class SingleXboxController implements ControllerInterface {
 
   @Override
   public Trigger shootButton() {
-    return new Trigger(() -> controller.getYButton());
+    return new Trigger(() -> controller.getLeftBumperButton());
   }
 
   @Override
@@ -68,7 +68,7 @@ public class SingleXboxController implements ControllerInterface {
 
   @Override
   public Trigger fetchButton() {
-    return new Trigger(() -> controller.getBButton());
+    return new Trigger(() -> controller.getLeftBumperButton());
   }
 
   @Override
