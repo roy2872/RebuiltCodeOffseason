@@ -60,7 +60,7 @@ public class FeederConstants {
         // Left follower (53) follow(55, true) -> Opposed
         config.followerAlignment = new MotorAlignmentValue[] {
             MotorAlignmentValue.Aligned,
-            MotorAlignmentValue.Aligned
+            MotorAlignmentValue.Opposed
         };
 
         config.followerConfig = getMainConfig();

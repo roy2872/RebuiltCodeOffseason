@@ -32,7 +32,7 @@ import org.littletonrobotics.junction.Logger;
 
 
 public class DriveCommands {
-  public static final double deadband = 0.1;
+  public static final double deadband = 0.15;
   private static final double ffStartDelay = 2.0; // Secs
   private static final double ffRampRate = 0.1; // Volts/Sec
   private static final double wheelRadiusMaxVelocity = 0.25; // Rad/Sec

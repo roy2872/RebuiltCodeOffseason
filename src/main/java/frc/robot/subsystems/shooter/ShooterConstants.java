@@ -39,7 +39,7 @@ public class ShooterConstants {
         config.idleMode(IdleMode.kCoast)
               .inverted(false) // Equivalent to CounterClockwise_Positive assuming right-hand configuration
               .smartCurrentLimit(30)
-              .secondaryCurrentLimit(50); 
+              .secondaryCurrentLimit(40); 
 
         // Slot 1: Active Velocity control slots
         double kP = 1;
@@ -77,7 +77,7 @@ public class ShooterConstants {
             Ports.SHOOTER_FOLLOWER_3.id
         };
         config.followerAlignment = new MotorAlignmentValue[] {
-            MotorAlignmentValue.Aligned, // Aligned
+            MotorAlignmentValue.Opposed, // Aligned
             MotorAlignmentValue.Opposed,  // Opposed
             MotorAlignmentValue.Opposed   // Opposed
         };

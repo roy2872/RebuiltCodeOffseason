@@ -81,7 +81,7 @@ public class SuperStructure extends SubsystemBase {
 		return Commands.parallel(
 			Feeder.mInstance.setpointCommand(Feeder.IDLE),
 			Hood.mInstance.setpointCommand(Hood.STOWED),
-			IntakeDeploy.mInstance.setpointCommand(IntakeDeploy.STOWED),
+			IntakeDeploy.mInstance.setpointCommand(IntakeDeploy.PARTIAL_IN),
 			IntakeRollers.mInstance.setpointCommand(IntakeRollers.IDLE),
 			Shooter.mInstance.setpointCommand(Shooter.IDLE)
 		);

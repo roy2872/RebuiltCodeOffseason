@@ -213,6 +213,7 @@ public class MotorIOSparkMax extends MotorIO<SparkMaxConfig> {
         setMainConfig(config.mainConfig);
 
         followers = new SparkMax[config.followerIDs.length];
+        followerConfig = config.followerConfig;
         for (int i = 0; i < config.followerIDs.length; i++) {
             followers[i] = new SparkMax(config.followerIDs[i], MotorType.kBrushless);
             
@@ -220,12 +221,13 @@ public class MotorIOSparkMax extends MotorIO<SparkMaxConfig> {
             boolean isInverted = (config.followerAlignment.length > i) 
                 && (config.followerAlignment[i] == MotorAlignmentValue.Opposed);
 
+            // Configure the follower and its follow relationship together. Applying
+            // followerConfig afterward would reset the follow relationship.
             SparkMaxConfig fConfig = new SparkMaxConfig();
+            fConfig.apply(followerConfig);
             fConfig.follow(config.mainID, isInverted);
             followers[i].configure(fConfig, ResetMode.kResetSafeParameters, PersistMode.kPersistParameters);
         }
-
-        setFollowerConfig(config.followerConfig);
     }
 
     private static ClosedLoopSlot getClosedLoopSlot(int slot) {

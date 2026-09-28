@@ -1,5 +1,10 @@
 package frc.lib.bases;
 
+import static edu.wpi.first.units.Units.RadiansPerSecond;
+import static edu.wpi.first.units.Units.Rotations;
+import static edu.wpi.first.units.Units.Second;
+import static edu.wpi.first.units.Units.Volt;
+
 import edu.wpi.first.units.BaseUnits;
 import edu.wpi.first.units.Units;
 import edu.wpi.first.units.measure.Angle;
@@ -233,9 +238,9 @@ public class ServoMotorSubsystem<C, IO extends MotorIO<C>> extends MotorSubsyste
      * Configuration to make a homing ServoMotorSubsystem
      */
     public static class ServoHomingConfig {
-        public Angle kHomePosition;
-        public Voltage kHomingVoltage;
-        public Time kHomingTimeout;
-        public AngularVelocity kSetHomedVelocity;
+        public Angle kHomePosition = Rotations.of(0);
+        public Voltage kHomingVoltage = Volt.of(0.0);
+        public Time kHomingTimeout = Second.of(1);
+        public AngularVelocity kSetHomedVelocity = RadiansPerSecond.of(0.0);
     }
 }

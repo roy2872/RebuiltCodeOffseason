@@ -31,8 +31,8 @@ public class IntakeDeployConstants {
   // public static final boolean ABSOLUTE_ENCODER_INVERTED = false;
 
   // Strong-typed angle, voltage, and time units
-  public static final Angle INTAKE_DEPLOYED_ANGLE = Rotations.of(18.0);
-  public static final Angle INTAKE_PARTIAL_IN_ANGLE = Rotations.of(7.0);
+  public static final Angle INTAKE_DEPLOYED_ANGLE = Rotations.of(19.5);
+  public static final Angle INTAKE_PARTIAL_IN_ANGLE = Rotations.of(5.0);
   public static final Angle INTAKE_STOWED_ANGLE = Rotations.of(0);
   public static final Angle INTAKE_ANGLE_TOLERANCE = Rotations.of(0.1);
 
@@ -83,8 +83,8 @@ public class IntakeDeployConstants {
         .pid(INTAKE_PID.kP, INTAKE_PID.kI, INTAKE_PID.kD, ClosedLoopSlot.kSlot3);
 
     config.closedLoop.maxMotion
-        .cruiseVelocity(40)
-        .maxAcceleration(100)
+        .cruiseVelocity(7000)
+        .maxAcceleration(6000)
         .allowedProfileError(20);
 
     config.softLimit

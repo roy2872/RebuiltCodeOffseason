@@ -297,7 +297,8 @@ public class RobotState {
         90 - shootingData.get(1, 0), // hood angle
         // (shootingData.get(0, 0) + SmartDashboard.getNumber("FlywheelBias", 1.0))
         //   / (Units.Inches.of(4).in(Units.Meters) * Math.PI), // flywheel velocity
-        20,
+                (10 + SmartDashboard.getNumber("FlywheelBias", 1.0))
+          / (Units.Inches.of(4).in(Units.Meters) * Math.PI), // flywheel velocity,
         getAngleToHub().getDegrees() // robot angle
     );
   }
