@@ -1,15 +1,17 @@
 package frc.lib.bases;
 
-import static edu.wpi.first.units.Units.RadiansPerSecond;
-import static edu.wpi.first.units.Units.Rotations;
-import static edu.wpi.first.units.Units.Second;
-import static edu.wpi.first.units.Units.Volt;
+import static edu.wpi.first.units.Units.MetersPerSecond;
+import static edu.wpi.first.units.Units.Rotation;
+import static edu.wpi.first.units.Units.RotationsPerSecond;
+import static edu.wpi.first.units.Units.Seconds;
+import static edu.wpi.first.units.Units.Volts;
 
 import edu.wpi.first.units.BaseUnits;
 import edu.wpi.first.units.Units;
 import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.units.measure.AngularVelocity;
 import edu.wpi.first.units.measure.Time;
+import edu.wpi.first.units.measure.Velocity;
 import edu.wpi.first.units.measure.Voltage;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.Timer;
@@ -238,9 +240,9 @@ public class ServoMotorSubsystem<C, IO extends MotorIO<C>> extends MotorSubsyste
      * Configuration to make a homing ServoMotorSubsystem
      */
     public static class ServoHomingConfig {
-        public Angle kHomePosition = Rotations.of(0);
-        public Voltage kHomingVoltage = Volt.of(0.0);
-        public Time kHomingTimeout = Second.of(1);
-        public AngularVelocity kSetHomedVelocity = RadiansPerSecond.of(0.0);
+        public Angle kHomePosition = Rotation.of(0);
+        public Voltage kHomingVoltage = Volts.of(1.0);
+        public Time kHomingTimeout = Seconds.of(5.0);
+        public AngularVelocity kSetHomedVelocity = RotationsPerSecond.of(0);
     }
 }
