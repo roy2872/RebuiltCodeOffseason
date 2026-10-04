@@ -29,7 +29,7 @@ public class ShooterConstants {
     public static final Time VELOCITY_THRESHOLD_DEBOUNCE_TIME = Seconds.of(0.0);
 
     public static final AngularVelocity kTestShot = RPM.of(4000.0);
-    public static final AngularVelocity kFerry = RPM.of(3000.0);
+    public static final AngularVelocity kFerry = RPM.of(1000.0);
     public static final AngularVelocity kSlow = RPM.of(2100.0);
 
     public static SparkMaxConfig ShooterSparkConfig() {

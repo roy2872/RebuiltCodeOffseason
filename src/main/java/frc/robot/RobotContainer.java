@@ -98,7 +98,7 @@ public class RobotContainer {
 
     controller.intakeButton().whileTrue(SuperStructure.mInstance.intakeCommand());
 
-    controller.closeIntakeButton().onTrue(SuperStructure.mInstance.stopCloseIntakeCommand());
+    controller.closeIntakeButton().whileTrue(SuperStructure.mInstance.stopCloseIntakeCommand());
 
     controller.intakeForceHomeButton().onTrue(SuperStructure.mInstance.intakeForceHomeCommand());
 

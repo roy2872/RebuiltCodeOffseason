@@ -87,15 +87,15 @@ public class SuperStructure extends SubsystemBase {
 		);
 	}
 
-	public Command stopCloseIntakeCommand() {
-		return Commands.parallel(
-			IntakeDeploy.mInstance.setpointCommandWithWait(IntakeDeploy.PARTIAL_IN),
-			IntakeRollers.mInstance.setpointCommand(IntakeRollers.INTAKE_WHILE_CLOSING),
-			Shooter.mInstance.setpointCommand(Shooter.IDLE)
-		).finallyDo(
-			() -> IntakeRollers.mInstance.applySetpoint(IntakeRollers.IDLE)
-		).withTimeout(1.0).withName("Close Intake");
-	}
+public Command stopCloseIntakeCommand() {
+    return Commands.parallel(
+        IntakeDeploy.mInstance.setpointCommand(IntakeDeploy.PARTIAL_IN),
+			IntakeRollers.mInstance.runEnd(
+				() -> IntakeRollers.mInstance.applySetpoint(IntakeRollers.INTAKE_WHILE_CLOSING),
+				() -> IntakeRollers.mInstance.applySetpoint(IntakeRollers.IDLE))
+	)
+    .withName("Close Intake");
+}
 
 	public Command intakeExhaustCommand() {
 		return Commands.parallel(
@@ -157,7 +157,7 @@ public class SuperStructure extends SubsystemBase {
 				// Scheduler interruption must not leave continuous-output mechanisms running.
 				.finallyDo(() -> {
 					Feeder.mInstance.applySetpoint(Feeder.IDLE);
-					Shooter.mInstance.applySetpoint(Shooter.IDLE);
+					// Shooter.mInstance.applySetpoint(Shooter.IDLE);
 				})
 				// .finallyDo(() -> Cameras.mInstance.setSTDDeviations(CamerasConstants.DEFAULT_STD_DEVIATION))
 				.withName("Shoot");
