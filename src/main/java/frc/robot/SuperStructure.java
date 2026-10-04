@@ -88,13 +88,13 @@ public class SuperStructure extends SubsystemBase {
 	}
 
 	public Command stopCloseIntakeCommand() {
-		return Commands.deadline(
+		return Commands.parallel(
 			IntakeDeploy.mInstance.setpointCommandWithWait(IntakeDeploy.PARTIAL_IN),
-			IntakeRollers.mInstance.runEnd(
-				() -> IntakeRollers.mInstance.applySetpoint(IntakeRollers.INTAKE_WHILE_CLOSING),
-				() -> IntakeRollers.mInstance.applySetpoint(IntakeRollers.IDLE)),
+			IntakeRollers.mInstance.setpointCommand(IntakeRollers.INTAKE_WHILE_CLOSING),
 			Shooter.mInstance.setpointCommand(Shooter.IDLE)
-		).withName("Close Intake");
+		).finallyDo(
+			() -> IntakeRollers.mInstance.applySetpoint(IntakeRollers.IDLE)
+		).withTimeout(1.0).withName("Close Intake");
 	}
 
 	public Command intakeExhaustCommand() {
