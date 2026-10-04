@@ -98,7 +98,7 @@ public class RobotContainer {
 
     controller.intakeButton().whileTrue(SuperStructure.mInstance.intakeCommand());
 
-    controller.closeIntakeButton().onTrue(SuperStructure.mInstance.stopCommand());
+    controller.closeIntakeButton().onTrue(SuperStructure.mInstance.stopCloseIntakeCommand());
 
     controller.intakeForceHomeButton().onTrue(SuperStructure.mInstance.intakeForceHomeCommand());
 
@@ -108,10 +108,6 @@ public class RobotContainer {
       .onFalse(SuperStructure.mInstance.stopShooting());
 
     controller.purgeIntakeButton().whileTrue(SuperStructure.mInstance.intakeExhaustCommand());
-
-    // controller.alignToBumpButton().
-
-    // controller.alignToTowerButton().
   }
 
   /**

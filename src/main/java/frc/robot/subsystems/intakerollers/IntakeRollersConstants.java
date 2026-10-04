@@ -19,8 +19,8 @@ import frc.robot.Robot;
 public class IntakeRollersConstants {
     public static final double GEARING = 1.0;
 
-    public static final Voltage INTAKE_VOLTAGE = Volts.of(12.0);
-    public static final Voltage OUTTAKE_VOLTAGE = Volts.of(-12.0);
+    public static final Voltage INTAKE_VOLTAGE = Volts.of(10.0);
+    public static final Voltage OUTTAKE_VOLTAGE = Volts.of(-10.0);
 
     // ==========================================
     // SPARK MAX METHODS

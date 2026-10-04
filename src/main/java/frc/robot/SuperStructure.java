@@ -87,6 +87,16 @@ public class SuperStructure extends SubsystemBase {
 		);
 	}
 
+	public Command stopCloseIntakeCommand() {
+		return Commands.deadline(
+			IntakeDeploy.mInstance.setpointCommandWithWait(IntakeDeploy.PARTIAL_IN),
+			IntakeRollers.mInstance.runEnd(
+				() -> IntakeRollers.mInstance.applySetpoint(IntakeRollers.INTAKE_WHILE_CLOSING),
+				() -> IntakeRollers.mInstance.applySetpoint(IntakeRollers.IDLE)),
+			Shooter.mInstance.setpointCommand(Shooter.IDLE)
+		).withName("Close Intake");
+	}
+
 	public Command intakeExhaustCommand() {
 		return Commands.parallel(
 			IntakeDeploy.mInstance.setpointCommandWithWait(IntakeDeploy.DEPLOYED),
@@ -144,16 +154,27 @@ public class SuperStructure extends SubsystemBase {
 									// Drive x pose
 
 								)))
+				// Scheduler interruption must not leave continuous-output mechanisms running.
+				.finallyDo(() -> {
+					Feeder.mInstance.applySetpoint(Feeder.IDLE);
+					Shooter.mInstance.applySetpoint(Shooter.IDLE);
+				})
 				// .finallyDo(() -> Cameras.mInstance.setSTDDeviations(CamerasConstants.DEFAULT_STD_DEVIATION))
 				.withName("Shoot");
 	}
 
 	public Command stopShooting() {
-		return Commands.parallel(
-			Feeder.mInstance.setpointCommand(Feeder.IDLE),
-			Hood.mInstance.setpointCommand(Hood.STOWED),
+		return Commands.sequence(
+			Commands.parallel(
+				Feeder.mInstance.setpointCommand(Feeder.IDLE),
+				Hood.mInstance.setpointCommand(Hood.STOWED),
+				Shooter.mInstance.setpointCommand(Shooter.FERRY)),
+			Commands.waitSeconds(1.0),
 			Shooter.mInstance.setpointCommand(Shooter.IDLE)
-		);
+		)
+			// This runs for both normal completion and scheduler cancellation during ferrying.
+			.finallyDo(() -> Shooter.mInstance.applySetpoint(Shooter.IDLE))
+			.withName("Stop Shooting");
 	}
 
 	public boolean shooterAndHoodSpunUp() {
