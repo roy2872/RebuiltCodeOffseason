@@ -51,10 +51,10 @@ public class DriveConstants {
   public static final double turnMotorReduction = 18.75; // Gear ratio for turn motor
 
   // Per drive motor supply limits (CTRE recommended starting point), the PowerManager lowers these at runtime
-  public static final double DRIVE_SUPPLY_CURRENT_LIMIT = 70.0; // Amps
-  public static final double DRIVE_SUPPLY_CURRENT_LOWER_LIMIT = 40.0; // Amps, after DRIVE_SUPPLY_CURRENT_LOWER_TIME
+  public static final double DRIVE_SUPPLY_CURRENT_LIMIT = 60.0; // Amps
+  public static final double DRIVE_SUPPLY_CURRENT_LOWER_LIMIT = 30.0; // Amps, after DRIVE_SUPPLY_CURRENT_LOWER_TIME
   public static final double DRIVE_SUPPLY_CURRENT_LOWER_TIME = 1.0; // Seconds
-  public static final double DRIVE_POWER_MIN_AMPS = 4 * 35.0; // Total for all drive motors
+  public static final double DRIVE_POWER_MIN_AMPS = 4 * 30.0; // Total for all drive motors
 
   public static final double DEADBAND = 0.1; // Deadband for joystick inputs
   public static final double ASSISTED_DRIVE_PERCENTAGE = 0.25;
