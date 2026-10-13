@@ -4,6 +4,7 @@ import static edu.wpi.first.units.Units.Hertz;
 
 import com.ctre.phoenix6.CANBus;
 import com.ctre.phoenix6.StatusCode;
+import com.ctre.phoenix6.configs.CurrentLimitsConfigs;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
 import com.ctre.phoenix6.controls.CoastOut;
 import com.ctre.phoenix6.controls.ControlRequest;
@@ -22,6 +23,7 @@ import edu.wpi.first.units.TimeUnit;
 import edu.wpi.first.units.Units;
 import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.units.measure.AngularVelocity;
+import edu.wpi.first.units.measure.Current;
 import edu.wpi.first.units.measure.Dimensionless;
 import edu.wpi.first.units.measure.Voltage;
 import edu.wpi.first.wpilibj.Timer;
@@ -176,6 +178,32 @@ public class MotorIOTalonFX extends MotorIO<TalonFXConfiguration> {
         };
 
         changeMainConfig(configChanger);
+    }
+
+    @Override
+    public void setSupplyCurrentLimit(Current perMotorLimit) {
+        double amps = perMotorLimit.in(Units.Amps);
+        config.CurrentLimits.SupplyCurrentLimit = amps;
+        config.CurrentLimits.SupplyCurrentLimitEnable = true;
+        followerConfig.CurrentLimits.SupplyCurrentLimit = amps;
+        followerConfig.CurrentLimits.SupplyCurrentLimitEnable = true;
+
+        // Only the current limit group is sent, with a 0 timeout so it doesn't block the loop
+        main.getConfigurator().apply(copyLimits(config.CurrentLimits), 0.0);
+        for (TalonFX talon : followers) {
+            talon.getConfigurator().apply(copyLimits(followerConfig.CurrentLimits), 0.0);
+        }
+    }
+
+    private static CurrentLimitsConfigs copyLimits(CurrentLimitsConfigs limits) {
+        CurrentLimitsConfigs copy = new CurrentLimitsConfigs();
+        copy.StatorCurrentLimit = limits.StatorCurrentLimit;
+        copy.StatorCurrentLimitEnable = limits.StatorCurrentLimitEnable;
+        copy.SupplyCurrentLimit = limits.SupplyCurrentLimit;
+        copy.SupplyCurrentLimitEnable = limits.SupplyCurrentLimitEnable;
+        copy.SupplyCurrentLowerLimit = limits.SupplyCurrentLowerLimit;
+        copy.SupplyCurrentLowerTime = limits.SupplyCurrentLowerTime;
+        return copy;
     }
 
     @Override

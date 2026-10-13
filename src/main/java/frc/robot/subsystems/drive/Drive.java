@@ -13,6 +13,10 @@ import edu.wpi.first.wpilibj.Alert;
 import edu.wpi.first.wpilibj.Alert.AlertType;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.lib.accelLimitsLib;
+import frc.lib.util.power.PowerConfig;
+import frc.lib.util.power.PowerConsumer;
+import frc.lib.util.power.PowerManager;
+import frc.lib.util.power.PowerPriority;
 import frc.robot.Constants;
 import frc.robot.Constants.Mode;
 import frc.robot.RobotState;
@@ -39,7 +43,7 @@ import com.pathplanner.lib.util.DriveFeedforwards;
 import com.pathplanner.lib.util.swerve.SwerveSetpoint;
 import com.pathplanner.lib.util.swerve.SwerveSetpointGenerator;
 
-public class Drive extends SubsystemBase {
+public class Drive extends SubsystemBase implements PowerConsumer {
 
   public SwerveDriveSimulation driveSimulation = null;
   static final Lock odometryLock = new ReentrantLock();
@@ -130,6 +134,13 @@ public class Drive extends SubsystemBase {
     for (var module : modules) {
       module.stop();
     }
+    PowerManager.mInstance.register(
+        this,
+        new PowerConfig(
+            getPowerName(),
+            PowerPriority.CRITICAL,
+            DriveConstants.DRIVE_POWER_MIN_AMPS,
+            modules.length * DriveConstants.DRIVE_SUPPLY_CURRENT_LIMIT));
     setpointGenerator =
         new SwerveSetpointGenerator(
             PP_CONFIG, // The robot configuration. This is the same config used for generating
@@ -336,5 +347,27 @@ public class Drive extends SubsystemBase {
       output += modules[i].getFFCharacterizationVelocity() / 4.0;
     }
     return output;
+  }
+
+  @Override
+  public String getPowerName() {
+    return "Drive";
+  }
+
+  /** Battery current of the drive motors. Steer motors are left unmanaged on their static limit. */
+  @Override
+  public double getSupplyCurrentAmps() {
+    double amps = 0.0;
+    for (var module : modules) {
+      amps += Math.abs(module.getDriveSupplyCurrentAmps());
+    }
+    return amps;
+  }
+
+  @Override
+  public void setSupplyCurrentLimitAmps(double totalAmps) {
+    for (var module : modules) {
+      module.setDriveSupplyCurrentLimit(totalAmps / modules.length);
+    }
   }
 }

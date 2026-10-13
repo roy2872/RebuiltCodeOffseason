@@ -1,5 +1,7 @@
 package frc.lib.bases;
 
+import static edu.wpi.first.units.Units.Amps;
+
 import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.units.measure.AngularVelocity;
 import edu.wpi.first.units.measure.Current;
@@ -12,6 +14,10 @@ import frc.lib.io.MotorIO;
 import frc.lib.io.MotorIO.Setpoint;
 import frc.lib.logging.LoggedTracer;
 import frc.lib.util.TunableNumber;
+import frc.lib.util.power.PowerConfig;
+import frc.lib.util.power.PowerConsumer;
+import frc.lib.util.power.PowerManager;
+import frc.lib.util.power.PowerPriority;
 import java.util.function.Supplier;
 import java.util.function.UnaryOperator;
 import org.littletonrobotics.junction.Logger;
@@ -21,7 +27,7 @@ import org.littletonrobotics.junction.Logger;
  * * @param <C> The configuration class specific to the hardware library (e.g., SparkMaxConfig or TalonFXConfiguration).
  * @param <IO> The generic MotorIO interface managing that configuration.
  */
-public class MotorSubsystem<C, IO extends MotorIO<C>> extends SubsystemBase {
+public class MotorSubsystem<C, IO extends MotorIO<C>> extends SubsystemBase implements PowerConsumer {
     protected final IO io;
     protected final String name;
     protected boolean tuningMode = false;
@@ -211,5 +217,31 @@ public class MotorSubsystem<C, IO extends MotorIO<C>> extends SubsystemBase {
 
     public IO getIO() {
         return io;
+    }
+
+    /**
+     * Lets the PowerManager share battery current with this subsystem. Call once from the constructor.
+     *
+     * @param priority Who gets cut last when power is short.
+     * @param minAmps Total current (all motors) this subsystem always keeps.
+     * @param maxAmps Total current (all motors) at full power, should match the configured current limits.
+     */
+    protected void enablePowerManagement(PowerPriority priority, double minAmps, double maxAmps) {
+        PowerManager.mInstance.register(this, new PowerConfig(name, priority, minAmps, maxAmps));
+    }
+
+    @Override
+    public String getPowerName() {
+        return name;
+    }
+
+    @Override
+    public double getSupplyCurrentAmps() {
+        return io.getTotalSupplyCurrent().in(Amps);
+    }
+
+    @Override
+    public void setSupplyCurrentLimitAmps(double totalAmps) {
+        io.setSupplyCurrentLimit(Amps.of(totalAmps / io.getMotorCount()));
     }
 }

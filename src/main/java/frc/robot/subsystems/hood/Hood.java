@@ -6,6 +6,7 @@ import edu.wpi.first.units.measure.Voltage;
 import frc.lib.bases.ServoMotorSubsystem;
 import frc.lib.io.MotorIO.Setpoint;
 import frc.lib.io.MotorIOSparkMax;
+import frc.lib.util.power.PowerPriority;
 
 public class Hood extends ServoMotorSubsystem<SparkMaxConfig, MotorIOSparkMax> {
 
@@ -24,5 +25,7 @@ public class Hood extends ServoMotorSubsystem<SparkMaxConfig, MotorIOSparkMax> {
         false
     );
     setCurrentPosition(HoodConstants.HOOD_STARTING_ANGLE);
+    // 1 motor x 10A smart limit
+    enablePowerManagement(PowerPriority.MEDIUM, 6.0, 10.0);
   }
 }

@@ -13,6 +13,7 @@ import edu.wpi.first.units.TimeUnit;
 import edu.wpi.first.units.Units;
 import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.units.measure.AngularVelocity;
+import edu.wpi.first.units.measure.Current;
 import edu.wpi.first.units.measure.Dimensionless;
 import edu.wpi.first.units.measure.Voltage;
 import edu.wpi.first.wpilibj.Timer;
@@ -171,6 +172,24 @@ public class MotorIOSparkMax extends MotorIO<SparkMaxConfig> {
         };
 
         changeMainConfig(configChanger);
+    }
+
+    @Override
+    public void setSupplyCurrentLimit(Current perMotorLimit) {
+        // SPARK MAX only has an output (stator) smart limit. Stator current is always >= supply
+        // current, so limiting it also caps the battery draw.
+        int amps = (int) Math.max(1, Math.round(perMotorLimit.in(Units.Amps)));
+        config.smartCurrentLimit(amps);
+        followerConfig.smartCurrentLimit(amps);
+
+        // Only the limit is sent, without resetting or persisting, so PID and follow settings stay
+        // and the flash isn't written every time the limit moves
+        SparkMaxConfig limitOnly = new SparkMaxConfig();
+        limitOnly.smartCurrentLimit(amps);
+        main.configureAsync(limitOnly, ResetMode.kNoResetSafeParameters, PersistMode.kNoPersistParameters);
+        for (SparkMax spark : followers) {
+            spark.configureAsync(limitOnly, ResetMode.kNoResetSafeParameters, PersistMode.kNoPersistParameters);
+        }
     }
 
     @Override

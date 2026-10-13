@@ -7,6 +7,7 @@ import edu.wpi.first.units.measure.Voltage;
 import frc.lib.bases.MotorSubsystem;
 import frc.lib.io.MotorIO.Setpoint;
 import frc.lib.io.MotorIOSparkMax;
+import frc.lib.util.power.PowerPriority;
 
 public class Feeder extends MotorSubsystem<SparkMaxConfig, MotorIOSparkMax> {
 
@@ -21,5 +22,7 @@ public class Feeder extends MotorSubsystem<SparkMaxConfig, MotorIOSparkMax> {
 
 	private Feeder() {
 		super(FeederConstants.getMotorIO(), "Feeder");
+		// 3 motors x 30A smart limit
+		enablePowerManagement(PowerPriority.MEDIUM, 30.0, 90.0);
 	}
 }

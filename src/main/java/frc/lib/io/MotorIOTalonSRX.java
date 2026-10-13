@@ -14,6 +14,7 @@ import edu.wpi.first.units.TimeUnit;
 import edu.wpi.first.units.Units;
 import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.units.measure.AngularVelocity;
+import edu.wpi.first.units.measure.Current;
 import edu.wpi.first.units.measure.Dimensionless;
 import edu.wpi.first.units.measure.Voltage;
 import edu.wpi.first.wpilibj.Timer;
@@ -41,6 +42,8 @@ public class MotorIOTalonSRX extends MotorIO<TalonSRXConfiguration> {
     private ThreadPoolExecutor threadPoolExecutor =
             new ThreadPoolExecutor(1, 1, 5, java.util.concurrent.TimeUnit.MILLISECONDS, queue);
     private boolean configFailed = false;
+    private int baseContinuousCurrentLimit = -1;
+    private int basePeakCurrentLimit = -1;
 
     public void applyConfig(TalonSRX talon, TalonSRXConfiguration config) {
         threadPoolExecutor.submit(() -> {
@@ -173,6 +176,31 @@ public class MotorIOTalonSRX extends MotorIO<TalonSRXConfiguration> {
         };
 
         changeMainConfig(configChanger);
+    }
+
+    @Override
+    public void setSupplyCurrentLimit(Current perMotorLimit) {
+        if (baseContinuousCurrentLimit < 0) {
+            baseContinuousCurrentLimit = config.continuousCurrentLimit;
+            basePeakCurrentLimit = config.peakCurrentLimit;
+        }
+        int amps = (int) Math.max(1, Math.round(perMotorLimit.in(Units.Amps)));
+        // Keep the configured peak burst when at full power, cap it to the limit when shedding
+        int peak = amps >= baseContinuousCurrentLimit ? basePeakCurrentLimit : amps;
+        config.continuousCurrentLimit = amps;
+        config.peakCurrentLimit = peak;
+        followerConfig.continuousCurrentLimit = amps;
+        followerConfig.peakCurrentLimit = peak;
+
+        // 0 timeout so these don't block the loop
+        main.configContinuousCurrentLimit(amps, 0);
+        main.configPeakCurrentLimit(peak, 0);
+        main.enableCurrentLimit(true);
+        for (TalonSRX talon : followers) {
+            talon.configContinuousCurrentLimit(amps, 0);
+            talon.configPeakCurrentLimit(peak, 0);
+            talon.enableCurrentLimit(true);
+        }
     }
 
     @Override

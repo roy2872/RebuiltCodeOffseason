@@ -92,6 +92,9 @@ public class ModuleIOSim implements ModuleIO {
     inputs.driveVelocityRadPerSec = moduleSimulation.getDriveWheelFinalSpeed().in(RadiansPerSecond);
     inputs.driveAppliedVolts = driveAppliedVolts;
     inputs.driveCurrentAmps = Math.abs(moduleSimulation.getDriveMotorStatorCurrent().in(Amps));
+    // Supply current ~= stator current * duty cycle
+    inputs.driveSupplyCurrentAmps =
+        inputs.driveCurrentAmps * Math.min(1.0, Math.abs(driveAppliedVolts) / 12.0);
 
     // Update turn inputs
     inputs.turnConnected = true;

@@ -20,6 +20,9 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import frc.lib.util.CANBusStatusLogger;
+import frc.lib.util.power.PowerManager;
+import edu.wpi.first.wpilibj.PowerDistribution;
+import edu.wpi.first.wpilibj.PowerDistribution.ModuleType;
 
 import static edu.wpi.first.units.Units.Volts;
 
@@ -99,6 +102,9 @@ public class Robot extends LoggedRobot {
   public void robotInit() {
     AutoLogOutputManager.addObject(RobotState.mInstance);
     RobotController.setBrownoutVoltage(Volts.of(5.5));
+    if (Constants.currentMode == Constants.Mode.REAL) {
+      PowerManager.mInstance.usePowerDistribution(new PowerDistribution(1, ModuleType.kRev));
+    }
     SmartDashboard.putData("Intake Force Home and Zero", SuperStructure.mInstance.intakeForceHomeCommand());
 
 		for (Sendable sendable : Constants.LOGGED_SENDABLES) {
@@ -112,6 +118,7 @@ public class Robot extends LoggedRobot {
 
     CommandScheduler.getInstance().run();
     robotContainer.periodic();
+    PowerManager.mInstance.periodic();
 
     // Return to non-RT thread priority (do not modify the first argument)
     // Threads.setCurrentThreadPriority(false, 10);

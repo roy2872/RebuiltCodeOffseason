@@ -18,6 +18,7 @@ import static frc.lib.util.PhoenixUtil.*;
 import com.ctre.phoenix6.BaseStatusSignal;
 import com.ctre.phoenix6.StatusSignal;
 import com.ctre.phoenix6.configs.CANcoderConfiguration;
+import com.ctre.phoenix6.configs.CurrentLimitsConfigs;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
 import com.ctre.phoenix6.controls.PositionTorqueCurrentFOC;
 import com.ctre.phoenix6.controls.PositionVoltage;
@@ -79,6 +80,8 @@ public class ModuleIOTalonFX implements ModuleIO {
   private final StatusSignal<AngularVelocity> driveVelocity;
   private final StatusSignal<Voltage> driveAppliedVolts;
   private final StatusSignal<Current> driveCurrent;
+  private final StatusSignal<Current> driveSupplyCurrent;
+  private final CurrentLimitsConfigs driveCurrentLimits;
 
   // Inputs from turn motor
   private final StatusSignal<Angle> turnAbsolutePosition;
@@ -108,8 +111,15 @@ public class ModuleIOTalonFX implements ModuleIO {
     driveConfig.Feedback.SensorToMechanismRatio = constants.DriveMotorGearRatio;
     driveConfig.TorqueCurrent.PeakForwardTorqueCurrent = constants.SlipCurrent;
     driveConfig.TorqueCurrent.PeakReverseTorqueCurrent = -constants.SlipCurrent;
-    driveConfig.CurrentLimits.StatorCurrentLimit = constants.SlipCurrent;
-    driveConfig.CurrentLimits.StatorCurrentLimitEnable = true;
+    // Own copy of the limits since the initial configs object is shared between modules
+    driveCurrentLimits = new CurrentLimitsConfigs();
+    driveCurrentLimits.StatorCurrentLimit = constants.SlipCurrent;
+    driveCurrentLimits.StatorCurrentLimitEnable = true;
+    driveCurrentLimits.SupplyCurrentLimit = DriveConstants.DRIVE_SUPPLY_CURRENT_LIMIT;
+    driveCurrentLimits.SupplyCurrentLowerLimit = DriveConstants.DRIVE_SUPPLY_CURRENT_LOWER_LIMIT;
+    driveCurrentLimits.SupplyCurrentLowerTime = DriveConstants.DRIVE_SUPPLY_CURRENT_LOWER_TIME;
+    driveCurrentLimits.SupplyCurrentLimitEnable = true;
+    driveConfig.CurrentLimits = driveCurrentLimits;
     driveConfig.MotorOutput.Inverted =
         constants.DriveMotorInverted
             ? InvertedValue.Clockwise_Positive
@@ -162,6 +172,7 @@ public class ModuleIOTalonFX implements ModuleIO {
     driveVelocity = driveTalon.getVelocity();
     driveAppliedVolts = driveTalon.getMotorVoltage();
     driveCurrent = driveTalon.getStatorCurrent();
+    driveSupplyCurrent = driveTalon.getSupplyCurrent();
 
     // Create turn status signals
     turnAbsolutePosition = cancoder.getAbsolutePosition();
@@ -179,6 +190,7 @@ public class ModuleIOTalonFX implements ModuleIO {
         driveVelocity,
         driveAppliedVolts,
         driveCurrent,
+        driveSupplyCurrent,
         turnAbsolutePosition,
         turnVelocity,
         turnAppliedVolts,
@@ -190,7 +202,8 @@ public class ModuleIOTalonFX implements ModuleIO {
   public void updateInputs(ModuleIOInputs inputs) {
     // Refresh all signals
     var driveStatus =
-        BaseStatusSignal.refreshAll(drivePosition, driveVelocity, driveAppliedVolts, driveCurrent);
+        BaseStatusSignal.refreshAll(
+            drivePosition, driveVelocity, driveAppliedVolts, driveCurrent, driveSupplyCurrent);
     var turnStatus =
         BaseStatusSignal.refreshAll(turnPosition, turnVelocity, turnAppliedVolts, turnCurrent);
     var turnEncoderStatus = BaseStatusSignal.refreshAll(turnAbsolutePosition);
@@ -201,6 +214,7 @@ public class ModuleIOTalonFX implements ModuleIO {
     inputs.driveVelocityRadPerSec = Units.rotationsToRadians(driveVelocity.getValueAsDouble());
     inputs.driveAppliedVolts = driveAppliedVolts.getValueAsDouble();
     inputs.driveCurrentAmps = driveCurrent.getValueAsDouble();
+    inputs.driveSupplyCurrentAmps = driveSupplyCurrent.getValueAsDouble();
 
     // Update turn inputs
     inputs.turnConnected = turnConnectedDebounce.calculate(turnStatus.isOK());
@@ -246,5 +260,12 @@ public class ModuleIOTalonFX implements ModuleIO {
   @Override
   public void setTurnPosition(Rotation2d rotation) {
     turnTalon.setControl(positionVoltageRequest.withPosition(rotation.getRotations()));
+  }
+
+  @Override
+  public void setDriveSupplyCurrentLimit(double amps) {
+    driveCurrentLimits.SupplyCurrentLimit = amps;
+    // Only the current limit group is sent, with a 0 timeout so it doesn't block the loop
+    driveTalon.getConfigurator().apply(driveCurrentLimits, 0.0);
   }
 }

@@ -127,6 +127,16 @@ public class Module {
   //   return inputs.odometryTimestamps;
   // }
 
+  /** Returns the drive motor's supply (battery) current. */
+  public double getDriveSupplyCurrentAmps() {
+    return inputs.driveSupplyCurrentAmps;
+  }
+
+  /** Changes the drive motor's supply current limit. */
+  public void setDriveSupplyCurrentLimit(double amps) {
+    io.setDriveSupplyCurrentLimit(amps);
+  }
+
   /** Returns the module position in radians. */
   public double getWheelRadiusCharacterizationPosition() {
     return inputs.drivePositionRad;

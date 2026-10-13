@@ -135,6 +135,15 @@ public abstract class MotorIO<C> {
    */
   protected abstract void setPositionSetpoint(Angle mechanismPosition);
 
+  /**
+   * Changes the current limit of the main motor and all followers at runtime, without touching
+   * any other configuration (PID gains etc.). Used by the PowerManager, so it must be cheap and
+   * non-blocking.
+   *
+   * @param perMotorLimit Limit for each motor.
+   */
+  public abstract void setSupplyCurrentLimit(Current perMotorLimit);
+
   public abstract void setMainConfig(C configuration);
 
   public abstract void changeMainConfig(UnaryOperator<C> configChanger);
@@ -247,6 +256,28 @@ public abstract class MotorIO<C> {
    */
   public Current getSupplyCurrent() {
     return inputs.supplyCurrent;
+  }
+
+  /**
+   * Gets the number of motors in this mechanism, main included.
+   *
+   * @return Main plus followers.
+   */
+  public int getMotorCount() {
+    return 1 + followerInputs.length;
+  }
+
+  /**
+   * Gets the last read supply current of the main motor and all followers combined.
+   *
+   * @return Total supply current.
+   */
+  public Current getTotalSupplyCurrent() {
+    double amps = Math.abs(inputs.supplyCurrent.in(Units.Amps));
+    for (InputsAutoLogged followerInput : followerInputs) {
+      amps += Math.abs(followerInput.supplyCurrent.in(Units.Amps));
+    }
+    return Units.Amps.of(amps);
   }
 
   /**

@@ -6,6 +6,7 @@ import edu.wpi.first.units.measure.Angle;
 import frc.lib.bases.ServoMotorSubsystem;
 import frc.lib.io.MotorIO.Setpoint;
 import frc.lib.io.MotorIOSparkMax;
+import frc.lib.util.power.PowerPriority;
 
 public class IntakeDeploy extends ServoMotorSubsystem<SparkMaxConfig, MotorIOSparkMax> {
 
@@ -23,5 +24,7 @@ public class IntakeDeploy extends ServoMotorSubsystem<SparkMaxConfig, MotorIOSpa
 				IntakeDeployConstants.getServoHomingConfig()
 				);
 		setCurrentPosition(IntakeDeployConstants.INTAKE_STOWED_ANGLE);
+		// 1 motor x 20A smart limit
+		enablePowerManagement(PowerPriority.LOW, 10.0, 20.0);
 	}
 }
