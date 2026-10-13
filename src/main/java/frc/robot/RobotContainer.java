@@ -32,6 +32,12 @@ import frc.robot.controllers.SimulationController;
 import frc.robot.controllers.SingleXboxController;
 import frc.robot.controllers.TwoControllers;
 import frc.robot.subsystems.drive.Drive;
+import frc.robot.subsystems.vision.Vision;
+import frc.robot.subsystems.vision.VisionConstants;
+import frc.robot.subsystems.vision.VisionIO;
+import frc.robot.subsystems.vision.VisionIOLimelight;
+import frc.robot.subsystems.vision.VisionIOPhoton;
+import frc.robot.subsystems.vision.VisionIOPhotonSim;
 
 /**
  * This class is where the bulk of the robot should be declared. Since Command-based is a
@@ -43,6 +49,7 @@ public class RobotContainer {
 
   private final ControllerInterface controller;
 
+  private final Vision vision;
   private final LoggedDashboardChooser<Command> autoChooser;
 
   /** The container for the robot. Contains subsystems, IO devices, and commands. */
@@ -54,14 +61,38 @@ public class RobotContainer {
         // Real robot, instantiate hardware IO implementations
         // controller = new twoco();
         controller = new SingleXboxController(0);
-        break;
+        vision =
+            new Vision(
+                RobotState.mInstance::addVisionObservation,
+                new VisionIO[] {
+                  new VisionIOLimelight("limelight-tsachi", RobotState.mInstance::getRotation)
+                });        
+                break;
       case SIM:
         controller = new SimulationController(0);
+        vision =
+            new Vision(
+                RobotState.mInstance::addVisionObservation,
+                new VisionIO[] {
+                  new VisionIOPhotonSim(
+                      "BLcamera",
+                      VisionConstants.robotToBLcamera,
+                      Drive.mInstance.driveSimulation::getSimulatedDriveTrainPose),
+                  new VisionIOPhotonSim(
+                      "BRcamera",
+                      VisionConstants.robotToBRcamera,
+                      Drive.mInstance.driveSimulation::getSimulatedDriveTrainPose),
+                  new VisionIOPhotonSim(
+                      "limelight-tsachi",
+                      VisionConstants.robotToTsachiCamera,
+                      Drive.mInstance.driveSimulation::getSimulatedDriveTrainPose)
+                });
         break;
 
       default:
         // Replayed robot, disable IO implementations
         controller = new SimulationController(0);
+        vision = new Vision(RobotState.mInstance::addVisionObservation, new VisionIO[0]);
         break;
     }
 

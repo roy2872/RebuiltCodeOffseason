@@ -23,6 +23,10 @@ public class VisionConstants {
   public static Transform3d robotToBRcamera =
       new Transform3d(-0.285, -0.32, 0.2, new Rotation3d(0.0, -25 * Math.PI / 180, 60 * Math.PI / 180 + Math.PI));
 
+      public static Transform3d robotToTsachiCamera = 
+      new Transform3d(
+        1, 1, 1, new Rotation3d());
+
   public static Transform3d[] robotToCameras = {robotToBLcamera, robotToBRcamera, new Transform3d()};
 
   // Basic filtering thresholds

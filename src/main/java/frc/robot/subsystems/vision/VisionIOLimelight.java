@@ -65,55 +65,52 @@ public class VisionIOLimelight implements VisionIO {
 
   //     Set<Integer> tagIds = new HashSet<>();
   //     List<PoseObservation> poseObservations = new LinkedList<>();
-  @Override
-  public void updateInputs(VisionIOInputs inputs) {
-    orientationPublisher.accept(
-        new double[] {rotationSupplier.get().getDegrees(), 0.0, 0.0, 0.0, 0.0, 0.0});
-    NetworkTableInstance.getDefault(); // .flush()
+@Override
+public void updateInputs(VisionIOInputs inputs) {
+  orientationPublisher.accept(
+      new double[] {rotationSupplier.get().getDegrees(), 0.0, 0.0, 0.0, 0.0, 0.0});
 
-    Set<Integer> tagIds = new HashSet<>();
-    List<PoseObservation> poseObservations = new LinkedList<>();
+  Set<Integer> tagIds = new HashSet<>();
+  List<PoseObservation> poseObservations = new LinkedList<>();
 
-    LimelightYawObservation yawObservation = null;
-    for (var rawResult : megatag1Subscriber.readQueue()) {
-      for (int i = 11; i < rawResult.value.length; i += 7) {
-        tagIds.add((int) rawResult.value[i]);
-      }
-      if (rawResult.value.length == 0) {
-        continue;
-      }
-      poseObservations.add(
-          new PoseObservation(
-              rawResult.timestamp * (1.0e-6) - rawResult.value[6] * (1.0e-3),
-              parsePose(rawResult.value),
-              rawResult.value.length >= 18 ? rawResult.value[17] : 0.0,
-              (int) rawResult.value[7],
-              rawResult.value[9],
-              rawResult.value[9],
-              0.1,
-              0.0));
+  for (var rawResult : megatag1Subscriber.readQueue()) {
+    if (rawResult.value.length == 0) {
+      continue;
+    }
 
-              
-      if(rawResult.value[9] <= 6.0 && rawResult.value[7] > 1) {
-        RobotState.mInstance.addLimelightYawObservation(
+    for (int i = 11; i < rawResult.value.length; i += 7) {
+      tagIds.add((int) rawResult.value[i]);
+    }
+
+    // Calculate latency-compensated FPGA timestamp (in seconds)
+    double captureTimestampFPGA = rawResult.timestamp * (1.0e-6) - rawResult.value[6] * (1.0e-3);
+    Pose3d pose = parsePose(rawResult.value);
+
+    poseObservations.add(
+        new PoseObservation(
+            captureTimestampFPGA,
+            pose,
+            rawResult.value.length >= 18 ? rawResult.value[17] : 0.0,
+            (int) rawResult.value[7],
+            rawResult.value[9],
+            rawResult.value[9],
+            0.1,
+            0.0));
+
+    // Yaw observation fix: use the same latency-compensated timestamp
+    if (rawResult.value[9] <= 6.0 && rawResult.value[7] > 1) {
+      RobotState.mInstance.addLimelightYawObservation(
           new LimelightYawObservation(
-            parsePose(rawResult.value).getRotation().toRotation2d(), 
-            rawResult.timestamp * (1.0e-6)
-            ));
-      }
+              pose.getRotation().toRotation2d(), 
+              captureTimestampFPGA // Fixed: subtracted total latency
+          ));
     }
+  }
 
-    inputs.poseObservations = new PoseObservation[poseObservations.size()];
-    for (int i = 0; i < poseObservations.size(); i++) {
-      inputs.poseObservations[i] = poseObservations.get(i);
-    }
+  inputs.poseObservations = poseObservations.toArray(new PoseObservation[0]);
 
-    // Save tag IDs to inputs objects
-    inputs.tagIds = new int[tagIds.size()];
-    int i = 0;
-    for (int id : tagIds) {
-      inputs.tagIds[i++] = id;
-    }
+  // Save tag IDs to inputs object
+  inputs.tagIds = tagIds.stream().mapToInt(Integer::intValue).toArray();
   }
 
   private void setHighResPipeline(boolean highRes) {
