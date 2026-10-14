@@ -10,6 +10,7 @@ import com.revrobotics.spark.config.SparkBaseConfig.IdleMode;
 import com.revrobotics.spark.config.SparkMaxConfig;
 
 import edu.wpi.first.math.controller.ArmFeedforward;
+import edu.wpi.first.math.geometry.Translation3d;
 import edu.wpi.first.math.system.plant.DCMotor;
 import edu.wpi.first.units.Units;
 import edu.wpi.first.units.measure.Angle;
@@ -21,6 +22,7 @@ import frc.lib.io.MotorIOSparkMaxSim;
 import frc.lib.io.MotorIOSparkMax.MotorIOSparkMaxConfig;
 import frc.lib.sim.ServoMechanismSim;
 import frc.lib.sim.ServoMechanismSim.ServoMechanismSimConstants;
+import frc.lib.visualization.VisualizedJoint;
 import frc.lib.util.ControlGains.PidGains;
 import frc.robot.Constants;
 import frc.robot.Ports;
@@ -34,6 +36,13 @@ public class HoodConstants {
   public static final Angle HOOD_MAX_ANGLE = HOOD_STARTING_ANGLE.minus(Degrees.of(30.0));
   public static final Angle HOOD_CLOSE_ANGLE = Degrees.of(82.0);
   public static final Angle HOOD_ANGLE_TOLERANCE = Degrees.of(0.3);
+
+  // 3D visualization. Points are in the robot frame (meters, origin on the floor at robot center)
+  // with the hood at HOOD_STARTING_ANGLE, which must be the pose the hood is exported in from CAD.
+  public static final Translation3d VISUALIZATION_PIVOT = new Translation3d(-0.14, 0.0, 0.45); // TODO: measure from CAD
+  public static final Translation3d VISUALIZATION_TIP = new Translation3d(-0.04, 0.0, 0.55); // TODO: measure from CAD (sim side view only)
+  // Positive rotation about +Y tips the front down. TODO: flip to Y_AXIS.unaryMinus() if the model moves the wrong way
+  public static final Translation3d VISUALIZATION_AXIS = VisualizedJoint.Y_AXIS;
 
   public static final Time BOOT_SEQUENCE_TIME = Seconds.of(2.0);
   public static final Voltage BOOT_SEQUENCE_VOLTAGE = Volts.of(0.5);

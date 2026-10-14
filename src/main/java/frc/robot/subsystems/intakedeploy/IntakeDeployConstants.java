@@ -1,6 +1,7 @@
 package frc.robot.subsystems.intakedeploy;
 
 import static edu.wpi.first.units.Units.Degrees;
+import static edu.wpi.first.units.Units.Meters;
 import static edu.wpi.first.units.Units.Rotations;
 import static edu.wpi.first.units.Units.Seconds;
 
@@ -9,9 +10,11 @@ import com.revrobotics.spark.FeedbackSensor;
 import com.revrobotics.spark.config.SparkBaseConfig.IdleMode;
 import com.revrobotics.spark.config.SparkMaxConfig;
 import edu.wpi.first.math.controller.ArmFeedforward;
+import edu.wpi.first.math.geometry.Translation3d;
 import edu.wpi.first.math.system.plant.DCMotor;
 import edu.wpi.first.units.Units;
 import edu.wpi.first.units.measure.Angle;
+import edu.wpi.first.units.measure.Distance;
 import edu.wpi.first.units.measure.Voltage;
 import frc.lib.bases.ServoMotorSubsystem.ServoHomingConfig;
 import frc.lib.io.MotorIOSparkMax;
@@ -19,6 +22,7 @@ import frc.lib.io.MotorIOSparkMaxSim;
 import frc.lib.io.MotorIOSparkMax.MotorIOSparkMaxConfig;
 import frc.lib.sim.ServoMechanismSim;
 import frc.lib.sim.ServoMechanismSim.ServoMechanismSimConstants;
+import frc.lib.visualization.VisualizedJoint;
 import frc.lib.util.ControlGains.PidGains;
 import frc.robot.Constants;
 import frc.robot.Ports;
@@ -35,6 +39,15 @@ public class IntakeDeployConstants {
   public static final Angle INTAKE_PARTIAL_IN_ANGLE = Rotations.of(5.0);
   public static final Angle INTAKE_STOWED_ANGLE = Rotations.of(0);
   public static final Angle INTAKE_ANGLE_TOLERANCE = Rotations.of(0.1);
+
+  // 3D visualization. Points are in the robot frame (meters, origin on the floor at robot center)
+  // with the intake stowed, which must be the pose the intake is exported in from CAD.
+  public static final Distance VISUALIZATION_DEPLOYED_EXTENSION = Meters.of(0.30); // TODO: measure slide travel at INTAKE_DEPLOYED_ANGLE
+  public static final Distance VISUALIZATION_EXTENSION_PER_ROTATION =
+      VISUALIZATION_DEPLOYED_EXTENSION.div(INTAKE_DEPLOYED_ANGLE.in(Rotations));
+  public static final Translation3d VISUALIZATION_DIRECTION = VisualizedJoint.X_AXIS; // TODO: confirm the intake slides out the front
+  public static final Translation3d VISUALIZATION_BASE = new Translation3d(0.25, 0.0, 0.15); // TODO: measure from CAD (sim side view only)
+  public static final Translation3d VISUALIZATION_TIP = new Translation3d(0.40, 0.0, 0.15); // TODO: measure from CAD (sim side view only)
 
   public static final int INTAKE_MOTOR_ID = Ports.INTAKE_DEPLOY.id;
 
