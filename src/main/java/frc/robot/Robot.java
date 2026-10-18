@@ -14,12 +14,13 @@
 package frc.robot;
 
 import edu.wpi.first.util.sendable.Sendable;
-import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.RobotController;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
+import frc.lib.logging.FilteredNT4Publisher;
 import frc.lib.util.CANBusStatusLogger;
+import frc.lib.visualization.RobotVisualizer;
 
 import static edu.wpi.first.units.Units.Volts;
 
@@ -68,9 +69,9 @@ public class Robot extends LoggedRobot {
       case REAL:
         // Running on a real robot, log to a USB stick ("/U/logs")
         Logger.addDataReceiver(new WPILOGWriter("/U/logs"));
-        if (!DriverStation.isFMSAttached()) {
-                Logger.addDataReceiver(new NT4Publisher());
-        }
+        // Hides the visualizer from NT while on the field (it stays in the log file). The FMS check
+        // runs every loop, since the FMS usually connects after robot code starts.
+        Logger.addDataReceiver(new FilteredNT4Publisher(RobotVisualizer.mInstance.getKey()));
         // Logger.registerURCL(URCL.startExternal()); // for sysid
         break;
 

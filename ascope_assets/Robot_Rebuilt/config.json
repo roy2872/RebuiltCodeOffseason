@@ -1,0 +1,33 @@
+{
+  "name": "Rebuilt",
+  "isFTC": false,
+  "disableSimplification": false,
+  "rotations": [
+    {
+      "axis": "z",
+      "degrees": 90
+    }
+  ],
+  "position": [0, 0, 0],
+  "cameras": [],
+  "components": [
+    {
+      "zeroedRotations": [
+        {
+          "axis": "z",
+          "degrees": 90
+        }
+      ],
+      "zeroedPosition": [-0.26, 0, 0.062]
+    },
+    {
+      "zeroedRotations": [
+        {
+          "axis": "z",
+          "degrees": 90
+        }
+      ],
+      "zeroedPosition": [0, 0, 0]
+    }
+  ]
+}

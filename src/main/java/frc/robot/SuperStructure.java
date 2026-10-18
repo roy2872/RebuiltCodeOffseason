@@ -135,7 +135,7 @@ public Command stopCloseIntakeCommand() {
 								() -> Setpoint.withVelocitySetpoint(
 									Units.RotationsPerSecond.of(RobotState.mInstance.getShootInfo().get(1)))),
 						Hood.mInstance.followSetpointCommand(() -> 
-							Setpoint.withPositionSetpoint(
+							Setpoint.withMotionMagicSetpoint(
 												// positionInputs.getHoodSetpoint()
 												Units.Degrees.of(RobotState.mInstance.getShootInfo().get(0)))),
 						DriveCommands.autoAlignAngle(Drive.mInstance, () -> Rotation2d.fromDegrees(RobotState.mInstance.getShootInfo().get(2))),
