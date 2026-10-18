@@ -27,7 +27,7 @@ public class VisionConstants {
   // TODO: measure. From the note below: 0.266 m back, 0.47 m up, centered. Pitch assumed to be
   // 25 deg up (65 deg from vertical) and facing forward; must match the Limelight web UI.
   public static final Transform3d robotToTsachiCamera =
-      new Transform3d(-0.266, 0.0, 0.47, new Rotation3d(0.0, Math.toRadians(-25.0), 0.0));
+      new Transform3d(-0.266, 0.0, 0.47, new Rotation3d(0.0, Math.toRadians(25.0), Math.PI));
 
   public static Transform3d[] robotToCameras = {robotToBLcamera, robotToBRcamera, new Transform3d()};
 
