@@ -189,3 +189,6 @@ compile_commands.json
 # Eclipse generated file for annotation processors
 .factorypath
 .continue/
+
+# graphify knowledge graph output (local, regenerated)
+graphify-out/
