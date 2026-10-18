@@ -190,5 +190,5 @@ compile_commands.json
 .factorypath
 .continue/
 
-# graphify knowledge graph output
+# graphify knowledge graph output (local, regenerated)
 graphify-out/
