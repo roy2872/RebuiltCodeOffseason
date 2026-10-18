@@ -22,7 +22,6 @@ import frc.lib.io.MotorIOSparkMaxSim;
 import frc.lib.io.MotorIOSparkMax.MotorIOSparkMaxConfig;
 import frc.lib.sim.ServoMechanismSim;
 import frc.lib.sim.ServoMechanismSim.ServoMechanismSimConstants;
-import frc.lib.visualization.VisualizedJoint;
 import frc.lib.util.ControlGains.PidGains;
 import frc.robot.Constants;
 import frc.robot.Ports;
@@ -42,10 +41,12 @@ public class IntakeDeployConstants {
 
   // 3D visualization. Points are in the robot frame (meters, origin on the floor at robot center)
   // with the intake stowed, which must be the pose the intake is exported in from CAD.
-  public static final Distance VISUALIZATION_DEPLOYED_EXTENSION = Meters.of(0.30); // TODO: measure slide travel at INTAKE_DEPLOYED_ANGLE
+  // Slide travel from stowed to deployed: forward and slightly down along the slope
+  public static final Translation3d VISUALIZATION_TRAVEL = new Translation3d(0.26, 0.0, -0.062);
+  public static final Distance VISUALIZATION_DEPLOYED_EXTENSION = Meters.of(VISUALIZATION_TRAVEL.getNorm());
   public static final Distance VISUALIZATION_EXTENSION_PER_ROTATION =
       VISUALIZATION_DEPLOYED_EXTENSION.div(INTAKE_DEPLOYED_ANGLE.in(Rotations));
-  public static final Translation3d VISUALIZATION_DIRECTION = VisualizedJoint.X_AXIS; // TODO: confirm the intake slides out the front
+  public static final Translation3d VISUALIZATION_DIRECTION = VISUALIZATION_TRAVEL;
   public static final Translation3d VISUALIZATION_BASE = new Translation3d(0.25, 0.0, 0.15); // TODO: measure from CAD (sim side view only)
   public static final Translation3d VISUALIZATION_TIP = new Translation3d(0.40, 0.0, 0.15); // TODO: measure from CAD (sim side view only)
 
@@ -129,7 +130,7 @@ public class IntakeDeployConstants {
     config.gearing = GEAR_RATIO;
     config.maxAngle = INTAKE_DEPLOYED_ANGLE;
     config.minAngle = INTAKE_STOWED_ANGLE;
-    config.momentOfInertia = 0.05;
+    config.momentOfInertia = 0.0005; // Sim only. Measured at the motor (gearing 1), so it must be small
     config.motor = DCMotor.getNEO(1);
     config.simulateGravity = false;
     config.startingAngle = INTAKE_STOWED_ANGLE;

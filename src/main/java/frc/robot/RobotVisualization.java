@@ -1,5 +1,6 @@
 package frc.robot;
 
+import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.wpilibj.util.Color8Bit;
 import frc.lib.visualization.MotorSubsystemJoints;
 import frc.lib.visualization.RobotVisualizer;
@@ -17,6 +18,16 @@ import frc.robot.subsystems.intakedeploy.IntakeDeployConstants;
  * model_INDEX.glb files and the "components" array in ascope_assets/Robot_Rebuilt/config.json.
  */
 public final class RobotVisualization {
+  /**
+   * Publishes live-editable offsets and pivots for every part (see RobotVisualizer#enableCalibration).
+   * Set to false once the calibrated numbers are copied into the constants.
+   */
+  private static final boolean CALIBRATION = true;
+
+  // Hood position at which the model is drawn in its CAD pose. Lowering it turns the model down.
+  private static final Angle HOOD_MODEL_ZERO =
+      HoodConstants.HOOD_STARTING_ANGLE.minus(HoodConstants.VISUALIZATION_ZERO_OFFSET);
+
   private RobotVisualization() {}
 
   /** Registers all joints. Call once at startup, after the subsystems exist. */
@@ -24,6 +35,9 @@ public final class RobotVisualization {
     // The 2D side view is only for sim/replay, like 6328 does, to keep real robot logs lean
     boolean drawSideView = Constants.currentMode != Constants.Mode.REAL;
     RobotVisualizer visualizer = RobotVisualizer.mInstance;
+    if (CALIBRATION) {
+      visualizer.enableCalibration();
+    }
 
     // Component 0 (model_0.glb)
     VisualizedJoint intake = VisualizedJoint.linear(
@@ -54,9 +68,9 @@ public final class RobotVisualization {
             HoodConstants.VISUALIZATION_PIVOT,
             HoodConstants.VISUALIZATION_AXIS,
             MotorSubsystemJoints.angle(
-                MotorSubsystemJoints.measured(Hood.mInstance), HoodConstants.HOOD_STARTING_ANGLE, 1.0))
+                MotorSubsystemJoints.measured(Hood.mInstance), HOOD_MODEL_ZERO, 1.0))
         .withSetpoint(MotorSubsystemJoints.angle(
-            MotorSubsystemJoints.setpoint(Hood.mInstance), HoodConstants.HOOD_STARTING_ANGLE, 1.0));
+            MotorSubsystemJoints.setpoint(Hood.mInstance), HOOD_MODEL_ZERO, 1.0));
     if (drawSideView) {
       hood.withSideViewLine(HoodConstants.VISUALIZATION_TIP, new Color8Bit(255, 170, 0));
     }

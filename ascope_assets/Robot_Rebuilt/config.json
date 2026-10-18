@@ -4,7 +4,7 @@
   "disableSimplification": false,
   "rotations": [
     {
-      "axis": "x",
+      "axis": "z",
       "degrees": 90
     }
   ],
@@ -14,16 +14,16 @@
     {
       "zeroedRotations": [
         {
-          "axis": "x",
+          "axis": "z",
           "degrees": 90
         }
       ],
-      "zeroedPosition": [0, 0, 0]
+      "zeroedPosition": [-0.26, 0, 0.062]
     },
     {
       "zeroedRotations": [
         {
-          "axis": "x",
+          "axis": "z",
           "degrees": 90
         }
       ],

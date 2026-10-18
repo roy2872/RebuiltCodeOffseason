@@ -1,6 +1,10 @@
 package frc.robot.subsystems.hood;
 
 import static edu.wpi.first.units.Units.Degrees;
+import static edu.wpi.first.units.Units.DegreesPerSecond;
+import static edu.wpi.first.units.Units.DegreesPerSecondPerSecond;
+import static edu.wpi.first.units.Units.RPM;
+import static edu.wpi.first.units.Units.RotationsPerSecondPerSecond;
 import static edu.wpi.first.units.Units.Rotations;
 import static edu.wpi.first.units.Units.Seconds;
 import static edu.wpi.first.units.Units.Volts;
@@ -14,6 +18,8 @@ import edu.wpi.first.math.geometry.Translation3d;
 import edu.wpi.first.math.system.plant.DCMotor;
 import edu.wpi.first.units.Units;
 import edu.wpi.first.units.measure.Angle;
+import edu.wpi.first.units.measure.AngularAcceleration;
+import edu.wpi.first.units.measure.AngularVelocity;
 import edu.wpi.first.units.measure.Time;
 import edu.wpi.first.units.measure.Voltage;
 import frc.lib.bases.ServoMotorSubsystem.ServoHomingConfig;
@@ -37,12 +43,19 @@ public class HoodConstants {
   public static final Angle HOOD_CLOSE_ANGLE = Degrees.of(82.0);
   public static final Angle HOOD_ANGLE_TOLERANCE = Degrees.of(0.3);
 
+  // Motion profile. A NEO 550 (~11000 RPM free) through the gearing tops out near 245 deg/s at the
+  // hood, so cruise at ~70% of that and reach it in 0.1 s. A full 54-84 deg move takes ~0.28 s.
+  public static final AngularVelocity HOOD_CRUISE_VELOCITY = DegreesPerSecond.of(170.0);
+  public static final AngularAcceleration HOOD_MAX_ACCELERATION = DegreesPerSecondPerSecond.of(1700.0);
+
   // 3D visualization. Points are in the robot frame (meters, origin on the floor at robot center)
   // with the hood at HOOD_STARTING_ANGLE, which must be the pose the hood is exported in from CAD.
-  public static final Translation3d VISUALIZATION_PIVOT = new Translation3d(-0.14, 0.0, 0.45); // TODO: measure from CAD
+  public static final Translation3d VISUALIZATION_PIVOT = new Translation3d(-0.235, 0.0, 0.533); // Hood axle, at the back-bottom of the hood
   public static final Translation3d VISUALIZATION_TIP = new Translation3d(-0.04, 0.0, 0.55); // TODO: measure from CAD (sim side view only)
   // Positive rotation about +Y tips the front down. TODO: flip to Y_AXIS.unaryMinus() if the model moves the wrong way
   public static final Translation3d VISUALIZATION_AXIS = VisualizedJoint.Y_AXIS;
+  // The CAD hood pose is this far above the real stowed pose, so the model is turned down by it
+  public static final Angle VISUALIZATION_ZERO_OFFSET = Degrees.of(30.0);
 
   public static final Time BOOT_SEQUENCE_TIME = Seconds.of(2.0);
   public static final Voltage BOOT_SEQUENCE_VOLTAGE = Volts.of(0.5);
@@ -62,7 +75,7 @@ public class HoodConstants {
   protected static final PidGains HOOD_PID =
       switch (Constants.currentMode) {
         case REAL -> new PidGains(1.5, 0.0, 0.2);
-        case SIM -> new PidGains(0.1, 0.0, 0.0);
+        case SIM -> new PidGains(30.0, 0.0, 0.0); // Error is in hood rotations, so this needs to be large
         default -> new PidGains(0.1, 0.0, 0.0);
       };
 
@@ -83,11 +96,13 @@ public class HoodConstants {
         .velocityConversionFactor(GEAR_RATIO);
 
     config.closedLoop
-        .pid(HOOD_PID.kP, HOOD_PID.kI, HOOD_PID.kD, ClosedLoopSlot.kSlot0);
+        .pid(HOOD_PID.kP, HOOD_PID.kI, HOOD_PID.kD, ClosedLoopSlot.kSlot0) // MAXMotion (e.g. STOWED)
+        .pid(HOOD_PID.kP, HOOD_PID.kI, HOOD_PID.kD, ClosedLoopSlot.kSlot2); // Plain position setpoints
 
     config.closedLoop.maxMotion
-        .cruiseVelocity(10000)
-        .maxAcceleration(12000)
+        // MAXMotion units follow the velocity conversion factor: hood RPM and hood RPM per second
+        .cruiseVelocity(HOOD_CRUISE_VELOCITY.in(RPM))
+        .maxAcceleration(HOOD_MAX_ACCELERATION.in(RotationsPerSecondPerSecond) * 60.0)
         .allowedProfileError(20);
 
     config.softLimit
@@ -122,7 +137,7 @@ public class HoodConstants {
 
   public static ServoMechanismSimConstants getSimConstants() {
     ServoMechanismSimConstants config = new ServoMechanismSimConstants();
-    config.gearing = GEAR_RATIO;
+    config.gearing = 1.0 / GEAR_RATIO; // The sim wants motor rotations per mechanism rotation
     config.maxAngle = HOOD_MAX_ANGLE;
     config.minAngle = HOOD_MIN_ANGLE;
     config.momentOfInertia = 0.05;

@@ -28,8 +28,9 @@ public class ServoMechanismSim extends MechanismSim {
             constants.gearing,
             constants.momentOfInertia,
             constants.armLength,
-            constants.minAngle.in(Units.Radians),
-            constants.maxAngle.in(Units.Radians),
+            // Order-independent, since some mechanisms count down (e.g. a hood going from 84 to 54 degrees)
+            Math.min(constants.minAngle.in(Units.Radians), constants.maxAngle.in(Units.Radians)),
+            Math.max(constants.minAngle.in(Units.Radians), constants.maxAngle.in(Units.Radians)),
             constants.simulateGravity,
             constants.startingAngle.in(Units.Radians));
   }

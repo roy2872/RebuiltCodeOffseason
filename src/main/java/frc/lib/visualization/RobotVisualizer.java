@@ -2,7 +2,10 @@ package frc.lib.visualization;
 
 import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Translation3d;
+import edu.wpi.first.math.util.Units;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj.util.Color8Bit;
+import frc.lib.util.TunableNumber;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -27,6 +30,9 @@ import org.littletonrobotics.junction.mechanism.LoggedMechanismRoot2d;
  *   <li>{@code SideView} - a Mechanism2d drawn from joints with a side view line. Works with no CAD.
  * </ul>
  *
+ * <p>With {@link #enableCalibration()}, every joint also gets live-editable numbers under
+ * {@code SmartDashboard/TunableNumbers/<key>/} to line the models up without redeploying.
+ *
  * <p>Everything is derived from data that subsystems already log, so if logging is turned off during
  * matches the poses can still be regenerated afterwards with AdvantageKit replay.
  */
@@ -40,6 +46,8 @@ public class RobotVisualizer {
   private final List<VisualizedJoint> joints = new ArrayList<>();
   private final Map<VisualizedJoint, Integer> indices = new HashMap<>();
   private final Map<VisualizedJoint, LoggedMechanismLigament2d[]> lines = new HashMap<>();
+  private final Map<VisualizedJoint, Calibration> calibrations = new HashMap<>();
+  private boolean calibrationEnabled = false;
 
   private double sideViewWidth = 2.0;
   private double sideViewHeight = 2.0;
@@ -75,6 +83,9 @@ public class RobotVisualizer {
     joints.add(joint);
     if (joint.lineStart != null) {
       addSideViewLine(joint);
+    }
+    if (calibrationEnabled) {
+      calibrations.put(joint, new Calibration(key, joint));
     }
     loggedNames = false;
     return joint;
@@ -112,6 +123,34 @@ public class RobotVisualizer {
     period = Math.max(1, cycles);
   }
 
+  /**
+   * Publishes live-editable calibration values for every joint, under
+   * {@code SmartDashboard/TunableNumbers/<key>/}:
+   *
+   * <ul>
+   *   <li>{@code ShowZero} - when true, draws every part at zero (its CAD pose), ignoring sensors.
+   *       All parts should then sit exactly on the base model.
+   *   <li>{@code <joint>/Offset} - added to the joint's value (degrees for rotary, meters for linear).
+   *       Use it when the model is always off from the real mechanism by the same amount.
+   *   <li>{@code <joint>/PivotX}, {@code PivotY}, {@code PivotZ} - rotary joints only. The pivot in
+   *       meters, starting at the value from code. Adjust until the part turns in place.
+   * </ul>
+   *
+   * <p>Values are not saved: copy them into the constants when done. Can be called before or after
+   * registering joints.
+   */
+  public void enableCalibration() {
+    calibrationEnabled = true;
+    SmartDashboard.putBoolean(showZeroKey(), SmartDashboard.getBoolean(showZeroKey(), false));
+    for (VisualizedJoint joint : joints) {
+      calibrations.putIfAbsent(joint, new Calibration(key, joint));
+    }
+  }
+
+  private String showZeroKey() {
+    return "TunableNumbers/" + key + "/ShowZero";
+  }
+
   /** The log key prefix of all outputs, e.g. to filter them from NetworkTables. */
   public String getKey() {
     return key;
@@ -145,14 +184,21 @@ public class RobotVisualizer {
 
   /** Robot-relative pose of each joint. Parents are always earlier in the list than children. */
   private Pose3d[] computePoses(boolean useSetpoints) {
+    boolean showZero = calibrationEnabled && SmartDashboard.getBoolean(showZeroKey(), false);
     Pose3d[] poses = new Pose3d[joints.size()];
     for (int i = 0; i < poses.length; i++) {
       VisualizedJoint joint = joints.get(i);
       double value = (useSetpoints && joint.setpoint != null)
           ? joint.setpoint.getAsDouble()
           : joint.measured.getAsDouble();
+      Translation3d origin = joint.origin;
+      Calibration calibration = calibrations.get(joint);
+      if (calibration != null) {
+        value = showZero ? 0.0 : value + calibration.offset();
+        origin = calibration.origin();
+      }
       Pose3d parentPose = joint.parent == null ? Pose3d.kZero : poses[indices.get(joint.parent)];
-      poses[i] = parentPose.transformBy(joint.localTransform(value));
+      poses[i] = parentPose.transformBy(joint.localTransform(value, origin));
     }
     return poses;
   }
@@ -196,5 +242,37 @@ public class RobotVisualizer {
 
   private static Translation3d applyPose(Pose3d pose, Translation3d point) {
     return pose.getTranslation().plus(point.rotateBy(pose.getRotation()));
+  }
+
+  /** Live-editable offset and pivot of one joint, see {@link #enableCalibration()}. */
+  private static final class Calibration {
+    private final VisualizedJoint joint;
+    private final TunableNumber offset;
+    private final TunableNumber pivotX;
+    private final TunableNumber pivotY;
+    private final TunableNumber pivotZ;
+
+    Calibration(String key, VisualizedJoint joint) {
+      this.joint = joint;
+      String prefix = key + "/" + joint.name + "/";
+      offset = new TunableNumber(prefix + "Offset", 0.0);
+      boolean rotary = joint.type == VisualizedJoint.Type.ROTARY;
+      pivotX = rotary ? new TunableNumber(prefix + "PivotX", joint.origin.getX()) : null;
+      pivotY = rotary ? new TunableNumber(prefix + "PivotY", joint.origin.getY()) : null;
+      pivotZ = rotary ? new TunableNumber(prefix + "PivotZ", joint.origin.getZ()) : null;
+    }
+
+    /** Offset in base units (radians or meters). */
+    double offset() {
+      return joint.type == VisualizedJoint.Type.ROTARY
+          ? Units.degreesToRadians(offset.getAsDouble())
+          : offset.getAsDouble();
+    }
+
+    Translation3d origin() {
+      return pivotX == null
+          ? joint.origin
+          : new Translation3d(pivotX.getAsDouble(), pivotY.getAsDouble(), pivotZ.getAsDouble());
+    }
   }
 }

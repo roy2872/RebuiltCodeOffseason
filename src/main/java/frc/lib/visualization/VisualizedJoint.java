@@ -159,6 +159,11 @@ public final class VisualizedJoint {
    * Rotary joints rotate about {@link #origin} so that models exported in place stay aligned.
    */
   Transform3d localTransform(double value) {
+    return localTransform(value, origin);
+  }
+
+  /** Same as {@link #localTransform(double)}, but rotating about a different pivot (for calibration). */
+  Transform3d localTransform(double value, Translation3d origin) {
     switch (type) {
       case ROTARY:
         Rotation3d rotation = new Rotation3d(VecBuilder.fill(axis.getX(), axis.getY(), axis.getZ()), value);
