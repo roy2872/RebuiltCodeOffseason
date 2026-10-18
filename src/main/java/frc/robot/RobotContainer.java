@@ -24,6 +24,7 @@ import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import edu.wpi.first.wpilibj2.command.Commands;
 import frc.lib.util.AllianceFlipping;
 import frc.lib.util.TableLoader;
+import frc.lib.visualization.RobotVisualizer;
 import frc.robot.commands.DriveCommands;
 import frc.robot.controllers.ControllerInterface;
 import frc.robot.controllers.DummyController;
@@ -56,6 +57,7 @@ public class RobotContainer {
   public RobotContainer() {
     Constants.RobotState.shooterTableData = TableLoader.loadFromCSV("shootingSolutions.csv");
     Constants.RobotState.fetchingTableData = TableLoader.loadDoubleMapFromCSV("fetchingSolutions.csv");
+    RobotVisualization.configure();
     switch (Constants.currentMode) {
       case REAL:
         // Real robot, instantiate hardware IO implementations
@@ -153,6 +155,7 @@ public class RobotContainer {
   public void periodic() {
     SmartDashboard.putData("Command Scheduler", CommandScheduler.getInstance());
     RobotState.mInstance.periodic();
+    RobotVisualizer.mInstance.periodic();
   }
 
   public void resetSimulation() {

@@ -1,6 +1,7 @@
 package frc.robot.subsystems.intakedeploy;
 
 import static edu.wpi.first.units.Units.Degrees;
+import static edu.wpi.first.units.Units.Meters;
 import static edu.wpi.first.units.Units.Rotations;
 import static edu.wpi.first.units.Units.Seconds;
 
@@ -9,9 +10,11 @@ import com.revrobotics.spark.FeedbackSensor;
 import com.revrobotics.spark.config.SparkBaseConfig.IdleMode;
 import com.revrobotics.spark.config.SparkMaxConfig;
 import edu.wpi.first.math.controller.ArmFeedforward;
+import edu.wpi.first.math.geometry.Translation3d;
 import edu.wpi.first.math.system.plant.DCMotor;
 import edu.wpi.first.units.Units;
 import edu.wpi.first.units.measure.Angle;
+import edu.wpi.first.units.measure.Distance;
 import edu.wpi.first.units.measure.Voltage;
 import frc.lib.bases.ServoMotorSubsystem.ServoHomingConfig;
 import frc.lib.io.MotorIOSparkMax;
@@ -35,6 +38,17 @@ public class IntakeDeployConstants {
   public static final Angle INTAKE_PARTIAL_IN_ANGLE = Rotations.of(5.0);
   public static final Angle INTAKE_STOWED_ANGLE = Rotations.of(0);
   public static final Angle INTAKE_ANGLE_TOLERANCE = Rotations.of(0.1);
+
+  // 3D visualization. Points are in the robot frame (meters, origin on the floor at robot center)
+  // with the intake stowed, which must be the pose the intake is exported in from CAD.
+  // Slide travel from stowed to deployed: forward and slightly down along the slope
+  public static final Translation3d VISUALIZATION_TRAVEL = new Translation3d(0.26, 0.0, -0.062);
+  public static final Distance VISUALIZATION_DEPLOYED_EXTENSION = Meters.of(VISUALIZATION_TRAVEL.getNorm());
+  public static final Distance VISUALIZATION_EXTENSION_PER_ROTATION =
+      VISUALIZATION_DEPLOYED_EXTENSION.div(INTAKE_DEPLOYED_ANGLE.in(Rotations));
+  public static final Translation3d VISUALIZATION_DIRECTION = VISUALIZATION_TRAVEL;
+  public static final Translation3d VISUALIZATION_BASE = new Translation3d(0.25, 0.0, 0.15); // TODO: measure from CAD (sim side view only)
+  public static final Translation3d VISUALIZATION_TIP = new Translation3d(0.40, 0.0, 0.15); // TODO: measure from CAD (sim side view only)
 
   public static final int INTAKE_MOTOR_ID = Ports.INTAKE_DEPLOY.id;
 
@@ -116,7 +130,7 @@ public class IntakeDeployConstants {
     config.gearing = GEAR_RATIO;
     config.maxAngle = INTAKE_DEPLOYED_ANGLE;
     config.minAngle = INTAKE_STOWED_ANGLE;
-    config.momentOfInertia = 0.05;
+    config.momentOfInertia = 0.0005; // Sim only. Measured at the motor (gearing 1), so it must be small
     config.motor = DCMotor.getNEO(1);
     config.simulateGravity = false;
     config.startingAngle = INTAKE_STOWED_ANGLE;
