@@ -22,7 +22,7 @@ public final class RobotVisualization {
    * Publishes live-editable offsets and pivots for every part (see RobotVisualizer#enableCalibration).
    * Set to false once the calibrated numbers are copied into the constants.
    */
-  private static final boolean CALIBRATION = true;
+  private static final boolean CALIBRATION = false;
 
   // Hood position at which the model is drawn in its CAD pose. Lowering it turns the model down.
   private static final Angle HOOD_MODEL_ZERO =
