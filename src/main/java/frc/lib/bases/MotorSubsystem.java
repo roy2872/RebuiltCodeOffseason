@@ -117,11 +117,6 @@ public class MotorSubsystem<C, IO extends MotorIO<C>> extends SubsystemBase {
         io.changeFollowerConfig(configChanger);
     }
 
-    /** Changes the current limit while running (power management). No flash writes. */
-    public void setCurrentLimit(double amps) {
-        io.setRuntimeCurrentLimit(amps);
-    }
-
     @Override
     public void periodic() {
         io.updateInputs();
