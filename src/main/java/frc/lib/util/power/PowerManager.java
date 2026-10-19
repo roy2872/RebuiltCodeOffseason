@@ -1,6 +1,7 @@
 package frc.lib.util.power;
 
 import edu.wpi.first.math.MathUtil;
+import edu.wpi.first.math.filter.Debouncer;
 import edu.wpi.first.math.filter.LinearFilter;
 import edu.wpi.first.wpilibj.Alert;
 import edu.wpi.first.wpilibj.Alert.AlertType;
@@ -36,6 +37,9 @@ import org.littletonrobotics.junction.Logger;
  *
  * <p>Only current limits change. Closed loop controllers (PID, motion magic) keep running.
  *
+ * <p>It also logs power (W) and energy (Wh) per consumer for each match, so match logs show where
+ * the battery went, and warns the drivers to swap a battery that is low at rest.
+ *
  * <p>Usage: register consumers (MotorSubsystem does it through {@code enablePowerManagement}),
  * optionally pass the PDH with {@link #usePowerDistribution}, and call {@link #periodic()} once
  * per loop after the CommandScheduler.
@@ -60,6 +64,8 @@ public class PowerManager {
 	private static final double MIN_UPDATE_PERIOD_SECONDS = 0.1;
 	/** Voltage the dashboard treats as a full battery when computing headroom. */
 	private static final double NOMINAL_VOLTAGE = 12.0;
+	/** A disable longer than this counts as the end of a match (the auto to teleop gap is shorter). */
+	private static final double MATCH_END_DISABLED_SECONDS = 5.0;
 
 	private final TunableNumber enabled = new TunableNumber("Power/Enabled", 1.0);
 	private final TunableNumber targetVoltage = new TunableNumber("Power/TargetVoltage", 8.0);
@@ -67,6 +73,7 @@ public class PowerManager {
 	private final TunableNumber maxBudgetAmps = new TunableNumber("Power/MaxBudgetAmps", 400.0);
 	private final TunableNumber recoveryAmpsPerSec = new TunableNumber("Power/RecoveryAmpsPerSec", 40.0);
 	private final TunableNumber lowBatteryVolts = new TunableNumber("Power/LowBatteryVolts", 12.3);
+	private final TunableNumber changeBatteryVolts = new TunableNumber("Power/ChangeBatteryVolts", 12.0);
 
 	private final List<Entry> entries = new ArrayList<>();
 	private final LinearFilter voltageFilter = LinearFilter.movingAverage(5);
@@ -78,12 +85,19 @@ public class PowerManager {
 	private final Alert lowBatteryAlert = new Alert("", AlertType.kWarning);
 	private final Alert limitingAlert = new Alert("", AlertType.kWarning);
 	private final Alert brownoutAlert = new Alert("", AlertType.kError);
+	private final Alert changeBatteryAlert = new Alert("", AlertType.kError);
+	// Same timings as 1678's battery checker, so a short dip doesn't fire the alert
+	private final Debouncer lowBatteryDebouncer = new Debouncer(5.0);
+	private final Debouncer changeBatteryDebouncer = new Debouncer(2.0);
 
 	private double lastTimestamp = Timer.getFPGATimestamp();
 	private double lastVoltage = Double.NaN;
 	private double lastCurrent = Double.NaN;
 	private double estimatedResistance = Double.NaN;
-	private double minVoltageSinceEnable = Double.POSITIVE_INFINITY;
+	private double minVoltageThisMatch = Double.POSITIVE_INFINITY;
+	private double totalEnergyJoules = 0.0;
+	private double unmanagedEnergyJoules = 0.0;
+	private double lastDisableTimestamp = Double.NEGATIVE_INFINITY;
 	private boolean wasEnabled = false;
 	private boolean wasBrownedOut = false;
 	private int brownoutCount = 0;
@@ -96,6 +110,7 @@ public class PowerManager {
 		double allocated;
 		double applied = Double.NaN;
 		double lastApplyTimestamp = Double.NEGATIVE_INFINITY;
+		double energyJoules = 0.0;
 
 		Entry(PowerConsumer consumer, PowerConfig config) {
 			this.consumer = consumer;
@@ -180,8 +195,9 @@ public class PowerManager {
 		}
 
 		updateState(voltage, vTarget);
-		updateEvents(rawVoltage);
-		publish(voltage, current, budget, vTarget, managing);
+		updateEvents(rawVoltage, now);
+		updateEnergy(rawVoltage, rawCurrent, consumersAmps, dt);
+		publish(voltage, current, budget, vTarget, managing, unmanagedAmps);
 	}
 
 	/** Water-fill: everyone gets their min, then priorities are filled in order up to their max. */
@@ -194,7 +210,7 @@ public class PowerManager {
 		for (PowerPriority priority : PowerPriority.values()) {
 			double tierRange = 0.0;
 			for (Entry entry : entries) {
-				if (entry.config.priority == priority) {
+				if (entry.config.getPriority() == priority) {
 					tierRange += entry.config.getMaxAmps() - entry.config.getMinAmps();
 				}
 			}
@@ -203,7 +219,7 @@ public class PowerManager {
 			}
 			double share = MathUtil.clamp(available / tierRange, 0.0, 1.0);
 			for (Entry entry : entries) {
-				if (entry.config.priority == priority) {
+				if (entry.config.getPriority() == priority) {
 					entry.target += (entry.config.getMaxAmps() - entry.config.getMinAmps()) * share;
 				}
 			}
@@ -251,7 +267,7 @@ public class PowerManager {
 		for (Entry entry : entries) {
 			if (entry.isLimited()) {
 				anyLimited = true;
-				importantLimited |= entry.config.priority.compareTo(PowerPriority.HIGH) <= 0;
+				importantLimited |= entry.config.getPriority().compareTo(PowerPriority.HIGH) <= 0;
 			}
 		}
 		if (importantLimited || voltage < vTarget) {
@@ -263,19 +279,30 @@ public class PowerManager {
 		}
 	}
 
-	private void updateEvents(double rawVoltage) {
+	private void updateEvents(double rawVoltage, double now) {
 		boolean robotEnabled = DriverStation.isEnabled();
 		if (robotEnabled && !wasEnabled) {
-			minVoltageSinceEnable = Double.POSITIVE_INFINITY;
+			// A new match starts with auto, or after a long disable. The short gap between auto and
+			// teleop keeps counting, so the stats cover the whole match.
+			if (DriverStation.isAutonomous() || now - lastDisableTimestamp > MATCH_END_DISABLED_SECONDS) {
+				resetMatchStats();
+			}
+		} else if (!robotEnabled && wasEnabled) {
+			lastDisableTimestamp = now;
 		}
 		wasEnabled = robotEnabled;
 		if (robotEnabled) {
-			minVoltageSinceEnable = Math.min(minVoltageSinceEnable, rawVoltage);
+			minVoltageThisMatch = Math.min(minVoltageThisMatch, rawVoltage);
 		} else {
 			// Only judge the battery while resting, voltage always sags while driving
 			double lowVolts = lowBatteryVolts.getAsDouble();
+			double changeVolts = changeBatteryVolts.getAsDouble();
+			boolean change = changeBatteryDebouncer.calculate(rawVoltage < changeVolts);
+			boolean low = lowBatteryDebouncer.calculate(rawVoltage < lowVolts);
+			changeBatteryAlert.setText(String.format("CHANGE BATTERY NOW: %.2fV (below %.1fV)", rawVoltage, changeVolts));
+			changeBatteryAlert.set(change);
 			lowBatteryAlert.setText(String.format("Low battery: %.2fV (swap below %.1fV)", rawVoltage, lowVolts));
-			lowBatteryAlert.set(rawVoltage < lowVolts);
+			lowBatteryAlert.set(low && !change);
 		}
 
 		boolean brownedOut = RobotController.isBrownedOut();
@@ -296,7 +323,30 @@ public class PowerManager {
 		limitingAlert.set(limited.length() > 0);
 	}
 
-	private void publish(double voltage, double current, double budget, double vTarget, boolean managing) {
+	private void resetMatchStats() {
+		minVoltageThisMatch = Double.POSITIVE_INFINITY;
+		totalEnergyJoules = 0.0;
+		unmanagedEnergyJoules = 0.0;
+		for (Entry entry : entries) {
+			entry.energyJoules = 0.0;
+		}
+	}
+
+	/** Integrates power over the loop, from raw readings so the filters don't smear it. */
+	private void updateEnergy(double rawVoltage, double rawCurrent, double consumersAmps, double dt) {
+		totalEnergyJoules += rawCurrent * rawVoltage * dt;
+		unmanagedEnergyJoules += Math.max(0.0, rawCurrent - consumersAmps) * rawVoltage * dt;
+		for (Entry entry : entries) {
+			entry.energyJoules += Math.abs(entry.consumer.getSupplyCurrentAmps()) * rawVoltage * dt;
+		}
+	}
+
+	private static double toWattHours(double joules) {
+		return joules / 3600.0;
+	}
+
+	private void publish(double voltage, double current, double budget, double vTarget, boolean managing,
+			double unmanagedAmps) {
 		double headroom = MathUtil.clamp((voltage - vTarget) / (NOMINAL_VOLTAGE - vTarget), 0.0, 1.0) * 100.0;
 
 		// Small driver-facing set
@@ -307,6 +357,7 @@ public class PowerManager {
 		SmartDashboard.putString(TABLE + "State", state.name());
 		SmartDashboard.putBoolean(TABLE + "Power OK", state == PowerState.NORMAL);
 		SmartDashboard.putNumber(TABLE + "Brownouts", brownoutCount);
+		SmartDashboard.putNumber(TABLE + "Match Wh", toWattHours(totalEnergyJoules));
 
 		// Full detail for logs
 		Logger.recordOutput(TABLE + "Enabled", managing);
@@ -317,12 +368,20 @@ public class PowerManager {
 		Logger.recordOutput(TABLE + "BudgetAmps", budget);
 		Logger.recordOutput(TABLE + "HeadroomPercent", headroom);
 		Logger.recordOutput(TABLE + "EstimatedResistanceOhms", Double.isNaN(estimatedResistance) ? 0.0 : estimatedResistance);
-		Logger.recordOutput(TABLE + "MinVoltageSinceEnable",
-				Double.isInfinite(minVoltageSinceEnable) ? voltage : minVoltageSinceEnable);
+		Logger.recordOutput(TABLE + "MinVoltageThisMatch",
+				Double.isInfinite(minVoltageThisMatch) ? voltage : minVoltageThisMatch);
 		Logger.recordOutput(TABLE + "BrownoutCount", brownoutCount);
+		Logger.recordOutput(TABLE + "TotalPowerWatts", current * voltage);
+		Logger.recordOutput(TABLE + "TotalEnergyWh", toWattHours(totalEnergyJoules));
+		// Everything the manager doesn't control: roboRIO, radio, steer motors, cameras...
+		Logger.recordOutput(TABLE + "Unmanaged/DrawAmps", unmanagedAmps);
+		Logger.recordOutput(TABLE + "Unmanaged/EnergyWh", toWattHours(unmanagedEnergyJoules));
 		for (Entry entry : entries) {
 			String key = TABLE + "Consumers/" + entry.consumer.getPowerName() + "/";
-			Logger.recordOutput(key + "DrawAmps", Math.abs(entry.consumer.getSupplyCurrentAmps()));
+			double drawAmps = Math.abs(entry.consumer.getSupplyCurrentAmps());
+			Logger.recordOutput(key + "DrawAmps", drawAmps);
+			Logger.recordOutput(key + "PowerWatts", drawAmps * voltage);
+			Logger.recordOutput(key + "EnergyWh", toWattHours(entry.energyJoules));
 			Logger.recordOutput(key + "TargetAmps", entry.target);
 			Logger.recordOutput(key + "LimitAmps", entry.allocated);
 			Logger.recordOutput(key + "Limited", entry.isLimited());

@@ -64,8 +64,9 @@ public class MotorIOSparkMaxSim extends MotorIOSparkMax {
         inputsToUpdate.statorCurrent = sim.getStatorCurrent();
         
         // Feed the calculated simulation values back into the inputs tracking structure
-        inputsToUpdate.supplyCurrent = 
-                Units.Amps.of(mainSim.getMotorCurrent()).times(getMotorInvertMultiplier());
+        // Same motor current * duty cycle estimate as the real robot
+        inputsToUpdate.supplyCurrent =
+                Units.Amps.of(Math.abs(mainSim.getMotorCurrent() * mainSim.getAppliedOutput()));
         inputsToUpdate.motorVoltage = 
                 Units.Volts.of(mainSim.getAppliedOutput() * mainSim.getBusVoltage()).times(getMotorInvertMultiplier());
     }

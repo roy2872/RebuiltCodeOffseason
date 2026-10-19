@@ -23,6 +23,6 @@ public class Feeder extends MotorSubsystem<SparkMaxConfig, MotorIOSparkMax> {
 	private Feeder() {
 		super(FeederConstants.getMotorIO(), "Feeder");
 		// 3 motors x 30A smart limit
-		enablePowerManagement(PowerPriority.MEDIUM, 30.0, 90.0);
+		enablePowerManagement(PowerPriority.HIGH, 30.0, 90.0);
 	}
 }

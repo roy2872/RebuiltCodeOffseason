@@ -25,6 +25,6 @@ public class IntakeDeploy extends ServoMotorSubsystem<SparkMaxConfig, MotorIOSpa
 				);
 		setCurrentPosition(IntakeDeployConstants.INTAKE_STOWED_ANGLE);
 		// 1 motor x 20A smart limit
-		enablePowerManagement(PowerPriority.LOW, 10.0, 20.0);
+		enablePowerManagement(PowerPriority.MEDIUM, 10.0, 20.0);
 	}
 }

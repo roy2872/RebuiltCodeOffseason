@@ -75,7 +75,10 @@ public class MotorIOSparkMax extends MotorIO<SparkMaxConfig> {
         inputsToUpdate.position = Units.Rotations.of(motor.getEncoder().getPosition());
         inputsToUpdate.velocity = Units.RotationsPerSecond.of(motor.getEncoder().getVelocity() / 60.0); // RPM to RPS
         inputsToUpdate.statorCurrent = Units.Amps.of(motor.getOutputCurrent());
-        inputsToUpdate.supplyCurrent = Units.Amps.of(motor.getOutputCurrent()); 
+        // SPARK MAX only measures motor current. Battery current is about motor current * duty cycle
+        // (power in = power out), so a stalled motor at low output draws far less than it reads.
+        inputsToUpdate.supplyCurrent =
+                Units.Amps.of(Math.abs(motor.getOutputCurrent() * motor.getAppliedOutput()));
         inputsToUpdate.motorVoltage = Units.Volts.of(motor.getBusVoltage() * motor.getAppliedOutput());
         inputsToUpdate.pidVoltage = Units.Volts.of(motor.getBusVoltage() * motor.getAppliedOutput()); 
         inputsToUpdate.motorTemperature = Units.Celsius.of(motor.getMotorTemperature());

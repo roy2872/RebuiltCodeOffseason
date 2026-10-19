@@ -28,6 +28,7 @@ import static edu.wpi.first.units.Units.Volts;
 
 import org.littletonrobotics.junction.AutoLogOutputManager;
 import org.littletonrobotics.junction.LogFileUtil;
+import org.littletonrobotics.junction.LoggedPowerDistribution;
 import org.littletonrobotics.junction.LoggedRobot;
 import org.littletonrobotics.junction.Logger;
 import org.littletonrobotics.junction.networktables.NT4Publisher;
@@ -71,6 +72,8 @@ public class Robot extends LoggedRobot {
       case REAL:
         // Running on a real robot, log to a USB stick ("/U/logs")
         Logger.addDataReceiver(new WPILOGWriter("/U/logs"));
+        // Logs every PDH channel's current, to see which motor draws what
+        LoggedPowerDistribution.getInstance(1, ModuleType.kRev);
         if (!DriverStation.isFMSAttached()) {
                 Logger.addDataReceiver(new NT4Publisher());
         }

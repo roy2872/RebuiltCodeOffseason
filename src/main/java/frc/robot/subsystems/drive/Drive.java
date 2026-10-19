@@ -35,6 +35,7 @@ import java.util.concurrent.locks.ReentrantLock;
 import org.ironmaple.simulation.SimulatedArena;
 import org.ironmaple.simulation.drivesims.SwerveDriveSimulation;
 import org.littletonrobotics.junction.AutoLogOutput;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import org.littletonrobotics.junction.Logger;
 
 import com.pathplanner.lib.config.ModuleConfig;
@@ -55,6 +56,7 @@ public class Drive extends SubsystemBase implements PowerConsumer {
   private final SwerveSetpointGenerator setpointGenerator;
     private static final double ROBOT_MASS_KG = 55;
   private static final double ROBOT_MOI = 1.2;
+  private static final String DEFENSE_MODE_KEY = "Defense Mode";
   private static final double WHEEL_COF = 1.5;
   private static final RobotConfig PP_CONFIG =
       new RobotConfig(
@@ -138,9 +140,16 @@ public class Drive extends SubsystemBase implements PowerConsumer {
         this,
         new PowerConfig(
             getPowerName(),
-            PowerPriority.CRITICAL,
+            PowerPriority.LOW,
             DriveConstants.DRIVE_POWER_MIN_AMPS,
-            modules.length * DriveConstants.DRIVE_SUPPLY_CURRENT_LIMIT));
+            modules.length * DriveConstants.DRIVE_SUPPLY_CURRENT_LIMIT,
+            modules.length * DriveConstants.DRIVE_AUTO_SUPPLY_CURRENT_LIMIT)
+            // Defense mode: drive goes back to full current and is protected before the shooter
+            .withOverride(
+                this::isDefenseMode,
+                PowerPriority.CRITICAL,
+                modules.length * DriveConstants.DRIVE_DEFENSE_SUPPLY_CURRENT_LIMIT));
+    SmartDashboard.putBoolean(DEFENSE_MODE_KEY, false);
     setpointGenerator =
         new SwerveSetpointGenerator(
             PP_CONFIG, // The robot configuration. This is the same config used for generating
@@ -155,6 +164,7 @@ public class Drive extends SubsystemBase implements PowerConsumer {
 
   @Override
   public void periodic() {
+    Logger.recordOutput("Drive/DefenseMode", isDefenseMode());
     odometryLock.lock(); // Prevents odometry updates while reading data
     gyroIO.updateInputs(gyroInputs);
     Logger.processInputs("Drive/Gyro", gyroInputs);
@@ -347,6 +357,11 @@ public class Drive extends SubsystemBase implements PowerConsumer {
       output += modules[i].getFFCharacterizationVelocity() / 4.0;
     }
     return output;
+  }
+
+  /** Dashboard switch for playing defense: full drive current, and the drive keeps it over the shooter. */
+  public boolean isDefenseMode() {
+    return SmartDashboard.getBoolean(DEFENSE_MODE_KEY, false);
   }
 
   @Override

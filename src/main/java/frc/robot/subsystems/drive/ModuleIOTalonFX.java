@@ -265,6 +265,9 @@ public class ModuleIOTalonFX implements ModuleIO {
   @Override
   public void setDriveSupplyCurrentLimit(double amps) {
     driveCurrentLimits.SupplyCurrentLimit = amps;
+    // The lower limit must stay under the limit, or the shed limit would be ignored
+    driveCurrentLimits.SupplyCurrentLowerLimit =
+        Math.min(DriveConstants.DRIVE_SUPPLY_CURRENT_LOWER_LIMIT, amps);
     // Only the current limit group is sent, with a 0 timeout so it doesn't block the loop
     driveTalon.getConfigurator().apply(driveCurrentLimits, 0.0);
   }

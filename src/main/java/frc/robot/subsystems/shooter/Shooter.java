@@ -28,6 +28,6 @@ public class Shooter extends FlywheelMotorSubsystem<SparkMaxConfig, MotorIOSpark
         ShooterConstants.VELOCITY_THRESHOLD_DEBOUNCE_TIME,
         true);
     // 4 motors x 30A smart limit
-    enablePowerManagement(PowerPriority.HIGH, 60.0, 120.0);
+    enablePowerManagement(PowerPriority.CRITICAL, 60.0, 120.0);
   }
 }

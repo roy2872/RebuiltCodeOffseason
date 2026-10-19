@@ -20,6 +20,6 @@ public class IntakeRollers extends MotorSubsystem<TalonSRXConfiguration, MotorIO
     public IntakeRollers() {
         super(IntakeRollersConstants.getMotorIOTalonSRX(), "Intake Rollers");
         // 1 motor x 40A continuous limit
-        enablePowerManagement(PowerPriority.LOW, 15.0, 40.0);
+        enablePowerManagement(PowerPriority.MEDIUM, 15.0, 40.0);
     }
 }

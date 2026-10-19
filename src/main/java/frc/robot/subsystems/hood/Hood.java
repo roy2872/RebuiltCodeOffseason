@@ -26,6 +26,6 @@ public class Hood extends ServoMotorSubsystem<SparkMaxConfig, MotorIOSparkMax> {
     );
     setCurrentPosition(HoodConstants.HOOD_STARTING_ANGLE);
     // 1 motor x 10A smart limit
-    enablePowerManagement(PowerPriority.MEDIUM, 6.0, 10.0);
+    enablePowerManagement(PowerPriority.HIGH, 6.0, 10.0);
   }
 }
