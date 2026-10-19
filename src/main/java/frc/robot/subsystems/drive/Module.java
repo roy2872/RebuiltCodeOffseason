@@ -22,6 +22,8 @@ public class Module {
   private final Alert driveDisconnectedAlert;
   private final Alert turnDisconnectedAlert;
   private final Alert turnEncoderDisconnectedAlert;
+  private SwerveModulePosition[] odometryPositions = new SwerveModulePosition[] {};
+  private double[] odometryTimestamps = new double[] {};
 
   public Module(
       ModuleIO io,
@@ -49,14 +51,20 @@ public class Module {
     io.updateInputs(inputs);
     Logger.processInputs("Drive/Module" + Integer.toString(index), inputs);
 
-    // // Calculate positions for odometry
-    // int sampleCount = inputs.odometryTimestamps.length; // All signals are sampled together
-    // odometryPositions = new SwerveModulePosition[sampleCount];
-    // for (int i = 0; i < sampleCount; i++) {
-    //   double positionMeters = inputs.odometryDrivePositionsRad[i] * constants.WheelRadius;
-    //   Rotation2d angle = inputs.odometryTurnPositions[i];
-    //   odometryPositions[i] = new SwerveModulePosition(positionMeters, angle);
-    // }
+    // Calculate positions for odometry. Signals are sampled together, but a full queue can drop
+    // a sample from one of them, so only use samples every signal has.
+    int sampleCount =
+        Math.min(
+            inputs.odometryTimestamps.length,
+            Math.min(inputs.odometryDrivePositionsRad.length, inputs.odometryTurnPositions.length));
+    odometryPositions = new SwerveModulePosition[sampleCount];
+    odometryTimestamps = new double[sampleCount];
+    for (int i = 0; i < sampleCount; i++) {
+      double positionMeters = inputs.odometryDrivePositionsRad[i] * DriveConstants.WHEEL_RADIUS.in(Meters);
+      Rotation2d angle = inputs.odometryTurnPositions[i];
+      odometryPositions[i] = new SwerveModulePosition(positionMeters, angle);
+      odometryTimestamps[i] = inputs.odometryTimestamps[i];
+    }
 
     // Update alerts
     driveDisconnectedAlert.set(!inputs.driveConnected);
@@ -79,6 +87,11 @@ public class Module {
   public void runCharacterization(double output) {
     io.setDriveOpenLoop(output);
     io.setTurnPosition(new Rotation2d());
+  }
+
+  /** Changes the drive motor current limits while running (power management). */
+  public void setDriveCurrentLimits(double statorAmps, double supplyAmps) {
+    io.setDriveCurrentLimits(statorAmps, supplyAmps);
   }
 
   /** Disables all outputs to motors. */
@@ -117,15 +130,15 @@ public class Module {
     return new SwerveModuleState(getVelocityMetersPerSec(), getAngle());
   }
 
-  // /** Returns the module positions received this cycle. */
-  // public SwerveModulePosition[] getOdometryPositions() {
-  //   return odometryPositions;
-  // }
+  /** Returns the module positions received this cycle. */
+  public SwerveModulePosition[] getOdometryPositions() {
+    return odometryPositions;
+  }
 
-  // /** Returns the timestamps of the samples received this cycle. */
-  // public double[] getOdometryTimestamps() {
-  //   return inputs.odometryTimestamps;
-  // }
+  /** Returns the timestamps of the samples received this cycle. */
+  public double[] getOdometryTimestamps() {
+    return odometryTimestamps;
+  }
 
   /** Returns the module position in radians. */
   public double getWheelRadiusCharacterizationPosition() {

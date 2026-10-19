@@ -16,6 +16,7 @@ import frc.lib.accelLimitsLib;
 import frc.robot.Constants;
 import frc.robot.Constants.Mode;
 import frc.robot.RobotState;
+import frc.robot.auto.BumpCrossing;
 import frc.robot.RobotState.OdometryObservation;
 import frc.robot.generated.TunerConstants;
 import edu.wpi.first.wpilibj.DriverStation;
@@ -29,11 +30,19 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
 import org.ironmaple.simulation.SimulatedArena;
+import org.ironmaple.simulation.seasonspecific.rebuilt2026.Arena2026Rebuilt;
 import org.ironmaple.simulation.drivesims.SwerveDriveSimulation;
 import org.littletonrobotics.junction.AutoLogOutput;
 import org.littletonrobotics.junction.Logger;
 
+import com.pathplanner.lib.auto.AutoBuilder;
 import com.pathplanner.lib.config.ModuleConfig;
+import com.pathplanner.lib.config.PIDConstants;
+import com.pathplanner.lib.controllers.PPHolonomicDriveController;
+import com.pathplanner.lib.pathfinding.Pathfinding;
+import com.pathplanner.lib.util.PathPlannerLogging;
+import frc.lib.util.AllianceFlipping;
+import frc.lib.util.LocalADStarAK;
 import com.pathplanner.lib.config.RobotConfig;
 import com.pathplanner.lib.util.DriveFeedforwards;
 import com.pathplanner.lib.util.swerve.SwerveSetpoint;
@@ -49,17 +58,16 @@ public class Drive extends SubsystemBase {
   private final Alert gyroDisconnectedAlert = new Alert("Disconnected gyro, using backup gyro as fallback.",
       AlertType.kError);
   private final SwerveSetpointGenerator setpointGenerator;
-    private static final double ROBOT_MASS_KG = 55;
-  private static final double ROBOT_MOI = 1.2;
-  private static final double WHEEL_COF = 1.5;
-  private static final RobotConfig PP_CONFIG =
+  // Physical constants come from DriveConstants so the setpoint generator, PathPlanner and
+  // maple-sim all agree. Keep deploy/pathplanner/settings.json in sync when changing them.
+  public static final RobotConfig PP_CONFIG =
       new RobotConfig(
-          ROBOT_MASS_KG,
-          ROBOT_MOI,
+          DriveConstants.robotMassKg,
+          DriveConstants.robotMOI,
           new ModuleConfig(
-              TunerConstants.FrontLeft.WheelRadius,
+              DriveConstants.WHEEL_RADIUS.in(edu.wpi.first.units.Units.Meters),
               TunerConstants.kSpeedAt12Volts.in(MetersPerSecond),
-              WHEEL_COF,
+              DriveConstants.wheelCOF,
               DCMotor.getFalcon500(1).withReduction(TunerConstants.FrontLeft.DriveMotorGearRatio),
               TunerConstants.FrontLeft.SlipCurrent,
               1),
@@ -103,10 +111,15 @@ public class Drive extends SubsystemBase {
         modules[3] = new Module(new ModuleIOTalonFX(TunerConstants.BackRight), 3);
       }
       case SIM -> {
+        // Only the hubs are solid: the robot drives over the bumps (maple-sim can't model the slope)
+        SimulatedArena.overrideInstance(new Arena2026Rebuilt(false));
         driveSimulation = new SwerveDriveSimulation(
             DriveConstants.mapleSimConfig, new Pose2d(3, 3, new Rotation2d()));
         SimulatedArena.getInstance().addDriveTrainSimulation(driveSimulation);
-        this.gyroIO = new GyroIOSim(driveSimulation.getGyroSimulation());
+        this.gyroIO =
+            new GyroIOSim(
+                driveSimulation.getGyroSimulation(),
+                () -> BumpCrossing.simulatedTiltDegrees(driveSimulation.getSimulatedDriveTrainPose()));
         modules[0] = new Module(new ModuleIOSim(driveSimulation.getModules()[0]), 0);
         modules[1] = new Module(new ModuleIOSim(driveSimulation.getModules()[1]), 1);
         modules[2] = new Module(new ModuleIOSim(driveSimulation.getModules()[2]), 2);
@@ -130,6 +143,8 @@ public class Drive extends SubsystemBase {
     for (var module : modules) {
       module.stop();
     }
+    // Starts only if real hardware registered signals with it
+    PhoenixOdometryThread.getInstance().start();
     setpointGenerator =
         new SwerveSetpointGenerator(
             PP_CONFIG, // The robot configuration. This is the same config used for generating
@@ -140,6 +155,28 @@ public class Drive extends SubsystemBase {
                 previousSetpoint =
     new SwerveSetpoint(
       getChassisSpeeds(), getModuleStates(), DriveFeedforwards.zeros(PP_CONFIG.numModules));
+    configurePathPlanner();
+  }
+
+  /** PathPlanner path following and on-the-fly pathfinding (navgrid: tools/generate_navgrid.py). */
+  private void configurePathPlanner() {
+    AutoBuilder.configure(
+        RobotState.mInstance::getEstimatedPose,
+        RobotState.mInstance::resetPose,
+        this::getChassisSpeeds,
+        (speeds, feedforwards) -> runVelocity(speeds),
+        new PPHolonomicDriveController(
+            new PIDConstants(DriveConstants.PATH_TRANSLATION_KP, 0.0, 0.0),
+            new PIDConstants(DriveConstants.PATH_ROTATION_KP, 0.0, 0.0)),
+        PP_CONFIG,
+        AllianceFlipping::shouldFlip,
+        this);
+    // AdvantageKit-compatible AD*: logged inputs, so replay plans the same paths
+    Pathfinding.setPathfinder(new LocalADStarAK());
+    PathPlannerLogging.setLogActivePathCallback(
+        poses -> Logger.recordOutput("Auto/ActivePath", poses.toArray(new Pose2d[0])));
+    PathPlannerLogging.setLogTargetPoseCallback(
+        pose -> Logger.recordOutput("Auto/TargetPose", pose));
   }
 
   @Override
@@ -158,42 +195,43 @@ public class Drive extends SubsystemBase {
       Logger.recordOutput("SwerveStates/SetpointsOptimized", new SwerveModuleState[] {});
     }
 
-    // // Update odometry
-    // boolean driveConnected = true;
-    // for (var module : modules) {
-    //   driveConnected &= module.isConnected();
-    // }
+    // Before odometry: on the bump, wheel distance is measured along the slope
+    RobotState.mInstance.updateTilt(getTiltDegrees(), RobotController.getFPGATime() * 1e-6);
 
-    SwerveModulePosition[] modulePositions = new SwerveModulePosition[4];
-    SwerveModulePosition[] moduleDeltas = new SwerveModulePosition[4];
-    for (int moduleIndex = 0; moduleIndex < 4; moduleIndex++) { // can add here skid detection
-      modulePositions[moduleIndex] = modules[moduleIndex].getPosition();
-      moduleDeltas[moduleIndex] =
-          new SwerveModulePosition(
-              modulePositions[moduleIndex].distanceMeters
-                  - lastModulePositions[moduleIndex].distanceMeters,
-              modulePositions[moduleIndex].angle);
-      lastModulePositions[moduleIndex] = modulePositions[moduleIndex];
+    // Update odometry with every high-rate sample received since the last cycle, each at its own
+    // timestamp. Every module and the gyro are sampled together; use only samples all of them have.
+    int sampleCount = Integer.MAX_VALUE;
+    for (var module : modules) {
+      sampleCount = Math.min(sampleCount, module.getOdometryTimestamps().length);
     }
+    boolean useGyroSamples = gyroInputs.connected && gyroInputs.odometryYawPositions.length > 0;
+    if (useGyroSamples) {
+      sampleCount = Math.min(sampleCount, gyroInputs.odometryYawPositions.length);
+    }
+    Logger.recordOutput("Drive/OdometrySampleCount", sampleCount);
 
-    // Update gyro angle
-    if (gyroInputs.connected) {
-      // Use the real gyro angle
-      rawGyroRotation = gyroInputs.yawPosition;
+    if (sampleCount == 0) {
+      // No queued samples (thread not running, or a log recorded before high-rate odometry):
+      // fall back to one sample from this cycle's inputs
+      SwerveModulePosition[] modulePositions = getModulePositions();
+      addOdometrySample(
+          modulePositions,
+          gyroInputs.connected ? Optional.of(gyroInputs.yawPosition) : Optional.empty(),
+          RobotController.getFPGATime() * 1e-6);
     } else {
-      // Use the angle delta from the kinematics and module deltas
-      Twist2d twist = kinematics.toTwist2d(moduleDeltas);
-      rawGyroRotation = rawGyroRotation.plus(new Rotation2d(twist.dtheta));
+      double[] sampleTimestamps = modules[0].getOdometryTimestamps();
+      for (int i = 0; i < sampleCount; i++) {
+        SwerveModulePosition[] modulePositions = new SwerveModulePosition[4];
+        for (int moduleIndex = 0; moduleIndex < 4; moduleIndex++) {
+          modulePositions[moduleIndex] = modules[moduleIndex].getOdometryPositions()[i];
+        }
+        Optional<Rotation2d> gyroYaw =
+            useGyroSamples
+                ? Optional.of(gyroInputs.odometryYawPositions[i])
+                : gyroInputs.connected ? Optional.of(gyroInputs.yawPosition) : Optional.empty();
+        addOdometrySample(modulePositions, gyroYaw, sampleTimestamps[i]);
+      }
     }
-
-    //   // Apply update
-    //   poseEstimator.updateWithTime(sampleTimestamps[i], rawGyroRotation, modulePositions);
-    // }
-
-    RobotState.mInstance
-        .addOdometryObservation(
-            new OdometryObservation(
-                modulePositions, Optional.of(rawGyroRotation), RobotController.getFPGATime() * 1e-6));
 
     // Update gyro alert
     gyroDisconnectedAlert.set(!gyroInputs.connected && Constants.currentMode != Mode.SIM);
@@ -208,6 +246,36 @@ public class Drive extends SubsystemBase {
     if (DriverStation.isEnabled() && !lastEnabled) {
       coastRequest = CoastRequest.AUTOMATIC;
     }
+  }
+
+  /**
+   * Adds one odometry sample to RobotState.
+   *
+   * @param gyroYaw the gyro yaw for this sample, or empty to integrate the heading from the wheels
+   */
+  private void addOdometrySample(
+      SwerveModulePosition[] modulePositions, Optional<Rotation2d> gyroYaw, double timestamp) {
+    SwerveModulePosition[] moduleDeltas = new SwerveModulePosition[4];
+    for (int moduleIndex = 0; moduleIndex < 4; moduleIndex++) { // can add here skid detection
+      moduleDeltas[moduleIndex] =
+          new SwerveModulePosition(
+              modulePositions[moduleIndex].distanceMeters
+                  - lastModulePositions[moduleIndex].distanceMeters,
+              modulePositions[moduleIndex].angle);
+      lastModulePositions[moduleIndex] = modulePositions[moduleIndex];
+    }
+
+    if (gyroYaw.isPresent()) {
+      // Use the real gyro angle
+      rawGyroRotation = gyroYaw.get();
+    } else {
+      // Use the angle delta from the kinematics and module deltas
+      Twist2d twist = kinematics.toTwist2d(moduleDeltas);
+      rawGyroRotation = rawGyroRotation.plus(new Rotation2d(twist.dtheta));
+    }
+
+    RobotState.mInstance.addOdometryObservation(
+        new OdometryObservation(modulePositions, Optional.of(rawGyroRotation), timestamp));
   }
 
   // @Override
@@ -229,8 +297,8 @@ public class Drive extends SubsystemBase {
         previousSetpoint =
         setpointGenerator.generateSetpoint(
             previousSetpoint, // The previous setpoint
-            speeds, // The desired target speeds
-            0.02 // The loop time of the robot code, in seconds
+            speeds, // The desired target speeds, not discretized: the generator discretizes itself
+            Constants.CYCLE_TIME.in(edu.wpi.first.units.Units.Seconds) // The loop time of the robot code
             );
     SwerveModuleState[] setpointStates = previousSetpoint.moduleStates(); 
     SwerveDriveKinematics.desaturateWheelSpeeds(setpointStates, DriveConstants.MAX_SPEED);
@@ -257,6 +325,60 @@ public class Drive extends SubsystemBase {
       modules[i].runCharacterization(output);
     }
     RobotState.mInstance.setRobotSetpointVelocity(new ChassisSpeeds());
+  }
+
+  /** How far the robot is tilted from flat in any direction, 0 without a gyro. */
+  public double getTiltDegrees() {
+    return gyroInputs.connected
+        ? Math.hypot(gyroInputs.pitchDegrees, gyroInputs.rollDegrees)
+        : 0.0;
+  }
+
+  public boolean isGyroConnected() {
+    return gyroInputs.connected;
+  }
+
+  /** Whether every drive and turn motor is connected. */
+  public boolean areModulesConnected() {
+    for (var module : modules) {
+      if (!module.isConnected()) return false;
+    }
+    return true;
+  }
+
+  /** Self test: every module to the same angle and wheel speed, no kinematics or setpoint limits. */
+  public void runModuleTest(Rotation2d angle, double speedMetersPerSec) {
+    for (var module : modules) {
+      module.runSetpoint(new SwerveModuleState(speedMetersPerSec, angle));
+    }
+  }
+
+  /**
+   * Self test: whether every module points along {@code angle}, either way round (modules flip
+   * instead of turning past 90 degrees).
+   */
+  public boolean modulesAlong(Rotation2d angle, double toleranceDegrees) {
+    for (var module : modules) {
+      double error = Math.abs(Math.IEEEremainder(module.getAngle().minus(angle).getDegrees(), 180.0));
+      if (error > toleranceDegrees) return false;
+    }
+    return true;
+  }
+
+  /** Self test: the slowest module's wheel speed. */
+  public double slowestModuleSpeed() {
+    double slowest = Double.POSITIVE_INFINITY;
+    for (var module : modules) {
+      slowest = Math.min(slowest, Math.abs(module.getVelocityMetersPerSec()));
+    }
+    return slowest;
+  }
+
+  /** Changes every drive motor's current limits while running (power management). */
+  public void setDriveCurrentLimits(double statorAmps, double supplyAmps) {
+    for (var module : modules) {
+      module.setDriveCurrentLimits(statorAmps, supplyAmps);
+    }
   }
 
   /** Stops the drive. */

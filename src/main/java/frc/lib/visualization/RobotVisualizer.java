@@ -3,7 +3,6 @@ package frc.lib.visualization;
 import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Translation3d;
 import edu.wpi.first.math.util.Units;
-import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj.util.Color8Bit;
 import frc.lib.util.TunableNumber;
 import java.util.ArrayList;
@@ -15,6 +14,7 @@ import org.littletonrobotics.junction.Logger;
 import org.littletonrobotics.junction.mechanism.LoggedMechanism2d;
 import org.littletonrobotics.junction.mechanism.LoggedMechanismLigament2d;
 import org.littletonrobotics.junction.mechanism.LoggedMechanismRoot2d;
+import org.littletonrobotics.junction.networktables.LoggedNetworkBoolean;
 
 /**
  * Logs robot mechanism poses for AdvantageScope, independent of which subsystems a robot has.
@@ -48,6 +48,7 @@ public class RobotVisualizer {
   private final Map<VisualizedJoint, LoggedMechanismLigament2d[]> lines = new HashMap<>();
   private final Map<VisualizedJoint, Calibration> calibrations = new HashMap<>();
   private boolean calibrationEnabled = false;
+  private LoggedNetworkBoolean showZero = null; // Logged, so replay draws the same
 
   private double sideViewWidth = 2.0;
   private double sideViewHeight = 2.0;
@@ -141,14 +142,12 @@ public class RobotVisualizer {
    */
   public void enableCalibration() {
     calibrationEnabled = true;
-    SmartDashboard.putBoolean(showZeroKey(), SmartDashboard.getBoolean(showZeroKey(), false));
+    if (showZero == null) {
+      showZero = new LoggedNetworkBoolean("/SmartDashboard/TunableNumbers/" + key + "/ShowZero", false);
+    }
     for (VisualizedJoint joint : joints) {
       calibrations.putIfAbsent(joint, new Calibration(key, joint));
     }
-  }
-
-  private String showZeroKey() {
-    return "TunableNumbers/" + key + "/ShowZero";
   }
 
   /** The log key prefix of all outputs, e.g. to filter them from NetworkTables. */
@@ -184,7 +183,7 @@ public class RobotVisualizer {
 
   /** Robot-relative pose of each joint. Parents are always earlier in the list than children. */
   private Pose3d[] computePoses(boolean useSetpoints) {
-    boolean showZero = calibrationEnabled && SmartDashboard.getBoolean(showZeroKey(), false);
+    boolean drawAtZero = calibrationEnabled && showZero.get();
     Pose3d[] poses = new Pose3d[joints.size()];
     for (int i = 0; i < poses.length; i++) {
       VisualizedJoint joint = joints.get(i);
@@ -194,7 +193,7 @@ public class RobotVisualizer {
       Translation3d origin = joint.origin;
       Calibration calibration = calibrations.get(joint);
       if (calibration != null) {
-        value = showZero ? 0.0 : value + calibration.offset();
+        value = drawAtZero ? 0.0 : value + calibration.offset();
         origin = calibration.origin();
       }
       Pose3d parentPose = joint.parent == null ? Pose3d.kZero : poses[indices.get(joint.parent)];

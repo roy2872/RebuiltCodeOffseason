@@ -14,8 +14,8 @@
 package frc.robot;
 
 import org.ironmaple.simulation.SimulatedArena;
+import org.littletonrobotics.junction.AutoLog;
 import org.littletonrobotics.junction.Logger;
-import org.littletonrobotics.junction.networktables.LoggedDashboardChooser;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
@@ -23,17 +23,22 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import edu.wpi.first.wpilibj2.command.Commands;
+import edu.wpi.first.wpilibj2.command.button.Trigger;
+import frc.lib.auto.ModularAutoChooser;
 import frc.lib.util.AllianceFlipping;
+import frc.robot.auto.BumpCrossing;
+import frc.robot.auto.RebuiltAutos;
+import frc.robot.power.PowerManager;
+import java.util.Optional;
 import frc.lib.util.TableLoader;
 import frc.lib.visualization.RobotVisualizer;
 import frc.robot.commands.DriveCommands;
+import frc.robot.commands.SelfTest;
 import frc.robot.controllers.ControllerInterface;
-import frc.robot.controllers.DummyController;
-import frc.robot.controllers.QXController;
-import frc.robot.controllers.SimulationController;
-import frc.robot.controllers.SingleXboxController;
-import frc.robot.controllers.TwoControllers;
+import frc.robot.controllers.SwitchableController;
+import frc.robot.simulation.RobotFuelSim;
 import frc.robot.subsystems.drive.Drive;
+import frc.robot.subsystems.vision.CameraConfig;
 import frc.robot.subsystems.vision.Vision;
 import frc.robot.subsystems.vision.VisionConstants;
 import frc.robot.subsystems.vision.VisionIO;
@@ -53,61 +58,76 @@ public class RobotContainer {
   private final ControllerInterface controller;
 
   private final Vision vision;
-  private final LoggedDashboardChooser<Command> autoChooser;
+  private final ModularAutoChooser autoChooser;
+  private final SelfTest selfTest;
+  private RobotFuelSim fuelSim = null; // Sim only
+
+  /** Simulator state that robot code acts on. Always false / zero on the real robot. */
+  @AutoLog
+  public static class SimulationInputs {
+    public boolean isSimulation = false;
+    public Pose2d groundTruthPose = Pose2d.kZero;
+  }
+
+  private final SimulationInputsAutoLogged simInputs = new SimulationInputsAutoLogged();
 
   /** The container for the robot. Contains subsystems, IO devices, and commands. */
   public RobotContainer() {
-    Constants.RobotState.shooterTableData = TableLoader.loadFromCSV("shootingSolutions.csv");
+    Constants.RobotState.shooterTableData = TableLoader.loadFromCSV("hubSolutions.csv");
     Constants.RobotState.fetchingTableData = TableLoader.loadDoubleMapFromCSV("fetchingSolutions.csv");
     RobotVisualization.configure();
-    switch (Constants.currentMode) {
-      case REAL:
-        // Real robot, instantiate hardware IO implementations
-        // controller = new twoco();
-        controller = new SingleXboxController(0);
-        vision =
-            new Vision(
-                RobotState.mInstance::addVisionObservation,
-                new VisionIO[] {
-                  new VisionIOLimelight(
-                      VisionConstants.tsachiCamera,
-                      VisionIOLimelight.Options.DEFAULT,
-                      RobotState.mInstance::getRotation,
-                      RobotContainer::getRobotMotion)
-                });
-                break;
-      case SIM:
-        controller = new SimulationController(0);
-        vision =
-            new Vision(
-                RobotState.mInstance::addVisionObservation,
-                new VisionIO[] {
-                  new VisionIOPhotonSim(
-                      "BLcamera",
-                      VisionConstants.robotToBLcamera,
-                      Drive.mInstance.driveSimulation::getSimulatedDriveTrainPose),
-                  new VisionIOPhotonSim(
-                      "BRcamera",
-                      VisionConstants.robotToBRcamera,
-                      Drive.mInstance.driveSimulation::getSimulatedDriveTrainPose),
-                  new VisionIOPhotonSim(
-                      "limelight-tsachi",
-                      VisionConstants.robotToTsachiCamera,
-                      Drive.mInstance.driveSimulation::getSimulatedDriveTrainPose)
-                });
-        break;
-
-      default:
-        // Replayed robot, disable IO implementations
-        controller = new SimulationController(0);
-        vision = new Vision(RobotState.mInstance::addVisionObservation, new VisionIO[0]);
-        break;
+    // Picked on the dashboard: Xbox by default on the robot, the simulation mapping otherwise
+    controller = new SwitchableController();
+    if (Constants.currentMode == Constants.Mode.SIM) {
+      fuelSim = new RobotFuelSim(
+          Drive.mInstance.driveSimulation::getSimulatedDriveTrainPose,
+          Drive.mInstance.driveSimulation::getDriveTrainSimulatedChassisSpeedsFieldRelative);
     }
 
-    // Set up auto routines
-    autoChooser = new LoggedDashboardChooser<>("Auto Choices");
-    autoChooser.addDefaultOption("Do Nothing", Commands.print("Doing nothing"));
+    vision =
+        new Vision(
+            (pose, timestamp, stdDevs) -> {
+              // Still read and logged by Vision, just not fused
+              if (!DashboardOverrides.DISABLE_VISION.get()) {
+                RobotState.mInstance.addVisionObservation(pose, timestamp, stdDevs);
+              }
+            },
+            limelight(VisionConstants.tsachiCamera, VisionIOLimelight.Options.DEFAULT));
+
+    // The real robot has no fuel sensor; in sim the fuel sim counts the fuel for the self test
+    selfTest =
+        new SelfTest(
+            vision, fuelSim == null ? Optional.empty() : Optional.of(fuelSim::getFuelHeld));
+
+    // Set up auto routines: Auto/Start, Auto/Part 1..5 and Auto/Preset on the dashboard
+    autoChooser = RebuiltAutos.createChooser();
     configureButtonBindings();
+  }
+
+  /**
+   * A Limelight on the robot. In simulation it becomes a PhotonVision sim camera with the same optics
+   * and mounting, so localization can be tested without the hardware.
+   */
+  private static VisionIO limelight(CameraConfig config, VisionIOLimelight.Options options) {
+    return switch (Constants.currentMode) {
+      case REAL ->
+          new VisionIOLimelight(
+              config, options, RobotState.mInstance::getRotation, RobotContainer::getRobotMotion);
+      case SIM ->
+          new VisionIOPhotonSim(
+              config,
+              VisionIOPhoton.Options.DEFAULT,
+              VisionIOPhotonSim.SimOptions.DEFAULT,
+              Drive.mInstance.driveSimulation::getSimulatedDriveTrainPose,
+              RobotState.mInstance::getRotation);
+      // Replayed robot: no hardware, inputs come from the log. Keeps the name so the log keys match.
+      default -> new VisionIO() {
+        @Override
+        public String getName() {
+          return config.name();
+        }
+      };
+    };
   }
 
   private static RobotMotion getRobotMotion() {
@@ -122,27 +142,23 @@ public class RobotContainer {
   private void configureButtonBindings() {
 
     final Runnable resetGyro =
-        Constants.currentMode == Constants.Mode.SIM
-            ? () -> RobotState.mInstance.resetPose(Drive.mInstance.driveSimulation.getSimulatedDriveTrainPose())
-            : () ->
-                RobotState.mInstance
-                    .resetPose(
-                        new Pose2d(
-                            RobotState.mInstance.getEstimatedPose().getTranslation(),
-                            AllianceFlipping.apply(Rotation2d.fromDegrees(0))));
+        () -> RobotState.mInstance.resetPose(
+            simInputs.isSimulation
+                ? simInputs.groundTruthPose
+                : new Pose2d(
+                    RobotState.mInstance.getEstimatedPose().getTranslation(),
+                    AllianceFlipping.apply(Rotation2d.fromDegrees(0))));
 
     Drive.mInstance.setDefaultCommand(
       DriveCommands.joystickDrive(Drive.mInstance, 
-        controller::xVelocityAnalog, controller::yVelocityAnalog, controller::rotationVelocityAnalog, () -> false));
+        controller::xVelocityAnalog, controller::yVelocityAnalog, controller::rotationVelocityAnalog,
+        DashboardOverrides.ROBOT_RELATIVE::get));
 
     controller.resetGyroButton().onTrue(Commands.runOnce(resetGyro).ignoringDisable(true).alongWith(
     Commands.print("reset gyro")
     ));
 
-    controller.shootButton()
-      .onTrue(Commands.runOnce(() -> RobotState.mInstance.setShootType(true)))
-      .whileTrue(SuperStructure.mInstance.shoot())
-      .onFalse(SuperStructure.mInstance.stopShooting());
+    bindShoot(controller.shootButton(), true);
 
     controller.intakeButton().whileTrue(SuperStructure.mInstance.intakeCommand());
 
@@ -150,12 +166,32 @@ public class RobotContainer {
 
     controller.intakeForceHomeButton().onTrue(SuperStructure.mInstance.intakeForceHomeCommand());
 
-    controller.fetchButton()
-      .onTrue(Commands.runOnce(() -> RobotState.mInstance.setShootType(false)))
-      .whileTrue(SuperStructure.mInstance.shoot())
-      .onFalse(SuperStructure.mInstance.stopShooting());
+    bindShoot(controller.fetchButton(), false);
 
     controller.purgeIntakeButton().whileTrue(SuperStructure.mInstance.intakeExhaustCommand());
+
+    // While held: line up diagonally with the nearest bump and drive over it slowly
+    controller.alignToBumpButton().whileTrue(BumpCrossing.crossNearestCommand());
+
+    DashboardOverrides.bindOneShot(
+        DashboardOverrides.INTAKE_FORCE_HOME, SuperStructure.mInstance.intakeForceHomeCommand());
+    DashboardOverrides.bindOneShot(
+        DashboardOverrides.HOOD_FORCE_HOME, SuperStructure.mInstance.hoodForceHomeCommand());
+    DashboardOverrides.bindOneShot(DashboardOverrides.RUN_SELF_TEST, selfTest.command());
+  }
+
+  /**
+   * Shoots while {@code button} is held. With Disable Shoot Auto Align on, the shot doesn't take the
+   * drive, so the driver keeps driving and aims by hand.
+   *
+   * @param atHub true to score in the hub, false to ferry
+   */
+  private static void bindShoot(Trigger button, boolean atHub) {
+    Trigger autoAlignOff = new Trigger(DashboardOverrides.DISABLE_SHOOT_AUTO_ALIGN::get);
+    button.onTrue(Commands.runOnce(() -> RobotState.mInstance.setShootType(atHub)));
+    button.and(autoAlignOff.negate()).whileTrue(SuperStructure.mInstance.shoot(true));
+    button.and(autoAlignOff).whileTrue(SuperStructure.mInstance.shoot(false));
+    button.onFalse(SuperStructure.mInstance.stopShooting());
   }
 
   /**
@@ -164,19 +200,42 @@ public class RobotContainer {
    * @return the command to run in autonomous
    */
   public Command getAutonomousCommand() {
-    return autoChooser.get();
+    return autoChooser.getRoutine();
   }
 
   public void periodic() {
     SmartDashboard.putData("Command Scheduler", CommandScheduler.getInstance());
+    DashboardOverrides.periodic();
+    HubShiftTracker.mInstance.periodic();
+    autoChooser.periodic();
+    PowerManager.mInstance.periodic();
     RobotState.mInstance.periodic();
     RobotVisualizer.mInstance.periodic();
   }
 
-  public void resetSimulation() {
-    if (Constants.currentMode != Constants.Mode.SIM) return;
+  /**
+   * Logs the simulator state that robot code acts on. In replay it is read back from the log, so a
+   * log recorded in simulation replays the same way. Call before anything reads {@link #simInputs}.
+   */
+  public void updateSimulationInputs() {
+    if (Constants.currentMode == Constants.Mode.SIM) {
+      simInputs.isSimulation = true;
+      simInputs.groundTruthPose = Drive.mInstance.driveSimulation.getSimulatedDriveTrainPose();
+    }
+    Logger.processInputs("Simulation", simInputs);
+  }
 
-    RobotState.mInstance.resetPose(new Pose2d(3, 3, new Rotation2d()));
+  public void resetSimulation() {
+    updateSimulationInputs();
+    if (!simInputs.isSimulation) return;
+
+    // Move the simulated robot too. Resetting only the estimate leaves it offset from the true pose, and
+    // vision never corrects heading, so aiming would be off by however far the robot had turned.
+    Pose2d resetPose = new Pose2d(3, 3, new Rotation2d());
+    if (Constants.currentMode == Constants.Mode.SIM) {
+      Drive.mInstance.driveSimulation.setSimulationWorldPose(resetPose);
+    }
+    RobotState.mInstance.resetPose(resetPose);
     // SimulatedArena.getInstance().resetFieldForAuto();
   }
 
@@ -184,6 +243,7 @@ public class RobotContainer {
     if (Constants.currentMode != Constants.Mode.SIM) return;
 
     SimulatedArena.getInstance().simulationPeriodic();
+    fuelSim.periodic();
     Logger.recordOutput(
         "FieldSimulation/RobotPosition", Drive.mInstance.driveSimulation.getSimulatedDriveTrainPose());
   }
@@ -191,6 +251,7 @@ public class RobotContainer {
   public void autonomousInit() {
     if (Constants.currentMode != Constants.Mode.SIM) return;
 
+    fuelSim.reset();
     // Reset the simulation to the initial pose
     // driveSimulation.setSimulationWorldPose(RobotState.getInstance().getEstimatedPose());
   }
@@ -198,7 +259,12 @@ public class RobotContainer {
   public void disabledInit() {
   }
   
-  public void teleopInit() {
+  /** The pit self test, run when Test mode starts. */
+  public Command getSelfTestCommand() {
+    return selfTest.command();
+  }
 
+  public void teleopInit() {
+    HubShiftTracker.mInstance.onTeleopInit();
   }
 }

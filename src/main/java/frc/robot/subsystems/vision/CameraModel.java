@@ -21,6 +21,12 @@ public record CameraModel(
   public static final CameraModel LIMELIGHT_4 =
       new CameraModel("Limelight 4", 82.0, 56.2, 1280, 800);
 
+  // Arducam OV2311 (B0322) global shutter at 1600x1200, 75 deg horizontal per its listing; the
+  // vertical FOV follows from the aspect ratio. The FOV depends on the M12 lens fitted, so replace
+  // with fromIntrinsics(...) using the PhotonVision calibration once the cameras are calibrated.
+  public static final CameraModel OV2311 =
+      new CameraModel("Arducam OV2311", 75.0, 59.8, 1600, 1200);
+
   /** From a diagonal FOV, as PhotonVision and most USB camera datasheets report it. */
   public static CameraModel fromDiagonalFov(
       String displayName, int widthPixels, int heightPixels, double diagonalFovDeg) {

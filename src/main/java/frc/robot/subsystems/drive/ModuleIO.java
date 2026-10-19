@@ -33,9 +33,10 @@ public interface ModuleIO {
     public double turnAppliedVolts = 0.0;
     public double turnCurrentAmps = 0.0;
 
-    // public double[] odometryTimestamps = new double[] {};
-    // public double[] odometryDrivePositionsRad = new double[] {};
-    // public Rotation2d[] odometryTurnPositions = new Rotation2d[] {};
+    // High-rate odometry samples received since the last cycle
+    public double[] odometryTimestamps = new double[] {};
+    public double[] odometryDrivePositionsRad = new double[] {};
+    public Rotation2d[] odometryTurnPositions = new Rotation2d[] {};
   }
 
   /** Updates the set of loggable inputs. */
@@ -52,4 +53,7 @@ public interface ModuleIO {
 
   /** Run the turn motor to the specified rotation. */
   public default void setTurnPosition(Rotation2d rotation) {}
+
+  /** Changes the drive motor current limits while running (power management). */
+  public default void setDriveCurrentLimits(double statorAmps, double supplyAmps) {}
 }

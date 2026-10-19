@@ -21,7 +21,9 @@ import static edu.wpi.first.units.Units.Volts;
 import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.util.Units;
+import frc.lib.util.PhoenixUtil;
 import frc.robot.generated.TunerConstants;
+import java.util.Arrays;
 import org.ironmaple.simulation.drivesims.SwerveModuleSimulation;
 import org.ironmaple.simulation.motorsims.SimulatedMotorController;
 
@@ -103,13 +105,13 @@ public class ModuleIOSim implements ModuleIO {
     inputs.turnAppliedVolts = turnAppliedVolts;
     inputs.turnCurrentAmps = Math.abs(moduleSimulation.getSteerMotorStatorCurrent().in(Amps));
 
-    // // Update odometry inputs (50Hz because high-frequency odometry in sim doesn't matter)
-    // inputs.odometryTimestamps = PhoenixUtil.getSimulationOdometryTimeStamps();
-    // inputs.odometryDrivePositionsRad =
-    //     Arrays.stream(moduleSimulation.getCachedDriveWheelFinalPositions())
-    //         .mapToDouble(angle -> angle.in(Radians))
-    //         .toArray();
-    // inputs.odometryTurnPositions = moduleSimulation.getCachedSteerAbsolutePositions();
+    // Update odometry inputs: maple-sim's physics sub-ticks stand in for the high-rate samples
+    inputs.odometryTimestamps = PhoenixUtil.getSimulationOdometryTimeStamps();
+    inputs.odometryDrivePositionsRad =
+        Arrays.stream(moduleSimulation.getCachedDriveWheelFinalPositions())
+            .mapToDouble(angle -> angle.in(Radians))
+            .toArray();
+    inputs.odometryTurnPositions = moduleSimulation.getCachedSteerAbsolutePositions();
   }
 
   @Override
@@ -129,6 +131,12 @@ public class ModuleIOSim implements ModuleIO {
     driveClosedLoop = true;
     driveFFVolts = DRIVE_KS * Math.signum(velocityRadPerSec) + DRIVE_KV * velocityRadPerSec;
     driveController.setSetpoint(velocityRadPerSec);
+  }
+
+  @Override
+  public void setDriveCurrentLimits(double statorAmps, double supplyAmps) {
+    // maple-sim models one (stator) limit
+    driveMotor.withCurrentLimit(Amps.of(statorAmps));
   }
 
   @Override

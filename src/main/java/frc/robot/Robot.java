@@ -100,7 +100,6 @@ public class Robot extends LoggedRobot {
   public void robotInit() {
     AutoLogOutputManager.addObject(RobotState.mInstance);
     RobotController.setBrownoutVoltage(Volts.of(5.5));
-    SmartDashboard.putData("Intake Force Home and Zero", SuperStructure.mInstance.intakeForceHomeCommand());
 
 		for (Sendable sendable : Constants.LOGGED_SENDABLES) {
 			SmartDashboard.putData(sendable);
@@ -110,7 +109,7 @@ public class Robot extends LoggedRobot {
   /** This function is called periodically during all modes. */
   @Override
   public void robotPeriodic() {
-
+    robotContainer.updateSimulationInputs();
     CommandScheduler.getInstance().run();
     robotContainer.periodic();
 
@@ -145,9 +144,7 @@ public class Robot extends LoggedRobot {
 
   /** This function is called periodically during autonomous. */
   @Override
-  public void autonomousPeriodic() {
-    CommandScheduler.getInstance().run();
-  }
+  public void autonomousPeriodic() {}
 
   /** This function is called once when teleop is enabled. */
   @Override
@@ -169,8 +166,9 @@ public class Robot extends LoggedRobot {
   /** This function is called once when test mode is enabled. */
   @Override
   public void testInit() {
-    // Cancels all running commands at the start of test mode.
+    // Cancels all running commands at the start of test mode, then runs the pit self test
     CommandScheduler.getInstance().cancelAll();
+    CommandScheduler.getInstance().schedule(robotContainer.getSelfTestCommand());
   }
 
   /** This function is called periodically during test mode. */

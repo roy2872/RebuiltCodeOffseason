@@ -190,6 +190,24 @@ public class MotorIOSparkMax extends MotorIO<SparkMaxConfig> {
         setMainConfig(configChanger.apply(config));
     }
 
+    @Override
+    public void setRuntimeCurrentLimit(double amps) {
+        int limit = (int) Math.round(amps);
+        // Keep the stored configs in step, so a later full apply keeps this limit
+        config.smartCurrentLimit(limit);
+        if (followerConfig != null) {
+            followerConfig.smartCurrentLimit(limit);
+        }
+        SparkMaxConfig change = new SparkMaxConfig();
+        change.smartCurrentLimit(limit);
+        threadPoolExecutor.submit(() -> {
+            main.configure(change, ResetMode.kNoResetSafeParameters, PersistMode.kNoPersistParameters);
+            for (SparkMax spark : followers) {
+                spark.configure(change, ResetMode.kNoResetSafeParameters, PersistMode.kNoPersistParameters);
+            }
+        });
+    }
+
     public void setFollowerConfig(SparkMaxConfig configuration) {
         followerConfig = configuration;
         for (SparkMax spark : followers) {

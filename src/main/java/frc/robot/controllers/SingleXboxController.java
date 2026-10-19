@@ -33,7 +33,7 @@ public class SingleXboxController implements ControllerInterface {
 
   @Override
   public Trigger alignToBumpButton() {
-    return new Trigger(()->controller.getRawButton(11));
+    return new Trigger(() -> controller.getRightStickButton());
   }
 
   @Override
@@ -58,7 +58,7 @@ public class SingleXboxController implements ControllerInterface {
 
   @Override
   public Trigger shootCloseButton() {
-    return new Trigger(() -> controller.getRawButton(11));
+    return new Trigger(() -> controller.getYButton());
   }
 
   @Override
@@ -78,6 +78,6 @@ public class SingleXboxController implements ControllerInterface {
 
   @Override
   public Trigger xLockOverride() {
-    return new Trigger(() -> controller.getRightTriggerAxis() > 0.7);
+    return new Trigger(() -> controller.getLeftTriggerAxis() > 0.7);
   }
 }

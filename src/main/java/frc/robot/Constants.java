@@ -55,7 +55,9 @@ import frc.robot.subsystems.shooter.Shooter;
  */
 public final class Constants {
   public static final CANBus rio = new CANBus();
-  public static final Mode simMode = Mode.SIM;
+  // Replay when a log is given through AKIT_LOG_PATH (replayWatch sets it), physics sim otherwise.
+  // Set to Mode.REPLAY directly to replay the log open in AdvantageScope instead.
+  public static final Mode simMode = System.getenv("AKIT_LOG_PATH") != null ? Mode.REPLAY : Mode.SIM;
   public static final Mode currentMode = RobotBase.isReal() ? Mode.REAL : simMode;
 
   public static enum Mode {
@@ -71,15 +73,11 @@ public final class Constants {
 
   	public static Sendable LOGGED_SENDABLES[] = new Sendable[] {
 		Drive.mInstance,
-		// Cameras.mInstance,
 		IntakeRollers.mInstance,
-		// TunnelRollers.mInstance,
 		Feeder.mInstance,
 		IntakeDeploy.mInstance,
 		Shooter.mInstance,
 		Hood.mInstance
-		// LEDs.mInstance,
-		// Superstructure.mInstance
 	};
 
   public static final class ForceHomeConstants {
@@ -99,7 +97,8 @@ public final class Constants {
   public static final double SHOOT_CLOSE_ANGLE = 81.0; // deg
 
   public static final double FETCHING_VELOCITY = 13.7; // m/s
-  public static final double FETCHING_ANGLE = 52.0; // deg
+  // The flattest shot the hood can reach (hood at its 36 deg max). fetchingSolutions.csv is generated for it.
+  public static final double FETCHING_ANGLE = 54.0; // deg
 
   public static final class FieldConstants {
 
@@ -132,7 +131,7 @@ public final class Constants {
     public static final Pose3d LOWER_HUB_3D_COORDS = new Pose3d(HUB_2D_COORDS.getX(), HUB_2D_COORDS.getY(), 1.43, Rotation3d.kZero);
       /**
        * @param input A Vector<N2> representing the distance[m] and robots radial velocity[m/s]
-       * @return A Vector<N3> representing the optimal shooting angle[deg], optimal shooting speed[m/s], and time of flight[s]
+       * @return A Vector<N3> representing the ball's exit speed[m/s], launch angle[deg], and time of flight[s]
        */
     public static final Function<Vector<N2>, Vector<N3>> getShootingData = new Function<Vector<N2>, Vector<N3>>() {
       @Override

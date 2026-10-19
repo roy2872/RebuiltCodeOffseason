@@ -37,7 +37,7 @@ class HoodSimTest {
 
     goTo(Hood.MAX_ANGLE, HoodConstants.HOOD_MAX_ANGLE);
     // Mid-range, so the controller (not the sim's hard stop) has to hold it
-    Angle middle = Degrees.of(70.0);
+    Angle middle = Degrees.of(20.0);
     goTo(Setpoint.withMotionMagicSetpoint(middle), middle);
     goTo(Hood.STOWED, HoodConstants.HOOD_MIN_ANGLE);
   }
@@ -45,13 +45,13 @@ class HoodSimTest {
   /** shoot() aims with motion-profiled setpoints that change every loop. */
   @Test
   void followsChangingAim() {
-    hood.followSetpointCommand(() -> Setpoint.withMotionMagicSetpoint(Degrees.of(65.0))).schedule();
+    hood.followSetpointCommand(() -> Setpoint.withMotionMagicSetpoint(Degrees.of(25.0))).schedule();
     for (int i = 0; i < 50; i++) {
       SimHooks.stepTiming(0.02);
       CommandScheduler.getInstance().run();
       hood.periodic();
     }
-    assertEquals(65.0, hood.getPosition().in(Degrees), TOLERANCE_DEGREES);
+    assertEquals(25.0, hood.getPosition().in(Degrees), TOLERANCE_DEGREES);
     CommandScheduler.getInstance().cancelAll();
     goTo(Hood.STOWED, HoodConstants.HOOD_MIN_ANGLE);
   }
@@ -59,7 +59,7 @@ class HoodSimTest {
   /** Plain position setpoints use a different Spark slot (2) than motion profiles (0). */
   @Test
   void followsPositionSetpoints() {
-    Angle aim = Degrees.of(65.0);
+    Angle aim = Degrees.of(25.0);
     goTo(Setpoint.withPositionSetpoint(aim), aim);
     goTo(Hood.STOWED, HoodConstants.HOOD_MIN_ANGLE);
   }

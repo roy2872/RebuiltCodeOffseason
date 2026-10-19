@@ -1,63 +1,106 @@
 package frc.robot.subsystems.vision;
 
-import static frc.robot.subsystems.vision.VisionConstants.*;
-
+import edu.wpi.first.math.MatBuilder;
+import edu.wpi.first.math.Nat;
+import edu.wpi.first.math.VecBuilder;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
-import edu.wpi.first.math.geometry.Rotation3d;
-import edu.wpi.first.math.geometry.Transform3d;
+import edu.wpi.first.wpilibj.Timer;
 import java.util.function.Supplier;
+import org.littletonrobotics.junction.Logger;
 import org.photonvision.simulation.PhotonCameraSim;
 import org.photonvision.simulation.SimCameraProperties;
 import org.photonvision.simulation.VisionSystemSim;
 
+/**
+ * Simulates any camera (PhotonVision or Limelight) as a PhotonVision camera with the same optics and
+ * mounting, then runs it through the real {@link VisionIOPhoton} estimation code.
+ */
 public class VisionIOPhotonSim extends VisionIOPhoton {
+
+  /**
+   * Imperfections of the simulated camera.
+   *
+   * @param fps frames per second the camera processes
+   * @param avgLatencyMs average capture to result latency
+   * @param latencyStdDevMs latency jitter
+   * @param avgCornerErrorPx average tag corner detection error in pixels
+   * @param cornerErrorStdDevPx corner detection error jitter in pixels
+   * @param enableStreams publish raw / processed sim video streams (slow, debug only)
+   */
+  public record SimOptions(
+      double fps,
+      double avgLatencyMs,
+      double latencyStdDevMs,
+      double avgCornerErrorPx,
+      double cornerErrorStdDevPx,
+      boolean enableStreams) {
+    public static final SimOptions DEFAULT = new SimOptions(40.0, 30.0, 5.0, 0.35, 0.1, false);
+  }
+
+  // One world shared by every simulated camera, stepped once per loop
   private static VisionSystemSim visionSim;
-  private final PhotonCameraSim cameraSim;
+  private static double lastSimUpdateTime = Double.NaN;
 
-  private final Supplier<Pose2d> poseSupplier;
+  private final Supplier<Pose2d> simPoseSupplier;
 
-  public VisionIOPhotonSim(String name, Transform3d robotToCamera, Supplier<Pose2d> poseSupplier) {
-    super(name, robotToCamera);
-    this.poseSupplier = poseSupplier;
+  /**
+   * @param config camera model and mounting, the same one the real camera uses
+   * @param options PhotonVision-only settings
+   * @param simOptions simulated camera imperfections
+   * @param simPoseSupplier ground truth robot pose from the physics sim
+   * @param headingSupplier robot heading as the code sees it (gyro / estimator), not ground truth
+   */
+  public VisionIOPhotonSim(
+      CameraConfig config,
+      Options options,
+      SimOptions simOptions,
+      Supplier<Pose2d> simPoseSupplier,
+      Supplier<Rotation2d> headingSupplier) {
+    super(config, options, headingSupplier);
+    this.simPoseSupplier = simPoseSupplier;
 
     if (visionSim == null) {
       visionSim = new VisionSystemSim("main");
-      visionSim.addAprilTags(aprilTagLayout);
+      visionSim.addAprilTags(VisionConstants.aprilTagLayout);
     }
 
-    SimCameraProperties cameraProp = new SimCameraProperties();
-    // add here camera properties:
-    cameraProp.setCalibration(1280, 720, Rotation2d.fromDegrees(94));
-    cameraProp.setAvgLatencyMs(30);
-    cameraSim = new PhotonCameraSim(camera, cameraProp, aprilTagLayout);
-
-    Transform3d robotToCameraShifted =
-        // robotToCamera;
-        new Transform3d(
-            robotToCamera.getX(),
-            robotToCamera.getY(),
-            robotToCamera.getZ(), // Shift camera up by 5 cm to avoid ground clipping
-            new Rotation3d(
-                robotToCamera.getRotation().getX(),
-                robotToCamera.getRotation().getY(),
-                robotToCamera.getRotation().getZ()));
-    visionSim.addCamera(cameraSim, robotToCameraShifted);
+    var cameraSim =
+        new PhotonCameraSim(
+            camera, simProperties(config.model(), simOptions), VisionConstants.aprilTagLayout);
+    cameraSim.enableRawStream(simOptions.enableStreams());
+    cameraSim.enableProcessedStream(simOptions.enableStreams());
+    visionSim.addCamera(cameraSim, config.robotToCamera());
   }
 
+  /** Pinhole intrinsics matching the model's horizontal and vertical FOV, no distortion. */
+  static SimCameraProperties simProperties(CameraModel model, SimOptions simOptions) {
+    double fx = model.widthPixels() / (2.0 * model.tanHalfHorizontalFov());
+    double fy = model.heightPixels() / (2.0 * model.tanHalfVerticalFov());
+    double cx = model.widthPixels() / 2.0;
+    double cy = model.heightPixels() / 2.0;
+
+    var properties = new SimCameraProperties();
+    properties.setCalibration(
+        model.widthPixels(),
+        model.heightPixels(),
+        MatBuilder.fill(Nat.N3(), Nat.N3(), fx, 0, cx, 0, fy, cy, 0, 0, 1),
+        VecBuilder.fill(0, 0, 0, 0, 0, 0, 0, 0));
+    properties.setFPS(simOptions.fps());
+    properties.setAvgLatencyMs(simOptions.avgLatencyMs());
+    properties.setLatencyStdDevMs(simOptions.latencyStdDevMs());
+    properties.setCalibError(simOptions.avgCornerErrorPx(), simOptions.cornerErrorStdDevPx());
+    return properties;
+  }
+
+  @Override
   public void updateInputs(VisionIOInputs inputs) {
-    visionSim.update(poseSupplier.get());
+    double now = Timer.getFPGATimestamp();
+    if (now != lastSimUpdateTime) {
+      lastSimUpdateTime = now;
+      visionSim.update(simPoseSupplier.get());
+      Logger.recordOutput("Vision/Sim/GroundTruthPose", simPoseSupplier.get());
+    }
     super.updateInputs(inputs);
   }
-
-  public String getName() {
-    return super.getName();
-  }
-
-  // @Override
-  // protected void setHighResPipeline(boolean highRes) {
-  //     if(highRes == isHighRes) return; // No change needed
-  //     isHighRes = highRes;
-  //     cameraSim.
-  // }
 }

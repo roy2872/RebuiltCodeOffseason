@@ -207,6 +207,24 @@ public class MotorIOTalonFX extends MotorIO<TalonFXConfiguration> {
         setMainConfig(configChanger.apply(config));
     }
 
+    /** Sets the supply current limit; only the current limit group is sent. */
+    @Override
+    public void setRuntimeCurrentLimit(double amps) {
+        config.CurrentLimits.SupplyCurrentLimit = amps;
+        config.CurrentLimits.SupplyCurrentLimitEnable = true;
+        if (followerConfig != null) {
+            followerConfig.CurrentLimits.SupplyCurrentLimit = amps;
+            followerConfig.CurrentLimits.SupplyCurrentLimitEnable = true;
+        }
+        var limits = config.CurrentLimits.clone();
+        threadPoolExecutor.submit(() -> {
+            main.getConfigurator().apply(limits);
+            for (TalonFX talon : followers) {
+                talon.getConfigurator().apply(limits);
+            }
+        });
+    }
+
     /**
      * Applies a TalonFXConfiguration to all follower motors.
      *

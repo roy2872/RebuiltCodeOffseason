@@ -192,6 +192,22 @@ public class MotorIOTalonSRX extends MotorIO<TalonSRXConfiguration> {
         setMainConfig(configChanger.apply(config));
     }
 
+    @Override
+    public void setRuntimeCurrentLimit(double amps) {
+        int limit = (int) Math.round(amps);
+        // Keep the stored configs in step, so a later full apply keeps this limit
+        config.continuousCurrentLimit = limit;
+        if (followerConfig != null) {
+            followerConfig.continuousCurrentLimit = limit;
+        }
+        threadPoolExecutor.submit(() -> {
+            main.configContinuousCurrentLimit(limit, 0);
+            for (TalonSRX talon : followers) {
+                talon.configContinuousCurrentLimit(limit, 0);
+            }
+        });
+    }
+
     public void setFollowerConfig(TalonSRXConfiguration configuration) {
         followerConfig = configuration;
         for (TalonSRX talon : followers) {

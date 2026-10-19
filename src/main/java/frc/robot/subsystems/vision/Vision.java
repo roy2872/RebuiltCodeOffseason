@@ -6,13 +6,22 @@ import edu.wpi.first.math.Matrix;
 import edu.wpi.first.math.VecBuilder;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Pose3d;
+import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.numbers.N1;
 import edu.wpi.first.math.numbers.N3;
 import edu.wpi.first.wpilibj.Alert;
 import edu.wpi.first.wpilibj.Alert.AlertType;
+import edu.wpi.first.wpilibj.DriverStation;
+import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
+import frc.robot.RobotState;
+import frc.robot.RobotState.LimelightYawObservation;
+import frc.robot.subsystems.vision.VisionIO.ObservationType;
+import frc.robot.subsystems.vision.VisionIO.PoseObservation;
+import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Optional;
 import org.littletonrobotics.junction.Logger;
 
 public class Vision extends SubsystemBase {
@@ -21,6 +30,7 @@ public class Vision extends SubsystemBase {
   private final VisionIOInputsAutoLogged[] inputs;
   private Alert[] visionAlerts;
   private final VisionConsumer consumer;
+  private final VisionFilter.InnovationGate[] gates;
 
   List<Pose3d> allTagPoses, allRobotPoses, allRobotPosesAccepted, allRobotPosesRejected;
   List<Pose3d> tagPoses, robotPoses, robotPosesAccepted, robotPosesRejected;
@@ -33,16 +43,27 @@ public class Vision extends SubsystemBase {
       inputs[i] = new VisionIOInputsAutoLogged();
     }
 
+    this.gates = new VisionFilter.InnovationGate[io.length];
+    for (int i = 0; i < io.length; i++) {
+      gates[i] = new VisionFilter.InnovationGate();
+    }
+
     this.visionAlerts = new Alert[io.length];
     for (int i = 0; i < io.length; i++)
       visionAlerts[i] =
-          new Alert("Vision camera " + io[i].getName() + "is dissconnected!", AlertType.kWarning);
+          new Alert("Vision camera " + io[i].getName() + " is disconnected!", AlertType.kWarning);
   }
 
   public void periodic() {
     for (int i = 0; i < io.length; i++) {
       io[i].updateInputs(inputs[i]);
-      // Logger.processInputs("Vision/Camera " + io[i].getName(), inputs[i]);
+      // Records the camera data, or in replay overwrites it from the log. Logic below must only
+      // read inputs[i].
+      Logger.processInputs("Vision/" + io[i].getName(), inputs[i]);
+      for (var yaw : inputs[i].yawObservations) {
+        RobotState.mInstance.addLimelightYawObservation(
+            new LimelightYawObservation(yaw.yaw(), yaw.timestamp()));
+      }
     }
 
     // Initialize logging values
@@ -51,13 +72,13 @@ public class Vision extends SubsystemBase {
     allRobotPosesAccepted = new LinkedList<>();
     allRobotPosesRejected = new LinkedList<>();
 
-    // Initialize logging values
-    tagPoses = new LinkedList<>();
-    robotPoses = new LinkedList<>();
-    robotPosesAccepted = new LinkedList<>();
-    robotPosesRejected = new LinkedList<>();
-
     for (int cameraIndex = 0; cameraIndex < io.length; cameraIndex++) {
+      // Per-camera logging values, fresh for each camera so logs don't mix cameras
+      tagPoses = new LinkedList<>();
+      robotPoses = new LinkedList<>();
+      robotPosesAccepted = new LinkedList<>();
+      robotPosesRejected = new LinkedList<>();
+
       visionAlerts[cameraIndex].set(!inputs[cameraIndex].connected);
 
       for (int tagId : inputs[cameraIndex].tagIds) {
@@ -67,53 +88,59 @@ public class Vision extends SubsystemBase {
         }
       }
       // Loop over pose observations
+      List<String> rejectReasons = new ArrayList<>();
+      List<Double> acceptedLinearStdDevs = new ArrayList<>();
+      double cameraFactor =
+          cameraIndex < cameraStdDevFactors.length ? cameraStdDevFactors[cameraIndex] : 1.0;
       for (var observation : inputs[cameraIndex].poseObservations) {
-        // Check whether to reject pose
-        boolean rejectPose =
-            observation.tagCount() == 0 // Must have at least one tag
-                || (observation.tagCount() == 1
-                    && (observation.ambiguity() > maxAmbiguity || observation.onEdgePercentage() > ON_EDGE_THRESHOLD)) // Cannot be high ambiguity
-                || Math.abs(observation.pose().getZ())
-                    > maxZError // Must have realistic Z coordinate
+        VisionFilter.Context context = context(observation, inputs[cameraIndex].disturbed);
+        Pose2d visionPose = observation.pose().toPose2d();
 
-                // Must be within the field boundaries
-                || observation.pose().getX() < 0.0
-                || observation.pose().getX() > aprilTagLayout.getFieldLength()
-                || observation.pose().getY() < 0.0
-                || observation.pose().getY() > aprilTagLayout.getFieldWidth();
+        // Check whether to reject pose
+        Optional<String> rejectReason = VisionFilter.rejectReason(observation, context);
+        // Taken on the bump: the camera was tilted and MegaTag2 assumes it wasn't
+        if (rejectReason.isEmpty() && RobotState.mInstance.wasTiltedAt(observation.timestamp())) {
+          rejectReason = Optional.of("Tilted");
+        }
+        VisionFilter.StdDevs stdDevs = VisionFilter.stdDevs(observation, cameraFactor, context);
+        if (rejectReason.isEmpty()
+            && !gates[cameraIndex].accept(
+                visionPose,
+                RobotState.mInstance.getEstimatedPoseAtTimestamp(observation.timestamp()),
+                stdDevs.linear(),
+                context.enabled())) {
+          rejectReason = Optional.of("FarFromEstimate");
+        }
 
         // Add pose to log
         robotPoses.add(observation.pose());
-        if (rejectPose) {
+        if (rejectReason.isPresent()) {
           robotPosesRejected.add(observation.pose());
-        } else {
-          robotPosesAccepted.add(observation.pose());
-        }
-
-        // Skip if rejected
-        if (rejectPose) {
+          rejectReasons.add(observation.type() + ":" + rejectReason.get());
           continue;
         }
-
-        double offsetFactor = 
-            Math.exp(Math.pow(observation.onEdgePercentage(), 2.5) / (2 * Math.pow(0.5, 2.0))); // Reduce stddev if tags are near edge
-        // Calculate standard deviations
-        double stdDevFactor =
-            Math.pow(observation.averageTagDistance(), 2.0)
-                / observation.tagCount(); // TODO: change!!!
-        double linearStdDev = linearStdDevBaseline * stdDevFactor * offsetFactor;
-        double angularStdDev = angularStdDevBaseline * stdDevFactor;
-        if (cameraIndex < cameraStdDevFactors.length) {
-          linearStdDev *= cameraStdDevFactors[cameraIndex];
-          angularStdDev *= cameraStdDevFactors[cameraIndex];
-        }
+        robotPosesAccepted.add(observation.pose());
+        acceptedLinearStdDevs.add(stdDevs.linear());
+        // Plain numbers for tools/fit_vision_stddev.py (export to CSV from AdvantageScope)
+        String calibration = "Vision/Camera" + cameraIndex + "/Calibration/";
+        Logger.recordOutput(calibration + "Timestamp", observation.timestamp());
+        Logger.recordOutput(calibration + "X", observation.pose().getX());
+        Logger.recordOutput(calibration + "Y", observation.pose().getY());
+        Logger.recordOutput(calibration + "Distance", observation.averageTagDistance());
+        Logger.recordOutput(calibration + "TagCount", observation.tagCount());
+        Logger.recordOutput(calibration + "Megatag2", observation.type() == ObservationType.MEGATAG_2);
 
         // send to pose estimator
         consumer.accept(
-            observation.pose().toPose2d(),
+            visionPose,
             observation.timestamp(),
-            VecBuilder.fill(linearStdDev, linearStdDev, angularStdDev));
+            VecBuilder.fill(stdDevs.linear(), stdDevs.linear(), stdDevs.angular()));
       }
+      Logger.recordOutput(
+          "Vision/Camera" + cameraIndex + "/RejectReasons", rejectReasons.toArray(new String[0]));
+      Logger.recordOutput(
+          "Vision/Camera" + cameraIndex + "/AcceptedLinearStdDevs",
+          acceptedLinearStdDevs.stream().mapToDouble(Double::doubleValue).toArray());
 
       // Log camera datadata
       Logger.recordOutput(
@@ -145,6 +172,36 @@ public class Vision extends SubsystemBase {
     Logger.recordOutput(
         "Vision/Summary/RobotPosesRejected",
         allRobotPosesRejected.toArray(new Pose3d[allRobotPosesRejected.size()]));
+  }
+
+  public boolean allCamerasConnected() {
+    for (var input : inputs) {
+      if (!input.connected) return false;
+    }
+    return true;
+  }
+
+  public int getCameraCount() {
+    return io.length;
+  }
+
+  public String getCameraName(int cameraIndex) {
+    return io[cameraIndex].getName();
+  }
+
+  /** Whether this camera saw at least one tag this loop. */
+  public boolean cameraSeesTag(int cameraIndex) {
+    return inputs[cameraIndex].tagIds.length > 0;
+  }
+
+  private static VisionFilter.Context context(PoseObservation observation, boolean disturbed) {
+    ChassisSpeeds speeds = RobotState.mInstance.getRobotVelocity();
+    return new VisionFilter.Context(
+        DriverStation.isEnabled(),
+        Math.hypot(speeds.vxMetersPerSecond, speeds.vyMetersPerSecond),
+        RobotState.mInstance.getGyroYawRateRadPerSec(),
+        Timer.getFPGATimestamp() - observation.timestamp(),
+        disturbed);
   }
 
   @FunctionalInterface

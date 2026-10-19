@@ -49,6 +49,10 @@ public class NestedInterpolatingTreeMap<K extends Comparable<K>, V> {
             InterpolatingTreeMap<K, V> m = m_map.get(ceilKey1);
             return m.get(k2);
         }
+        if (floorKey1.equals(ceilKey1)) {
+            // k1 is exactly a key: the interpolation fraction would be 0/0 = NaN
+            return m_map.get(floorKey1).get(k2);
+        }
         InterpolatingTreeMap<K, V> floorMap1 = m_map.get(floorKey1);
         InterpolatingTreeMap<K, V> ceilMap1 = m_map.get(ceilKey1);
         V floorV1 = floorMap1.get(k2);

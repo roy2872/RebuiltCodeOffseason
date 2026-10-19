@@ -28,14 +28,17 @@ import edu.wpi.first.wpilibj.smartdashboard.Field2d;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj.RobotController;
 import frc.lib.util.AllianceFlipping;
+import frc.lib.util.TunableNumber;
 import frc.robot.Constants.FieldConstants;
 import frc.robot.subsystems.drive.DriveConstants;
+import frc.robot.subsystems.shooter.ShooterConstants;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Optional;
 import org.littletonrobotics.junction.AutoLogOutput;
 import org.littletonrobotics.junction.Logger;
+import org.littletonrobotics.junction.networktables.LoggedNetworkNumber;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -69,7 +72,30 @@ public class RobotState {
   private final TimeInterpolatableBuffer<Pose2d> poseBuffer =
       TimeInterpolatableBuffer.createBuffer(POSE_BUFFER_SIZE);
 
-  private final Matrix<N3, N1> qStdDevs = new Matrix<>(Nat.N3(), Nat.N1());
+  // Odometry (process) noise. Together with the vision std devs this sets how far each vision
+  // measurement pulls the estimate. Starts from the 6328 template values; tune against logs.
+  private static final TunableNumber odometryStdDevX = new TunableNumber("RobotState/OdometryStdDevX", 0.003);
+  private static final TunableNumber odometryStdDevY = new TunableNumber("RobotState/OdometryStdDevY", 0.003);
+  private static final TunableNumber odometryStdDevTheta = new TunableNumber("RobotState/OdometryStdDevTheta", 0.002);
+
+  // The bump. While tilted, the wheels measure distance along the slope and the cameras look
+  // through a tilted mount (MegaTag2 assumes the robot is flat), so vision is rejected. Right after
+  // landing, odometry is trusted less so the first good vision poses fix what the bump did to it.
+  private static final TunableNumber tiltThresholdDegrees =
+      new TunableNumber("RobotState/Bump/TiltThresholdDegrees", 7.0);
+  private static final TunableNumber bumpRecoverySeconds =
+      new TunableNumber("RobotState/Bump/RecoverySeconds", 1.0);
+  private static final TunableNumber bumpOdometryStdDevScale =
+      new TunableNumber("RobotState/Bump/OdometryStdDevScale", 10.0);
+  /** Extra time around a tilted stretch whose images are still rejected. */
+  private static final double TILT_VISION_MARGIN_SECONDS = 0.05;
+
+  @AutoLogOutput(key = "RobotState/Bump/TiltDegrees")
+  @Getter private double tiltDegrees = 0.0;
+  private double tiltedSince = Double.NEGATIVE_INFINITY;
+  private double lastTiltedTimestamp = Double.NEGATIVE_INFINITY;
+  private double lastTiltTimestamp = 0.0;
+  private boolean wasTilted = false;
 
   private final SwerveDriveKinematics kinematics
    = new SwerveDriveKinematics(DriveConstants.moduleTranslations);
@@ -89,13 +115,13 @@ public class RobotState {
   private Field2d field;
   private boolean shootToHubElseFerry;
 
+  // Flywheel speed trim [m/s] from the dashboard. Logged, so replay uses the same values.
+  private final LoggedNetworkNumber flywheelBias =
+      new LoggedNetworkNumber("/SmartDashboard/FlywheelBias", 0.0);
+
   private RobotState() {
     field = new Field2d();
     SmartDashboard.putData("Field", field);
-    SmartDashboard.putNumber("FlywheelBias", 1.5);
-    for (int i = 0; i < 3; i++) {
-      qStdDevs.set(i, 0, Math.pow(i, i)); // change this!
-    }
   }
 
   public void resetPose(Pose2d pose) {
@@ -119,6 +145,9 @@ public class RobotState {
 
   public void addOdometryObservation(OdometryObservation observation) {
     Twist2d twist = kinematics.toTwist2d(lastWheelPosition, observation.wheelPositions());
+    // On a ramp the wheels roll along the slope; only the part along the floor moves the robot
+    double floorScale = Math.cos(Math.toRadians(tiltDegrees));
+    twist = new Twist2d(twist.dx * floorScale, twist.dy * floorScale, twist.dtheta);
     lastWheelPosition = observation.wheelPositions();
     Pose2d lastOdometryPose = odometryPose;
     odometryPose = odometryPose.exp(twist);
@@ -165,15 +194,20 @@ public class RobotState {
     for (int i = 0; i < 3; ++i) {
       r[i] = visionMeasurementStdDevs.get(i, 0) * visionMeasurementStdDevs.get(i, 0);
     }
+    double translationScale = isRecoveringFromBump() ? bumpOdometryStdDevScale.getAsDouble() : 1.0;
+    double[] q = {
+      Math.pow(odometryStdDevX.getAsDouble() * translationScale, 2),
+      Math.pow(odometryStdDevY.getAsDouble() * translationScale, 2),
+      Math.pow(odometryStdDevTheta.getAsDouble(), 2)
+    };
     // Solve for closed form Kalman gain for continuous Kalman filter with A = 0
     // and C = I. See wpimath/algorithms.md.
     Matrix<N3, N3> visionK = new Matrix<>(Nat.N3(), Nat.N3());
     for (int row = 0; row < 3; ++row) {
-      double stdDev = qStdDevs.get(row, 0);
-      if (stdDev == 0.0) {
+      if (q[row] == 0.0) {
         visionK.set(row, row, 0.0);
       } else {
-        visionK.set(row, row, stdDev / (stdDev + Math.sqrt(stdDev * r[row])));
+        visionK.set(row, row, q[row] / (q[row] + Math.sqrt(q[row] * r[row])));
       }
     }
     // difference between estimate and vision pose
@@ -194,6 +228,42 @@ public class RobotState {
     estimatedPose = estimateAtTime.plus(scaledTransform).plus(sampleToOdometryTransform);
   }
 
+
+  /**
+   * The gyro's tilt from flat, in any direction. Call every loop before adding odometry.
+   *
+   * @param timestamp FPGA seconds
+   */
+  public void updateTilt(double tiltDegrees, double timestamp) {
+    this.tiltDegrees = tiltDegrees;
+    lastTiltTimestamp = timestamp;
+    boolean tilted = isTilted();
+    if (tilted && !wasTilted) {
+      tiltedSince = timestamp;
+    }
+    if (tilted) {
+      lastTiltedTimestamp = timestamp;
+    }
+    wasTilted = tilted;
+    Logger.recordOutput("RobotState/Bump/Tilted", isTilted());
+    Logger.recordOutput("RobotState/Bump/Recovering", isRecoveringFromBump());
+  }
+
+  /** On a bump (or otherwise tipped past the threshold). */
+  public boolean isTilted() {
+    return tiltDegrees >= tiltThresholdDegrees.getAsDouble();
+  }
+
+  /** Whether an image taken at {@code timestamp} was taken while the robot was on the last bump. */
+  public boolean wasTiltedAt(double timestamp) {
+    return timestamp >= tiltedSince - TILT_VISION_MARGIN_SECONDS
+        && timestamp <= lastTiltedTimestamp + TILT_VISION_MARGIN_SECONDS;
+  }
+
+  /** Just off a bump: odometry is trusted less, so vision pulls the estimate back quickly. */
+  public boolean isRecoveringFromBump() {
+    return !isTilted() && lastTiltTimestamp - lastTiltedTimestamp < bumpRecoverySeconds.getAsDouble();
+  }
 
   public void addDriveSpeeds(ChassisSpeeds speeds) {
     robotVelocity = speeds;
@@ -274,6 +344,11 @@ public class RobotState {
     return shootToHubElseFerry;
   }
 
+  /** @param manual true for a fixed hub flywheel speed, false for the shooting table */
+  public void setManualShooting(boolean manual) {
+    DashboardOverrides.MANUAL_SHOOTING.setNow(manual);
+  }
+
   public boolean atAngle(Rotation2d targetRotation, Angle epsilon) {
     return Math.abs(getRotation().minus(targetRotation).getDegrees()) < epsilon.magnitude();
   }
@@ -283,7 +358,15 @@ public class RobotState {
    * @return a vector that consists of {Hood angle[deg], Flywheel velocity[m/s], Robot angle[deg]}
    */
   public Vector<N3> getShootInfo() {
-    return shootToHubElseFerry ? getHubShootingInfo() : getFetchingInfo();
+    if (!isShootingAtHub()) {
+      return getFetchingInfo();
+    }
+    return DashboardOverrides.VISION_FALLBACK_PRESETS.get() ? getShootCloseInfo() : getHubShootingInfo();
+  }
+
+  /** True when the current shot goes into the hub, false when ferrying (also forced by Force Ferry Mode). */
+  public boolean isShootingAtHub() {
+    return shootToHubElseFerry && !DashboardOverrides.FORCE_FERRY.get();
   }
 
   /**
@@ -296,12 +379,12 @@ public class RobotState {
         getEstimatedPose().getTranslation().getDistance(AllianceFlipping.apply(HUB_2D_COORDS.getTranslation())) + SHOOTER_DISTANCE_FROM_CENTER, 
         hubCenteredVelocity.get(0, 0));
     var shootingData = getShootingData.apply(inputVector);
+    double wheelSpeed = DashboardOverrides.MANUAL_SHOOTING.get()
+        ? 10 + flywheelBias.get()
+        : ShooterConstants.mainWheelSpeedForBallSpeed(shootingData.get(0, 0));
     return VecBuilder.fill(
         90 - shootingData.get(1, 0), // hood angle
-        // (shootingData.get(0, 0) + SmartDashboard.getNumber("FlywheelBias", 1.0))
-        //   / (Units.Inches.of(4).in(Units.Meters) * Math.PI), // flywheel velocity
-                (10 + SmartDashboard.getNumber("FlywheelBias", 1.0))
-          / (Units.Inches.of(4).in(Units.Meters) * Math.PI), // flywheel velocity,
+        wheelSpeed / (Units.Inches.of(4).in(Units.Meters) * Math.PI), // flywheel velocity
         getAngleToHub().getDegrees() // robot angle
     );
   }
@@ -309,7 +392,7 @@ public class RobotState {
     /**
    * 
    * 
-   * @return a vector that consists of {Hood angle[deg], Flywheel velocity[m/s], Robot angle[deg]}
+   * @return a vector that consists of {Hood angle[deg], Flywheel velocity[rps], Robot angle[deg]}
    */
   public Vector<N3> getShootOnTheMoveScoringInfo() {
     ChassisSpeeds robotRelativeVelocity = getRobotVelocity();
@@ -350,9 +433,11 @@ public class RobotState {
     shootingData = getShootingData.apply(inputVector);
     Rotation2d angleToHub = getAngleToHub(effectiveEstimatedPose);
 
+    // Table outputs are {ball speed [m/s], launch angle [deg], time of flight [s]}, same as getHubShootingInfo
+    double wheelSpeed = ShooterConstants.mainWheelSpeedForBallSpeed(shootingData.get(0)) + flywheelBias.get();
     return VecBuilder.fill(
-        90 - shootingData.get(0), // hood angle
-        shootingData.get(1)+ SmartDashboard.getNumber("FlywheelBias", 1.0), // flywheel velocity
+        90 - shootingData.get(1), // hood angle
+        wheelSpeed / (Units.Inches.of(4).in(Units.Meters) * Math.PI), // flywheel velocity
         angleToHub.getDegrees() // robot angle
     );
   }
@@ -365,10 +450,11 @@ public class RobotState {
   public Vector<N3> getFetchingInfo() {
     double input = getFetchingDistance();
     Double fetchVel = fetchingTableData.get(input);
+    double wheelSpeed = fetchVel == null ? 10.0 : ShooterConstants.mainWheelSpeedForBallSpeed(fetchVel);
     return VecBuilder.fill(
         90-FETCHING_ANGLE, // hood angle
-        ((fetchVel == null ? 10.0 : fetchVel.doubleValue()) + SmartDashboard.getNumber("FlywheelBias", 1.0)) 
-        / (Units.Inches.of(4).magnitude() * Math.PI), // flywheel velocity
+        (wheelSpeed + flywheelBias.get()) 
+        / (Units.Inches.of(4).in(Units.Meters) * Math.PI), // flywheel velocity
         AllianceFlipping.apply(Rotation2d.kZero).getDegrees() // robot angle
     );
   }
@@ -385,12 +471,18 @@ public class RobotState {
   }
 
   /**
-   * 
-   * 
-   * @return a vector that consists of {Hood angle[deg], Flywheel velocity[m/s], Robot angle[deg]}
+   * The fixed close-shot preset, for when vision can't be trusted. SHOOT_CLOSE_VELOCITY is a ball speed
+   * and SHOOT_CLOSE_ANGLE a launch angle, converted the same way as table shots.
+   *
+   * @return a vector that consists of {Hood angle[deg], Flywheel velocity[rps], Robot angle[deg]}
    */
   public Vector<N3> getShootCloseInfo() {
-    return VecBuilder.fill(SHOOT_CLOSE_ANGLE, SHOOT_CLOSE_VELOCITY, getAngleToHub().getDegrees());
+    double wheelSpeed = ShooterConstants.mainWheelSpeedForBallSpeed(SHOOT_CLOSE_VELOCITY) + flywheelBias.get();
+    return VecBuilder.fill(
+        90 - SHOOT_CLOSE_ANGLE, // hood angle
+        wheelSpeed / (Units.Inches.of(4).in(Units.Meters) * Math.PI), // flywheel velocity
+        getAngleToHub().getDegrees() // robot angle
+    );
   }
 
   public double getFetchingDistance() {
@@ -408,17 +500,6 @@ public class RobotState {
   public record LimelightYawObservation(
       Rotation2d yaw, double timestamp) {}
 
-  public record TxTyObservation(
-      int tagId, int camera, double[] tx, double[] ty, double distance, double timestamp) {}
-
   public record OdometryObservation(
       SwerveModulePosition[] wheelPositions, Optional<Rotation2d> gyroAngle, double timestamp) {}
-
-  // public record fuelPoseRecord(Translation2d translation, double timestamp) {}
-
-  public record TxTyPoseRecord(Pose2d pose, double distance, double timestamp) {}
-
-  public record ScoringInfo(int reefFace, boolean backside, Pose2d alignPose, Pose2d scorePose) {}
-
-  public record ReefPoseEstimate(Pose2d pose, double blend) {}
 }

@@ -9,7 +9,24 @@
     }
   ],
   "position": [0, 0, 0],
-  "cameras": [],
+  "cameras": [
+    {
+      "name": "limelight-tsachi",
+      "rotations": [
+        {
+          "axis": "y",
+          "degrees": -25
+        },
+        {
+          "axis": "z",
+          "degrees": 180
+        }
+      ],
+      "position": [-0.266, 0, 0.47],
+      "resolution": [1280, 800],
+      "fov": 82
+    }
+  ],
   "components": [
     {
       "zeroedRotations": [

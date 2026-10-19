@@ -22,8 +22,12 @@ public interface GyroIO {
     public boolean connected = false;
     public Rotation2d yawPosition = new Rotation2d();
     public double yawVelocityRadPerSec = 0.0;
-    // public double[] odometryYawTimestamps = new double[] {};
-    // public Rotation2d[] odometryYawPositions = new Rotation2d[] {};
+    // Tilt, for detecting the bump
+    public double pitchDegrees = 0.0;
+    public double rollDegrees = 0.0;
+    // High-rate odometry samples received since the last cycle
+    public double[] odometryYawTimestamps = new double[] {};
+    public Rotation2d[] odometryYawPositions = new Rotation2d[] {};
   }
 
   public default void updateInputs(GyroIOInputs inputs) {}

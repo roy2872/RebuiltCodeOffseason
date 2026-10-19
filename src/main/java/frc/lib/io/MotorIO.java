@@ -142,6 +142,13 @@ public abstract class MotorIO<C> {
   public abstract void changeFollowerConfig(UnaryOperator<C> configChanger);
 
   /**
+   * Changes the current limit of the main motor and followers while running, for power management.
+   * Unlike {@link #changeMainConfig}, it sends only the limit: no reset and no flash write, so it is
+   * safe to call during a match. Call it when the limit changes, not every loop.
+   */
+  public void setRuntimeCurrentLimit(double amps) {}
+
+  /**
    * Applies a Setpoint to the MotorIO.
    *
    * @param setpointToApply
