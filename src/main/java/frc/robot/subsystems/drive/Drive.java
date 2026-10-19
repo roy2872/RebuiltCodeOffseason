@@ -374,13 +374,6 @@ public class Drive extends SubsystemBase {
     return slowest;
   }
 
-  /** Changes every drive motor's current limits while running (power management). */
-  public void setDriveCurrentLimits(double statorAmps, double supplyAmps) {
-    for (var module : modules) {
-      module.setDriveCurrentLimits(statorAmps, supplyAmps);
-    }
-  }
-
   /** Stops the drive. */
   public void stop() {
     runVelocity(new ChassisSpeeds());

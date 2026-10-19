@@ -28,7 +28,6 @@ import frc.lib.auto.ModularAutoChooser;
 import frc.lib.util.AllianceFlipping;
 import frc.robot.auto.BumpCrossing;
 import frc.robot.auto.RebuiltAutos;
-import frc.robot.power.PowerManager;
 import java.util.Optional;
 import frc.lib.util.TableLoader;
 import frc.lib.visualization.RobotVisualizer;
@@ -208,7 +207,6 @@ public class RobotContainer {
     DashboardOverrides.periodic();
     HubShiftTracker.mInstance.periodic();
     autoChooser.periodic();
-    PowerManager.mInstance.periodic();
     RobotState.mInstance.periodic();
     RobotVisualizer.mInstance.periodic();
   }

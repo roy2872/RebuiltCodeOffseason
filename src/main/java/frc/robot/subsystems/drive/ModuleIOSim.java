@@ -134,12 +134,6 @@ public class ModuleIOSim implements ModuleIO {
   }
 
   @Override
-  public void setDriveCurrentLimits(double statorAmps, double supplyAmps) {
-    // maple-sim models one (stator) limit
-    driveMotor.withCurrentLimit(Amps.of(statorAmps));
-  }
-
-  @Override
   public void setTurnPosition(Rotation2d rotation) {
     turnClosedLoop = true;
     turnController.setSetpoint(rotation.getRadians());

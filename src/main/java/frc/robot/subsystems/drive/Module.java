@@ -89,11 +89,6 @@ public class Module {
     io.setTurnPosition(new Rotation2d());
   }
 
-  /** Changes the drive motor current limits while running (power management). */
-  public void setDriveCurrentLimits(double statorAmps, double supplyAmps) {
-    io.setDriveCurrentLimits(statorAmps, supplyAmps);
-  }
-
   /** Disables all outputs to motors. */
   public void stop() {
     io.setDriveOpenLoop(0.0);

@@ -18,7 +18,6 @@ import static frc.lib.util.PhoenixUtil.*;
 import com.ctre.phoenix6.BaseStatusSignal;
 import com.ctre.phoenix6.StatusSignal;
 import com.ctre.phoenix6.configs.CANcoderConfiguration;
-import com.ctre.phoenix6.configs.CurrentLimitsConfigs;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
 import com.ctre.phoenix6.controls.PositionTorqueCurrentFOC;
 import com.ctre.phoenix6.controls.PositionVoltage;
@@ -249,19 +248,5 @@ public class ModuleIOTalonFX implements ModuleIO {
   @Override
   public void setTurnPosition(Rotation2d rotation) {
     turnTalon.setControl(positionVoltageRequest.withPosition(rotation.getRotations()));
-  }
-
-  @Override
-  public void setDriveCurrentLimits(double statorAmps, double supplyAmps) {
-    // Only the current limit group, without waiting, so it doesn't stall the main loop
-    driveTalon
-        .getConfigurator()
-        .apply(
-            new CurrentLimitsConfigs()
-                .withStatorCurrentLimit(statorAmps)
-                .withStatorCurrentLimitEnable(true)
-                .withSupplyCurrentLimit(supplyAmps)
-                .withSupplyCurrentLimitEnable(true),
-            0.0);
   }
 }

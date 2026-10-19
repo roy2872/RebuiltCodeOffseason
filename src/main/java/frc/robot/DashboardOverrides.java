@@ -31,16 +31,11 @@ public final class DashboardOverrides {
   public static final OverrideSwitch MANUAL_SHOOTING = new OverrideSwitch("Manual Shooting", true, false);
   /** The shoot button ferries instead of scoring in the hub. */
   public static final OverrideSwitch FORCE_FERRY = new OverrideSwitch("Force Ferry Mode", false, true);
-  /** Drive power profile for playing defense (see PowerManager). */
-  public static final OverrideSwitch DEFENSE_MODE = new OverrideSwitch("Defense Mode", false, true);
   /** Driver translation is robot relative instead of field relative. */
   public static final OverrideSwitch ROBOT_RELATIVE = new OverrideSwitch("Robot Relative Drive", false, true);
   /** Shooting does not turn the robot toward the target; the driver aims and feeding doesn't wait on heading. */
   public static final OverrideSwitch DISABLE_SHOOT_AUTO_ALIGN =
       new OverrideSwitch("Disable Shoot Auto Align", false, true);
-  /** Current limits stay at their static constants values. */
-  public static final OverrideSwitch DISABLE_POWER_MANAGER =
-      new OverrideSwitch("Disable Power Manager", false, true);
 
   // One-shot buttons: they turn themselves back off once their command starts
   public static final OverrideSwitch INTAKE_FORCE_HOME = new OverrideSwitch("Intake Force Home", false, false);
