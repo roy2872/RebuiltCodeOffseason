@@ -77,8 +77,8 @@ public class IntakeDeployConstants {
 
     config
         .idleMode(IdleMode.kCoast)
-        .smartCurrentLimit(20)
-        .secondaryCurrentLimit(30)
+        .smartCurrentLimit(40)
+        .secondaryCurrentLimit(50)
         .inverted(false);
 
     // // 1. Configure Absolute Encoder Settings
