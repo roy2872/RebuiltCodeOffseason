@@ -44,11 +44,16 @@ public class SuperStructure extends SubsystemBase {
   }
 
   public Command intakeForceHomeCommand() {
-    return IntakeDeploy.mInstance.runEnd(
-            // Drive toward the stow hard stop for a bounded time.
-            () -> IntakeDeploy.mInstance.applySetpoint(Setpoint.withVoltageSetpoint(Volts.of(-9.0))),
-            // Always neutral the motor first, including when canceled.
-            () -> IntakeDeploy.mInstance.applySetpoint(Setpoint.withNeutralSetpoint())
+    return Commands.parallel(
+            IntakeDeploy.mInstance.runEnd(
+                // Drive toward the stow hard stop for a bounded time.
+                () -> IntakeDeploy.mInstance.applySetpoint(Setpoint.withVoltageSetpoint(Volts.of(-9.0))),
+                // Always neutral the motor first, including when canceled.
+                () -> IntakeDeploy.mInstance.applySetpoint(Setpoint.withNeutralSetpoint())),
+            // Spin the rollers backwards at intake speed while homing.
+            IntakeRollers.mInstance.runEnd(
+                () -> IntakeRollers.mInstance.applySetpoint(IntakeRollers.HOMING_REVERSE),
+                () -> IntakeRollers.mInstance.applySetpoint(IntakeRollers.IDLE))
         )
         // runEnd() does not finish by itself; make this command end after one second.
         .withTimeout(1.0)
@@ -132,7 +137,7 @@ public Command stopCloseIntakeCommand() {
 							Feeder.mInstance.applySetpoint(Feeder.IDLE);
 						}),
 						Shooter.mInstance.followSetpointCommand(
-								() -> Setpoint.withVelocitySetpoint(
+								() -> Setpoint.withMotionMagicVelocitySetpoint(
 									Units.RotationsPerSecond.of(RobotState.mInstance.getShootInfo().get(1)))),
 						Hood.mInstance.followSetpointCommand(() -> 
 							Setpoint.withPositionSetpoint(
@@ -150,7 +155,7 @@ public Command stopCloseIntakeCommand() {
 								}
 								),
 								Commands.parallel(
-									Feeder.mInstance.setpointCommand(Feeder.FEED_VOLTAGE)
+									Feeder.mInstance.followSetpointCommand(Feeder.mInstance::getFeedVoltageSetpoint)
 									// Drive x pose
 
 								)))

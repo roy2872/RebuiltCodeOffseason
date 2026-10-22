@@ -1,5 +1,6 @@
 package frc.lib.io;
 
+import edu.wpi.first.units.Unit;
 import edu.wpi.first.units.AngleUnit;
 import edu.wpi.first.units.AngularVelocityUnit;
 import edu.wpi.first.units.BaseUnits;
@@ -114,6 +115,25 @@ public abstract class MotorIO<C> {
   protected abstract void setVelocitySetpoint(AngularVelocity mechanismVelocity);
 
   /**
+   * Sets the motor to go to a given velocity, ramping there with a motion profile (MAXMotion on
+   * SPARKs) instead of jumping straight to it. Should not be called directly, only applied through
+   * Setpoints. MotorIOs without profiled velocity control fall back to plain velocity control.
+   *
+   * @param mechanismVelocity Mechanism velocity to go to.
+   * @param slot The PID slot to assign
+   */
+  protected void setMotionMagicVelocitySetpoint(AngularVelocity mechanismVelocity, int slot) {
+    setVelocitySetpoint(mechanismVelocity, slot);
+  }
+
+  /**
+   * Same as {@link #setMotionMagicVelocitySetpoint(AngularVelocity, int)}. DEFAULTS TO SLOT 1
+   */
+  protected void setMotionMagicVelocitySetpoint(AngularVelocity mechanismVelocity) {
+    setMotionMagicVelocitySetpoint(mechanismVelocity, 1);
+  }
+
+  /**
    * Sets the motor to run at a percentage of it's max voltage. Should not be called directly, only applied through Setpoints.
    *
    * @param percent Percentage of max voltage to run at.
@@ -149,6 +169,26 @@ public abstract class MotorIO<C> {
   public abstract void changeMainConfig(UnaryOperator<C> configChanger);
 
   public abstract void changeFollowerConfig(UnaryOperator<C> configChanger);
+
+  /** Closed loop gains of one PID slot, in the motor controller's own units. */
+  public record Gains(double kP, double kI, double kD, double kV, double kS, double kG) {
+    public static final Gains ZERO = new Gains(0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
+  }
+
+  /**
+   * Reads the gains currently configured on the main motor. Used as the starting values for tuning.
+   * MotorIOs that don't support live tuning return zeros.
+   */
+  public Gains getGains(int slot) {
+    return Gains.ZERO;
+  }
+
+  /**
+   * Sends new gains for one slot to the main motor (followers don't run closed loop). Must only
+   * change the gains, so follow settings and current limits stay. MotorIOs that don't support live
+   * tuning ignore this.
+   */
+  public void setGains(int slot, Gains gains) {}
 
   /**
    * Applies a Setpoint to the MotorIO.
@@ -299,6 +339,22 @@ public abstract class MotorIO<C> {
   }
 
   /**
+   * Gets the unit of {@link Setpoint#baseUnits} for the current setpoint. These are the same base
+   * units AdvantageKit logs the Inputs in (rad, rad/s, V), so the two can be graphed together.
+   *
+   * @return Unit of the setpoint's base units, or null when idle.
+   */
+  public Unit getSetpointBaseUnit() {
+    return switch (getSetpoint().mode) {
+      case POSITIONPID, MOTIONMAGIC -> BaseUnits.AngleUnit;
+      case VELOCITY, MOTIONMAGIC_VELOCITY -> BaseUnits.AngleUnit.per(Units.Second);
+      case VOLTAGE -> BaseUnits.VoltageUnit;
+      case DUTY_CYCLE -> Units.Value;
+      default -> null;
+    };
+  }
+
+  /**
    * Gets the current setpoint value of the MotorIO using units of the MotorIO.
    *
    * @return Setpoint in mechanism units.
@@ -311,6 +367,7 @@ public abstract class MotorIO<C> {
         AngleUnit positionUnit = unitType;
         return positionUnit.ofBaseUnits(currentSetpoint.baseUnits).in(positionUnit);
       case VELOCITY:
+      case MOTIONMAGIC_VELOCITY:
         AngularVelocityUnit velocityUnit = unitType.per(time);
         return velocityUnit.ofBaseUnits(currentSetpoint.baseUnits).in(velocityUnit);
       case VOLTAGE:
@@ -342,6 +399,7 @@ public abstract class MotorIO<C> {
     VOLTAGE,
     MOTIONMAGIC,
     VELOCITY,
+    MOTIONMAGIC_VELOCITY,
     DUTY_CYCLE,
     POSITIONPID;
 
@@ -354,7 +412,7 @@ public abstract class MotorIO<C> {
 
     public boolean isVelocityControl() {
       return switch (this) {
-        case VELOCITY -> true;
+        case VELOCITY, MOTIONMAGIC_VELOCITY -> true;
         default -> false;
       };
     }
@@ -437,6 +495,24 @@ public abstract class MotorIO<C> {
         return io;
       };
       return new Setpoint<>(applier, Mode.VELOCITY, velocitySetpoint.baseUnitMagnitude());
+    }
+
+    @SuppressWarnings("unchecked")
+    public static <C> Setpoint<C> withMotionMagicVelocitySetpoint(AngularVelocity velocitySetpoint) {
+      UnaryOperator<MotorIO<C>> applier = (MotorIO<C> io) -> {
+        io.setMotionMagicVelocitySetpoint(velocitySetpoint);
+        return io;
+      };
+      return new Setpoint<>(applier, Mode.MOTIONMAGIC_VELOCITY, velocitySetpoint.baseUnitMagnitude());
+    }
+
+    @SuppressWarnings("unchecked")
+    public static <C> Setpoint<C> withMotionMagicVelocitySetpoint(AngularVelocity velocitySetpoint, int slot) {
+      UnaryOperator<MotorIO<C>> applier = (MotorIO<C> io) -> {
+        io.setMotionMagicVelocitySetpoint(velocitySetpoint, slot);
+        return io;
+      };
+      return new Setpoint<>(applier, Mode.MOTIONMAGIC_VELOCITY, velocitySetpoint.baseUnitMagnitude());
     }
 
     @SuppressWarnings("unchecked")

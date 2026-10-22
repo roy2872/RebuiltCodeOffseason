@@ -42,6 +42,8 @@ public class MotorIOSparkMax extends MotorIO<SparkMaxConfig> {
     private ThreadPoolExecutor threadPoolExecutor =
             new ThreadPoolExecutor(1, 1, 5, java.util.concurrent.TimeUnit.MILLISECONDS, queue);
     private boolean configFailed = false;
+    // Gains each slot was configured with, so tuning starts from them without reading over CAN
+    private final Gains[] slotGains;
 
     public void applyConfig(SparkMax spark, SparkMaxConfig config) {
         threadPoolExecutor.submit(() -> {
@@ -126,6 +128,11 @@ public class MotorIOSparkMax extends MotorIO<SparkMaxConfig> {
     }
 
     @Override
+    protected void setMotionMagicVelocitySetpoint(AngularVelocity mechanismVelocity, int slot) {
+        modeSetter.setMAXMotionVelocity(main, mechanismVelocity, slot);
+    }
+
+    @Override
     protected void setPositionSetpoint(Angle mechanismPosition) {
         setPositionSetpoint(mechanismPosition, 2);
     }
@@ -196,6 +203,50 @@ public class MotorIOSparkMax extends MotorIO<SparkMaxConfig> {
     }
 
     @Override
+    public Gains getGains(int slot) {
+        if (slotGains[slot] != null) {
+            return slotGains[slot];
+        }
+        // Slot wasn't given in MotorIOSparkMaxConfig.gains, so read it from the motor.
+        // Configs are applied on the executor thread, so wait for the queued ones or this reads old gains
+        try {
+            threadPoolExecutor.submit(() -> {}).get();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        } catch (java.util.concurrent.ExecutionException e) {
+            // The empty task can't fail
+        }
+        ClosedLoopSlot clSlot = getClosedLoopSlot(slot);
+        var closedLoop = main.configAccessor.closedLoop;
+        return new Gains(
+                closedLoop.getP(clSlot),
+                closedLoop.getI(clSlot),
+                closedLoop.getD(clSlot),
+                closedLoop.feedForward.getkV(clSlot),
+                closedLoop.feedForward.getkS(clSlot),
+                closedLoop.feedForward.getkG(clSlot));
+    }
+
+    @Override
+    public void setGains(int slot, Gains gains) {
+        slotGains[slot] = gains;
+        // Kept in the stored config too, so a later full configure doesn't undo the tuning
+        applyGainsTo(config, slot, gains);
+
+        // Only the gains are sent, without resetting or persisting, same as setSupplyCurrentLimit
+        SparkMaxConfig gainsOnly = new SparkMaxConfig();
+        applyGainsTo(gainsOnly, slot, gains);
+        main.configureAsync(gainsOnly, ResetMode.kNoResetSafeParameters, PersistMode.kNoPersistParameters);
+    }
+
+    /** Writes gains into a config, always on the given slot (a slot-less kV(...) silently goes to slot 0). */
+    private static void applyGainsTo(SparkMaxConfig sparkConfig, int slot, Gains gains) {
+        ClosedLoopSlot clSlot = getClosedLoopSlot(slot);
+        sparkConfig.closedLoop.pid(gains.kP(), gains.kI(), gains.kD(), clSlot)
+                .feedForward.kV(gains.kV(), clSlot).kS(gains.kS(), clSlot).kG(gains.kG(), clSlot);
+    }
+
+    @Override
     public SparkMaxConfig getMotorIOConfig() {
         return config;
     }
@@ -232,6 +283,12 @@ public class MotorIOSparkMax extends MotorIO<SparkMaxConfig> {
         super(config.unit, config.time, config.followerIDs.length);
         modeSetter = config.modeSetter;
         main = new SparkMax(config.mainID, MotorType.kBrushless);
+        slotGains = config.gains.clone();
+        for (int slot = 0; slot < slotGains.length; slot++) {
+            if (slotGains[slot] != null) {
+                applyGainsTo(config.mainConfig, slot, slotGains[slot]);
+            }
+        }
         setMainConfig(config.mainConfig);
 
         followers = new SparkMax[config.followerIDs.length];
@@ -279,6 +336,9 @@ public class MotorIOSparkMax extends MotorIO<SparkMaxConfig> {
         public MotorAlignmentValue[] followerAlignment = new MotorAlignmentValue[0]; // Mapped replacement array
         public SparkMaxConfig followerConfig = new SparkMaxConfig();
         public ControlModeSetter modeSetter = new ControlModeSetter();
+        // Gains per slot (index = slot number). Applied to mainConfig on the right slot and used as
+        // the tuning start values. Leave a slot null to configure it in mainConfig instead
+        public Gains[] gains = new Gains[4];
     }
 
     public static class ControlModeSetter {
@@ -302,6 +362,14 @@ public class MotorIOSparkMax extends MotorIO<SparkMaxConfig> {
             spark.getClosedLoopController().setSetpoint(
                     mechanismVelocity.in(AngularVelocityUnit.combine(Rotation, Minute)), 
                     ControlType.kVelocity, 
+                    getClosedLoopSlot(slot)
+            );
+        }
+
+        public void setMAXMotionVelocity(SparkMax spark, AngularVelocity mechanismVelocity, int slot) {
+            spark.getClosedLoopController().setSetpoint(
+                    mechanismVelocity.in(AngularVelocityUnit.combine(Rotation, Minute)), 
+                    ControlType.kMAXMotionVelocityControl, 
                     getClosedLoopSlot(slot)
             );
         }

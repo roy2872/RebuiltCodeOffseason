@@ -2,11 +2,11 @@ package frc.lib.bases;
 
 import static edu.wpi.first.units.Units.Amps;
 
+import edu.wpi.first.units.Unit;
 import edu.wpi.first.units.measure.Angle;
 import edu.wpi.first.units.measure.AngularVelocity;
 import edu.wpi.first.units.measure.Current;
 import edu.wpi.first.units.measure.Voltage;
-import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
@@ -19,7 +19,6 @@ import frc.lib.util.power.PowerConsumer;
 import frc.lib.util.power.PowerManager;
 import frc.lib.util.power.PowerPriority;
 import java.util.function.Supplier;
-import java.util.function.UnaryOperator;
 import org.littletonrobotics.junction.Logger;
 
 /**
@@ -32,27 +31,10 @@ public class MotorSubsystem<C, IO extends MotorIO<C>> extends SubsystemBase impl
     protected final String name;
     protected boolean tuningMode = false;
     
-    // Tunable Number Usage
-    protected TunableNumber kP0;
-    protected TunableNumber kI0;
-    protected TunableNumber kD0;
-    protected TunableNumber kV0;
-    protected TunableNumber kS0;
-    protected TunableNumber kG0;
-
-    protected TunableNumber kP1;
-    protected TunableNumber kI1;
-    protected TunableNumber kD1;
-    protected TunableNumber kV1;
-    protected TunableNumber kS1;
-    protected TunableNumber kG1;
-
-    protected TunableNumber kP2;
-    protected TunableNumber kI2;
-    protected TunableNumber kD2;
-    protected TunableNumber kV2;
-    protected TunableNumber kS2;
-    protected TunableNumber kG2;
+    // Tunable gains, one row per PID slot: kP, kI, kD, kV, kS, kG
+    private static final int TUNABLE_SLOTS = 3;
+    private static final String[] GAIN_NAMES = {"kP", "kI", "kD", "kV", "kS", "kG"};
+    protected TunableNumber[][] tunableGains = null;
 
     /**
      * Creates a MotorSubsystem with a MotorIO and name for telemetry.
@@ -73,54 +55,40 @@ public class MotorSubsystem<C, IO extends MotorIO<C>> extends SubsystemBase impl
     }
 
     /**
-     * Note: If your MotorIO abstract base class handles PID tracking across hardware via methods 
-     * like getSlot0kP(), getSlot0kI(), etc., replace the direct hardware object calls below with those.
-     * * If you prefer changing the hardware configuration blocks entirely out of this layer, 
-     * this method can be overriden or delegated to a custom vendor-specific implementation.
+     * Publishes the gains of every slot as TunableNumbers under "TunableNumbers/<name>/Slot<n>/",
+     * starting from the gains configured on the motor.
      */
     public void tuning(String name) {
-        if (DriverStation.isDisabled() && tuningMode) {
-            // Placeholder: Accessing parameters through universal abstractions or reflections 
-            // is best handled via base methods in MotorIO if direct dot notation is needed.
-            kP0 = new TunableNumber(name + "kP0", 0.0);
-            kI0 = new TunableNumber(name + "kI0", 0.0);
-            kD0 = new TunableNumber(name + "kD0", 0.0);
-            kV0 = new TunableNumber(name + "kV0", 0.0);
-            kS0 = new TunableNumber(name + "kS0", 0.0);
-            kG0 = new TunableNumber(name + "kG0", 0.0);
-
-            kP1 = new TunableNumber(name + "kP1", 0.0);
-            kI1 = new TunableNumber(name + "kI1", 0.0);
-            kD1 = new TunableNumber(name + "kD1", 0.0);
-            kV1 = new TunableNumber(name + "kV1", 0.0);
-            kS1 = new TunableNumber(name + "kS1", 0.0);
-            kG1 = new TunableNumber(name + "kG1", 0.0);
-
-            kP2 = new TunableNumber(name + "kP2", 0.0);
-            kI2 = new TunableNumber(name + "kI2", 0.0);
-            kD2 = new TunableNumber(name + "kD2", 0.0);
-            kV2 = new TunableNumber(name + "kV2", 0.0);
-            kS2 = new TunableNumber(name + "kS2", 0.0);
-            kG2 = new TunableNumber(name + "kG2", 0.0);
-        } else {
-            kP0 = null; kI0 = null; kD0 = null; kV0 = null; kS0 = null; kG0 = null;
-            kP1 = null; kI1 = null; kD1 = null; kV1 = null; kS1 = null; kG1 = null;
-            kP2 = null; kI2 = null; kD2 = null; kV2 = null; kS2 = null; kG2 = null;
+        if (!tuningMode) {
+            tunableGains = null;
+            return;
+        }
+        tunableGains = new TunableNumber[TUNABLE_SLOTS][];
+        for (int slot = 0; slot < TUNABLE_SLOTS; slot++) {
+            MotorIO.Gains gains = io.getGains(slot);
+            double[] values = {gains.kP(), gains.kI(), gains.kD(), gains.kV(), gains.kS(), gains.kG()};
+            tunableGains[slot] = new TunableNumber[GAIN_NAMES.length];
+            for (int i = 0; i < GAIN_NAMES.length; i++) {
+                tunableGains[slot][i] = new TunableNumber(name + "/Slot" + slot + "/" + GAIN_NAMES[i], values[i]);
+            }
         }
     }
 
-    /**
-     * Utilizes the Tunable Numbers across hardware generic boundaries.
-     * Concrete implementations can override this if direct field mutators are used.
-     */
+    /** Sends the tuned gains of every slot that changed on the dashboard to the motor. */
     public void useTunableNumbers() {
-        UnaryOperator<C> configChanger = (C config) -> {
-            // Implement universal settings conversions or override in concrete device subsystems
-            return config;
-        };
-
-        io.changeMainConfig(configChanger);
-        io.changeFollowerConfig(configChanger);
+        for (int slot = 0; slot < TUNABLE_SLOTS; slot++) {
+            TunableNumber[] g = tunableGains[slot];
+            boolean changed = false;
+            for (TunableNumber gain : g) {
+                // No short circuit, every gain has to update its last value
+                changed |= gain.hasChanged();
+            }
+            if (changed) {
+                io.setGains(slot, new MotorIO.Gains(
+                        g[0].getAsDouble(), g[1].getAsDouble(), g[2].getAsDouble(),
+                        g[3].getAsDouble(), g[4].getAsDouble(), g[5].getAsDouble()));
+            }
+        }
     }
 
     @Override
@@ -129,29 +97,16 @@ public class MotorSubsystem<C, IO extends MotorIO<C>> extends SubsystemBase impl
         io.logInputs(name + "/Inputs");
         Logger.recordOutput(name + "/Enabled", io.getEnabled());
         Logger.recordOutput(name + "/Setpoint/Mode", io.getSetpoint().mode);
-        Logger.recordOutput(name + "/Setpoint/Value", io.getSetpointDoubleInUnits());
+        // Logged in the same base units as the Inputs (rad, rad/s, V), so it lines up with them on a graph
+        Unit setpointUnit = io.getSetpointBaseUnit();
+        if (setpointUnit != null) {
+            Logger.recordOutput(name + "/Setpoint/Value", io.getSetpoint().baseUnits, setpointUnit);
+        } else {
+            Logger.recordOutput(name + "/Setpoint/Value", io.getSetpoint().baseUnits);
+        }
         outputTelemetry();
-        if (DriverStation.isDisabled() && tuningMode) {
-            if (kP0.hasChanged()
-                    || kI0.hasChanged()
-                    || kD0.hasChanged()
-                    || kV0.hasChanged()
-                    || kS0.hasChanged()
-                    || kG0.hasChanged()
-                    || kP1.hasChanged()
-                    || kI1.hasChanged()
-                    || kD1.hasChanged()
-                    || kV1.hasChanged()
-                    || kS1.hasChanged()
-                    || kG1.hasChanged()
-                    || kP2.hasChanged()
-                    || kI2.hasChanged()
-                    || kD2.hasChanged()
-                    || kV2.hasChanged()
-                    || kS2.hasChanged()
-                    || kG2.hasChanged()) {
-                useTunableNumbers();
-            }
+        if (tuningMode) {
+            useTunableNumbers();
         }
     }
 

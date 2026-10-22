@@ -13,10 +13,10 @@ import frc.lib.util.power.PowerPriority;
 public class Shooter extends FlywheelMotorSubsystem<SparkMaxConfig, MotorIOSparkMax> {
 
   // Specify the explicit unit generic type (AngularVelocity) to prevent raw setpoint warnings
-  public static final Setpoint<AngularVelocity> TESTSHOT = Setpoint.withVelocitySetpoint(ShooterConstants.kTestShot, 1);
+  public static final Setpoint<AngularVelocity> TESTSHOT = Setpoint.withMotionMagicVelocitySetpoint(ShooterConstants.kTestShot, ShooterConstants.kVelocitySlot);
   public static final Setpoint<AngularVelocity> IDLE = Setpoint.withNeutralSetpoint();
-  public static final Setpoint<AngularVelocity> FERRY = Setpoint.withVelocitySetpoint(ShooterConstants.kFerry, 1);
-  public static final Setpoint<AngularVelocity> SLOW = Setpoint.withVelocitySetpoint(ShooterConstants.kSlow);
+  public static final Setpoint<AngularVelocity> FERRY = Setpoint.withMotionMagicVelocitySetpoint(ShooterConstants.kFerry, ShooterConstants.kVelocitySlot);
+  public static final Setpoint<AngularVelocity> SLOW = Setpoint.withMotionMagicVelocitySetpoint(ShooterConstants.kSlow);
 
   public static final Shooter mInstance = new Shooter();
 

@@ -14,6 +14,9 @@ public class IntakeRollers extends MotorSubsystem<TalonSRXConfiguration, MotorIO
 	public static final Setpoint<Voltage> INTAKE = Setpoint.withVoltageSetpoint(IntakeRollersConstants.INTAKE_VOLTAGE);
     public static final Setpoint<Voltage> INTAKE_WHILE_CLOSING = Setpoint.withVoltageSetpoint(Volts.of(4));
 	public static final Setpoint<Voltage> OUTTAKE = Setpoint.withVoltageSetpoint(IntakeRollersConstants.OUTTAKE_VOLTAGE);
+	// Intake speed in the opposite direction, used while the intake force-homes
+	public static final Setpoint<Voltage> HOMING_REVERSE =
+			Setpoint.withVoltageSetpoint(IntakeRollersConstants.INTAKE_VOLTAGE.unaryMinus());
 
     public static final IntakeRollers mInstance = new IntakeRollers();
 

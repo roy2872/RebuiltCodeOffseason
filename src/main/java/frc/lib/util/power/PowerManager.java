@@ -16,6 +16,7 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import frc.lib.util.TunableNumber;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.DoubleSupplier;
 import org.littletonrobotics.junction.Logger;
 
 /**
@@ -78,7 +79,7 @@ public class PowerManager {
 	private final List<Entry> entries = new ArrayList<>();
 	private final LinearFilter voltageFilter = LinearFilter.movingAverage(5);
 	private final LinearFilter currentFilter = LinearFilter.movingAverage(5);
-	private PowerDistribution powerDistribution = null;
+	private DoubleSupplier totalCurrentSupplier = null;
 	private boolean filtersPrimed = false;
 	private boolean shedding = false;
 
@@ -136,7 +137,12 @@ public class PowerManager {
 	 * consumers' own measurements, which misses unmanaged loads (roboRIO, radio, steer motors...).
 	 */
 	public void usePowerDistribution(PowerDistribution powerDistribution) {
-		this.powerDistribution = powerDistribution;
+		this.totalCurrentSupplier = powerDistribution::getTotalCurrent;
+	}
+
+	/** Same as {@link #usePowerDistribution}, for when the PDH is already owned elsewhere (e.g. AdvantageKit). */
+	public void useTotalCurrentSupplier(DoubleSupplier totalCurrentSupplier) {
+		this.totalCurrentSupplier = totalCurrentSupplier;
 	}
 
 	public PowerState getState() {
@@ -153,7 +159,7 @@ public class PowerManager {
 		for (Entry entry : entries) {
 			consumersAmps += Math.abs(entry.consumer.getSupplyCurrentAmps());
 		}
-		double rawCurrent = powerDistribution != null ? powerDistribution.getTotalCurrent() : consumersAmps;
+		double rawCurrent = totalCurrentSupplier != null ? totalCurrentSupplier.getAsDouble() : consumersAmps;
 		if (RobotBase.isSimulation()) {
 			RoboRioSim.setVInVoltage(BatterySim.calculateDefaultBatteryLoadedVoltage(rawCurrent));
 		}

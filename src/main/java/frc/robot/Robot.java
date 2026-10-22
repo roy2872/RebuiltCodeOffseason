@@ -21,13 +21,13 @@ import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import frc.lib.util.CANBusStatusLogger;
 import frc.lib.util.power.PowerManager;
-import edu.wpi.first.wpilibj.PowerDistribution;
 import edu.wpi.first.wpilibj.PowerDistribution.ModuleType;
 
 import static edu.wpi.first.units.Units.Volts;
 
 import org.littletonrobotics.junction.AutoLogOutputManager;
 import org.littletonrobotics.junction.LogFileUtil;
+import org.littletonrobotics.conduit.ConduitApi;
 import org.littletonrobotics.junction.LoggedPowerDistribution;
 import org.littletonrobotics.junction.LoggedRobot;
 import org.littletonrobotics.junction.Logger;
@@ -106,7 +106,8 @@ public class Robot extends LoggedRobot {
     AutoLogOutputManager.addObject(RobotState.mInstance);
     RobotController.setBrownoutVoltage(Volts.of(5.5));
     if (Constants.currentMode == Constants.Mode.REAL) {
-      PowerManager.mInstance.usePowerDistribution(new PowerDistribution(1, ModuleType.kRev));
+      // The PDH is owned by LoggedPowerDistribution, so read its logged total current instead of opening it again
+      PowerManager.mInstance.useTotalCurrentSupplier(ConduitApi.getInstance()::getPDPTotalCurrent);
     }
     SmartDashboard.putData("Intake Force Home and Zero", SuperStructure.mInstance.intakeForceHomeCommand());
 
