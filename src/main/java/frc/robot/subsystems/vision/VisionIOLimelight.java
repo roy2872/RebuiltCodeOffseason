@@ -11,8 +11,6 @@ import edu.wpi.first.networktables.NetworkTable;
 import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.wpilibj.Timer;
 import frc.lib.util.LimelightHelpers;
-import frc.robot.RobotState;
-import frc.robot.RobotState.LimelightYawObservation;
 import frc.robot.subsystems.vision.VisionRoiController.Capabilities;
 import frc.robot.subsystems.vision.VisionRoiController.CropWindow;
 import frc.robot.subsystems.vision.VisionRoiController.Frame;
@@ -57,7 +55,9 @@ public class VisionIOLimelight implements VisionIO {
 
   private final DoubleArrayPublisher orientationPublisher;
   private final DoubleArraySubscriber megatag1Subscriber;
+  private final DoubleArraySubscriber megatag2Subscriber;
   private final DoubleSubscriber heartbeatSubscriber;
+  private final CameraModel model;
 
   private double lastHeartbeat = -1.0;
   private double lastHeartbeatChangeTime = Double.NEGATIVE_INFINITY;
@@ -86,17 +86,32 @@ public class VisionIOLimelight implements VisionIO {
     table = NetworkTableInstance.getDefault().getTable(name);
     orientationPublisher = table.getDoubleArrayTopic("robot_orientation_set").publish();
     megatag1Subscriber = table.getDoubleArrayTopic("botpose_wpiblue").subscribe(new double[] {});
+    megatag2Subscriber =
+        table.getDoubleArrayTopic("botpose_orb_wpiblue").subscribe(new double[] {});
     heartbeatSubscriber = table.getDoubleTopic("hb").subscribe(-1.0);
+    this.model = config.model();
 
     LimelightHelpers.setPipelineIndex(name, options.pipelineIndex());
+    if (VisionConstants.ignoredTagIds.length > 0) {
+      // Filtered on the camera, so ignored tags never enter a solve
+      LimelightHelpers.SetFiducialIDFiltersOverride(name, VisionConstants.allowedTagIds());
+    }
     applyCameraSettings(CropWindow.FULL, roiController.initialDownscale());
   }
 
   @Override
   public void updateInputs(VisionIOInputs inputs) {
     double now = Timer.getFPGATimestamp();
+    // Heading and yaw rate for MegaTag2: [yaw, yawRate, pitch, pitchRate, roll, rollRate] in deg
     orientationPublisher.accept(
-        new double[] {rotationSupplier.get().getDegrees(), 0.0, 0.0, 0.0, 0.0, 0.0});
+        new double[] {
+          rotationSupplier.get().getDegrees(),
+          Math.toDegrees(motionSupplier.get().gyroOmegaRadPerSec()),
+          0.0,
+          0.0,
+          0.0,
+          0.0
+        });
 
     double heartbeat = heartbeatSubscriber.get();
     if (heartbeat != lastHeartbeat) {
@@ -107,6 +122,7 @@ public class VisionIOLimelight implements VisionIO {
 
     Set<Integer> tagIds = new HashSet<>();
     List<PoseObservation> poseObservations = new LinkedList<>();
+    List<YawObservation> yawObservations = new ArrayList<>();
     List<Frame> frames = new ArrayList<>();
 
     for (var rawResult : megatag1Subscriber.readQueue()) {
@@ -116,10 +132,9 @@ public class VisionIOLimelight implements VisionIO {
       }
 
       // Latency-compensated FPGA timestamp of the image capture (seconds)
-      double captureTimestampFPGA = rawResult.timestamp * 1.0e-6 - values[6] * 1.0e-3;
+      double captureTimestampFPGA = captureTimestamp(rawResult.timestamp, values);
 
       List<TagSample> tags = new ArrayList<>();
-      double minTagDistance = Double.POSITIVE_INFINITY;
       for (int i = BOTPOSE_HEADER_LENGTH;
           i + BOTPOSE_VALUES_PER_TAG <= values.length;
           i += BOTPOSE_VALUES_PER_TAG) {
@@ -128,38 +143,43 @@ public class VisionIOLimelight implements VisionIO {
             new TagSample((int) values[i], values[i + 1], values[i + 2], values[i + 3], values[i + 4]);
         tags.add(tag);
         tagIds.add(tag.id());
-        minTagDistance = Math.min(minTagDistance, tag.distanceMeters());
       }
       frames.add(new Frame(captureTimestampFPGA, tags));
 
-      int tagCount = (int) values[7];
-      if (tagCount == 0) {
+      PoseObservation observation =
+          toObservation(values, captureTimestampFPGA, ObservationType.MEGATAG_1);
+      if (observation == null) {
         continue;
       }
+      poseObservations.add(observation);
 
-      Pose3d pose = parsePose(values);
-      poseObservations.add(
-          new PoseObservation(
-              captureTimestampFPGA,
-              pose,
-              values.length >= 18 ? values[17] : 0.0,
-              tagCount,
-              values[9],
-              tags.isEmpty() ? values[9] : minTagDistance,
-              0.1,
-              0.0));
+      if (values[9] <= 6.0 && observation.tagCount() > 1) {
+        yawObservations.add(
+            new YawObservation(captureTimestampFPGA, observation.pose().getRotation().toRotation2d()));
+      }
+    }
 
-      if (values[9] <= 6.0 && tagCount > 1) {
-        RobotState.mInstance.addLimelightYawObservation(
-            new LimelightYawObservation(pose.getRotation().toRotation2d(), captureTimestampFPGA));
+    // MegaTag2 uses the heading sent above, so it needs no heading from the tags
+    for (var rawResult : megatag2Subscriber.readQueue()) {
+      double[] values = rawResult.value;
+      if (values.length < BOTPOSE_HEADER_LENGTH) {
+        continue;
+      }
+      PoseObservation observation =
+          toObservation(
+              values, captureTimestamp(rawResult.timestamp, values), ObservationType.MEGATAG_2);
+      if (observation != null) {
+        poseObservations.add(observation);
       }
     }
 
     inputs.poseObservations = poseObservations.toArray(new PoseObservation[0]);
     inputs.tagIds = tagIds.stream().mapToInt(Integer::intValue).toArray();
+    inputs.yawObservations = yawObservations.toArray(new YawObservation[0]);
 
     var roi = roiController.update(frames, now, motionSupplier.get());
     applyCameraSettings(roi.crop(), roi.downscale());
+    inputs.disturbed = roi.state() == VisionRoiController.State.DISTURBED;
 
     String prefix = "Vision/" + name + "/Roi/";
     roi.log(prefix);
@@ -199,6 +219,53 @@ public class VisionIOLimelight implements VisionIO {
   @Override
   public String getName() {
     return name;
+  }
+
+  /** Latency-compensated FPGA timestamp of the image capture, in seconds. */
+  private static double captureTimestamp(long ntTimestampMicros, double[] values) {
+    return ntTimestampMicros * 1.0e-6 - values[6] * 1.0e-3;
+  }
+
+  /**
+   * Builds an observation from a botpose array, with the ambiguity and edge distance taken from the
+   * worst of the tags used. Returns null when no tags were used.
+   */
+  private PoseObservation toObservation(double[] values, double timestamp, ObservationType type) {
+    int tagCount = (int) values[7];
+    if (tagCount == 0) {
+      return null;
+    }
+    double maxAmbiguity = 0.0;
+    double maxOnEdge = 0.0;
+    double minTagDistance = Double.POSITIVE_INFINITY;
+    for (int i = BOTPOSE_HEADER_LENGTH;
+        i + BOTPOSE_VALUES_PER_TAG <= values.length;
+        i += BOTPOSE_VALUES_PER_TAG) {
+      // [id, txnc, tync, ta, distToCamera, distToRobot, ambiguity]
+      maxAmbiguity = Math.max(maxAmbiguity, values[i + 6]);
+      maxOnEdge = Math.max(maxOnEdge, onEdgeFraction(values[i + 1], values[i + 2]));
+      minTagDistance = Math.min(minTagDistance, values[i + 4]);
+    }
+    return new PoseObservation(
+        timestamp,
+        parsePose(values),
+        maxAmbiguity,
+        tagCount,
+        values[9],
+        Double.isInfinite(minTagDistance) ? values[9] : minTagDistance,
+        0.1,
+        maxOnEdge,
+        type);
+  }
+
+  /**
+   * How close a tag's center is to the image border, 0 at the center and 1 on the edge, from its
+   * angle off the principal point. Lens distortion is worst near the border.
+   */
+  private double onEdgeFraction(double txDeg, double tyDeg) {
+    double x = Math.abs(Math.tan(Math.toRadians(txDeg))) / model.tanHalfHorizontalFov();
+    double y = Math.abs(Math.tan(Math.toRadians(tyDeg))) / model.tanHalfVerticalFov();
+    return Math.min(1.0, Math.max(x, y));
   }
 
   private static Pose3d parsePose(double[] rawLLArray) {

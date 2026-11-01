@@ -6,10 +6,13 @@ import edu.wpi.first.wpilibj.Filesystem;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 
 import java.io.*;
+import java.util.List;
 
 import org.littletonrobotics.junction.Logger;
 
 public class TableLoader {
+    // The ball's speed out of the shooter, m/s. ShooterConstants turns it into a wheel speed.
+    private static final String BALL_SPEED_COLUMN = "exitVelocity";
 
     public static NestedInterpolatingTreeMap<Double, Translation3d> loadFromCSV(String path) {
         NestedInterpolatingTreeMap<Double, Translation3d> table =
@@ -34,21 +37,25 @@ public class TableLoader {
         try (BufferedReader br = new BufferedReader(new FileReader(file))) {
             String line;
 
-            br.readLine(); // skip header
+            List<String> header = List.of(br.readLine().split(","));
+            int distanceColumn = header.indexOf("distance");
+            int radialVelocityColumn = header.indexOf("radialVelocity");
+            int ballSpeedColumn = header.indexOf(BALL_SPEED_COLUMN);
+            int angleColumn = header.indexOf("solutionAngle");
+            int tofColumn = header.indexOf("tof");
 
             int count = 0;
 
             while ((line = br.readLine()) != null) {
 
                 String[] tokens = line.split(",");
-                if (tokens.length != 6) continue;
+                if (tokens.length != header.size()) continue;
 
-                double x = Double.parseDouble(tokens[0]);
-                double y = Double.parseDouble(tokens[1]);
-                double zX = Double.parseDouble(tokens[2]);
-                double zY = Double.parseDouble(tokens[3]);
-                double ignored = Double.parseDouble(tokens[4]);
-                double zZ = Double.parseDouble(tokens[5]);
+                double x = Double.parseDouble(tokens[distanceColumn]);
+                double y = Double.parseDouble(tokens[radialVelocityColumn]);
+                double zX = Double.parseDouble(tokens[ballSpeedColumn]);
+                double zY = Double.parseDouble(tokens[angleColumn]);
+                double zZ = Double.parseDouble(tokens[tofColumn]);
 
                 table.put(x, y, new Translation3d(zX, zY, zZ));
 
@@ -66,7 +73,7 @@ public class TableLoader {
     }
     /**
      * Loads a standard WPILib InterpolatingDoubleTreeMap from a CSV file deployed on the RIO.
-     * Maps distance (col 0) to solutionVelocity (col 2).
+     * Maps distance to the ball's exit velocity.
      * * @param path The relative path inside the deploy directory (e.g., "tuning/shooter.csv")
      * @return A populated InterpolatingDoubleTreeMap
      */
@@ -85,7 +92,9 @@ public class TableLoader {
 
         try (BufferedReader br = new BufferedReader(new FileReader(file))) {
             String line;
-            br.readLine(); // skip header row
+            List<String> header = List.of(br.readLine().split(","));
+            int distanceColumn = header.indexOf("distance");
+            int ballSpeedColumn = header.indexOf(BALL_SPEED_COLUMN);
 
             int count = 0;
             while ((line = br.readLine()) != null) {
@@ -93,12 +102,11 @@ public class TableLoader {
                 if (line.isEmpty()) continue;
 
                 String[] tokens = line.split(",");
-                // Ensure there are enough columns to parse up to index 2
-                if (tokens.length < 3) continue; 
+                if (tokens.length != header.size()) continue;
 
                 try {
-                    double distance = Double.parseDouble(tokens[0]);      // Column 1
-                    double velocity = Double.parseDouble(tokens[2]);      // Column 3 (solutionVelocity)
+                    double distance = Double.parseDouble(tokens[distanceColumn]);
+                    double velocity = Double.parseDouble(tokens[ballSpeedColumn]);
 
                     table.put(distance, velocity);
                     count++;

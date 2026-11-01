@@ -25,7 +25,6 @@ import frc.lib.sim.ServoMechanismSim.ServoMechanismSimConstants;
 import frc.lib.util.ControlGains.PidGains;
 import frc.robot.Constants;
 import frc.robot.Ports;
-import frc.robot.Robot;
 
 public class IntakeDeployConstants {
 
@@ -57,16 +56,14 @@ public class IntakeDeployConstants {
 
   public static final ArmFeedforward INTAKE_FF =
       switch (Constants.currentMode) {
-        case REAL -> new ArmFeedforward(0.0, 0.0, 0.0);
+        case REAL, REPLAY -> new ArmFeedforward(0.0, 0.0, 0.0);
         case SIM -> new ArmFeedforward(0.0, 0.0, 0.0);
-        default -> new ArmFeedforward(0.0, 0.0, 0.0);
       };
 
   protected static final PidGains INTAKE_PID =
       switch (Constants.currentMode) {
-        case REAL -> new PidGains(0.3, 0.0, 0.0);
+        case REAL, REPLAY -> new PidGains(0.3, 0.0, 0.0);
         case SIM -> new PidGains(0.1, 0.0, 0.0);
-        default -> new PidGains(0.1, 0.0, 0.0);
       };
 
   /**
@@ -119,7 +116,8 @@ public class IntakeDeployConstants {
   }
 
   public static MotorIOSparkMax getMotorIO() {
-    if(Robot.isReal())
+    // Replay uses the real IO too: its inputs are overwritten from the log
+    if (Constants.currentMode != Constants.Mode.SIM)
       return new MotorIOSparkMax(getIOConfig());
     else 
       return new MotorIOSparkMaxSim(getIOConfig(), new ServoMechanismSim(getSimConstants()));

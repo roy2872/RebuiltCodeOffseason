@@ -20,12 +20,16 @@ import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import frc.lib.logging.FilteredNT4Publisher;
 import frc.lib.util.CANBusStatusLogger;
+import frc.lib.util.power.PowerManager;
+import edu.wpi.first.wpilibj.PowerDistribution.ModuleType;
 import frc.lib.visualization.RobotVisualizer;
 
 import static edu.wpi.first.units.Units.Volts;
 
 import org.littletonrobotics.junction.AutoLogOutputManager;
 import org.littletonrobotics.junction.LogFileUtil;
+import org.littletonrobotics.conduit.ConduitApi;
+import org.littletonrobotics.junction.LoggedPowerDistribution;
 import org.littletonrobotics.junction.LoggedRobot;
 import org.littletonrobotics.junction.Logger;
 import org.littletonrobotics.junction.networktables.NT4Publisher;
@@ -69,6 +73,11 @@ public class Robot extends LoggedRobot {
       case REAL:
         // Running on a real robot, log to a USB stick ("/U/logs")
         Logger.addDataReceiver(new WPILOGWriter("/U/logs"));
+        // Logs every PDH channel's current, to see which motor draws what
+        LoggedPowerDistribution.getInstance(1, ModuleType.kRev);
+        if (!DriverStation.isFMSAttached()) {
+                Logger.addDataReceiver(new NT4Publisher());
+        }
         // Hides the visualizer from NT while on the field (it stays in the log file). The FMS check
         // runs every loop, since the FMS usually connects after robot code starts.
         Logger.addDataReceiver(new FilteredNT4Publisher(RobotVisualizer.mInstance.getKey()));
@@ -100,6 +109,10 @@ public class Robot extends LoggedRobot {
   public void robotInit() {
     AutoLogOutputManager.addObject(RobotState.mInstance);
     RobotController.setBrownoutVoltage(Volts.of(5.5));
+    if (Constants.currentMode == Constants.Mode.REAL) {
+      // The PDH is owned by LoggedPowerDistribution, so read its logged total current instead of opening it again
+      PowerManager.mInstance.useTotalCurrentSupplier(ConduitApi.getInstance()::getPDPTotalCurrent);
+    }
     SmartDashboard.putData("Intake Force Home and Zero", SuperStructure.mInstance.intakeForceHomeCommand());
 
 		for (Sendable sendable : Constants.LOGGED_SENDABLES) {
@@ -110,9 +123,10 @@ public class Robot extends LoggedRobot {
   /** This function is called periodically during all modes. */
   @Override
   public void robotPeriodic() {
-
+    robotContainer.updateSimulationInputs();
     CommandScheduler.getInstance().run();
     robotContainer.periodic();
+    PowerManager.mInstance.periodic();
 
     // Return to non-RT thread priority (do not modify the first argument)
     // Threads.setCurrentThreadPriority(false, 10);
@@ -145,9 +159,7 @@ public class Robot extends LoggedRobot {
 
   /** This function is called periodically during autonomous. */
   @Override
-  public void autonomousPeriodic() {
-    CommandScheduler.getInstance().run();
-  }
+  public void autonomousPeriodic() {}
 
   /** This function is called once when teleop is enabled. */
   @Override
@@ -169,8 +181,9 @@ public class Robot extends LoggedRobot {
   /** This function is called once when test mode is enabled. */
   @Override
   public void testInit() {
-    // Cancels all running commands at the start of test mode.
+    // Cancels all running commands at the start of test mode, then runs the pit self test
     CommandScheduler.getInstance().cancelAll();
+    CommandScheduler.getInstance().schedule(robotContainer.getSelfTestCommand());
   }
 
   /** This function is called periodically during test mode. */

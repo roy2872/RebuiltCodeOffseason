@@ -7,16 +7,22 @@ import edu.wpi.first.units.measure.Voltage;
 import frc.lib.bases.MotorSubsystem;
 import frc.lib.io.MotorIO.Setpoint;
 import frc.lib.io.MotorIOTalonSRX;
+import frc.lib.util.power.PowerPriority;
 
 public class IntakeRollers extends MotorSubsystem<TalonSRXConfiguration, MotorIOTalonSRX> {
 	public static final Setpoint<Voltage> IDLE = Setpoint.withNeutralSetpoint();
 	public static final Setpoint<Voltage> INTAKE = Setpoint.withVoltageSetpoint(IntakeRollersConstants.INTAKE_VOLTAGE);
     public static final Setpoint<Voltage> INTAKE_WHILE_CLOSING = Setpoint.withVoltageSetpoint(Volts.of(4));
 	public static final Setpoint<Voltage> OUTTAKE = Setpoint.withVoltageSetpoint(IntakeRollersConstants.OUTTAKE_VOLTAGE);
+	// Intake speed in the opposite direction, used while the intake force-homes
+	public static final Setpoint<Voltage> HOMING_REVERSE =
+			Setpoint.withVoltageSetpoint(IntakeRollersConstants.INTAKE_VOLTAGE.unaryMinus());
 
     public static final IntakeRollers mInstance = new IntakeRollers();
 
     public IntakeRollers() {
         super(IntakeRollersConstants.getMotorIOTalonSRX(), "Intake Rollers");
+        // 1 motor x 40A continuous limit
+        enablePowerManagement(PowerPriority.MEDIUM, 15.0, 40.0);
     }
 }

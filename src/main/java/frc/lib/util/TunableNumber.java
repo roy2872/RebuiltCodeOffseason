@@ -1,16 +1,23 @@
 package frc.lib.util;
 
-import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import java.util.function.DoubleSupplier;
+import org.littletonrobotics.junction.networktables.LoggedNetworkNumber;
 
 /**
- * Class creating a mutable object which can be mutated dynamically through SmartDashboard
+ * Class creating a mutable object which can be mutated dynamically through SmartDashboard.
+ *
+ * <p>The dashboard value is logged, so replay sees the same values the robot used. To try a new
+ * value in replay, change the default in code and set {@link #TUNING_ENABLED} to false: every
+ * TunableNumber then returns its default and ignores the log.
  */
 public class TunableNumber implements DoubleSupplier {
-	private static final String TABLE_KEY = "TunableNumbers";
-	private String key; // key associated with the object on SmartDashboard
+	/** When false, values are never read from the dashboard (or the log) and the defaults are used. */
+	public static final boolean TUNING_ENABLED = true;
+
+	private static final String TABLE_KEY = "/SmartDashboard/TunableNumbers";
+	private final String key; // key associated with the object on SmartDashboard
 	private double defaultValue; // default value
-	private double currentValue; // current value in SmartDashboard
+	private LoggedNetworkNumber dashboardNumber; // null when tuning is disabled
 	private double lastCurrentValue; // last checked current value
 
 	/**
@@ -19,12 +26,9 @@ public class TunableNumber implements DoubleSupplier {
 	 * @param defaultValue
 	 */
 	public TunableNumber(String smartDashboardKey, double defaultValue) {
-		key = TABLE_KEY + "/" + smartDashboardKey; // Constructs a new TunableNumber with smartDashboardKey
-		publish(defaultValue); // Assigns the default value parameter as the default value and publishes the value into
-		// SmartDashboard
-		// smartDashboard
-		this.currentValue = defaultValue;
-		this.lastCurrentValue = currentValue;
+		key = TABLE_KEY + "/" + smartDashboardKey;
+		publish(defaultValue);
+		this.lastCurrentValue = defaultValue;
 	}
 	/**
 	 * Gets the default value
@@ -34,27 +38,33 @@ public class TunableNumber implements DoubleSupplier {
 		return defaultValue;
 	}
 	/**
-	 * Sets the default value
-	 * Smartdashboard puts that value into network tables with the object's key
+	 * Sets the default value, which is published to SmartDashboard if it has no value yet
 	 * @param valueToSet
 	 */
 	public void publish(double valueToSet) {
 		defaultValue = valueToSet;
-		SmartDashboard.putNumber(key, SmartDashboard.getNumber(key, valueToSet));
+		if (!TUNING_ENABLED) {
+			return;
+		}
+		if (dashboardNumber == null) {
+			dashboardNumber = new LoggedNetworkNumber(key, valueToSet);
+		} else {
+			dashboardNumber.setDefault(valueToSet);
+		}
 	}
 	/**
-	 * Gets the current value on smartdashboard
+	 * Gets the current value on smartdashboard, as of the start of this loop
 	 */
 	@Override
 	public double getAsDouble() {
-		return SmartDashboard.getNumber(key, 0.0);
+		return TUNING_ENABLED ? dashboardNumber.get() : defaultValue;
 	}
 	/**
 	 * Checks if the current value in smartdashboard has changed
 	 * Returns true is the current value is different from the last current value
 	 */
 	public boolean hasChanged() {
-		currentValue = getAsDouble();
+		double currentValue = getAsDouble();
 		if (currentValue != lastCurrentValue) {
 			lastCurrentValue = currentValue;
 			return true;

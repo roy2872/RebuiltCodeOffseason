@@ -44,11 +44,16 @@ public class SuperStructure extends SubsystemBase {
   }
 
   public Command intakeForceHomeCommand() {
-    return IntakeDeploy.mInstance.runEnd(
-            // Drive toward the stow hard stop for a bounded time.
-            () -> IntakeDeploy.mInstance.applySetpoint(Setpoint.withVoltageSetpoint(Volts.of(-9.0))),
-            // Always neutral the motor first, including when canceled.
-            () -> IntakeDeploy.mInstance.applySetpoint(Setpoint.withNeutralSetpoint())
+    return Commands.parallel(
+            IntakeDeploy.mInstance.runEnd(
+                // Drive toward the stow hard stop for a bounded time.
+                () -> IntakeDeploy.mInstance.applySetpoint(Setpoint.withVoltageSetpoint(Volts.of(-9.0))),
+                // Always neutral the motor first, including when canceled.
+                () -> IntakeDeploy.mInstance.applySetpoint(Setpoint.withNeutralSetpoint())),
+            // Spin the rollers backwards at intake speed while homing.
+            IntakeRollers.mInstance.runEnd(
+                () -> IntakeRollers.mInstance.applySetpoint(IntakeRollers.HOMING_REVERSE),
+                () -> IntakeRollers.mInstance.applySetpoint(IntakeRollers.IDLE))
         )
         // runEnd() does not finish by itself; make this command end after one second.
         .withTimeout(1.0)
@@ -126,31 +131,42 @@ public Command stopCloseIntakeCommand() {
 	}
 
 	public Command shoot() {
+		return shoot(true);
+	}
+
+	/**
+	 * @param autoAlign turn the robot toward the target and wait for the heading before feeding. When
+	 *     false the command doesn't require the drive, so the driver keeps driving and aims by hand.
+	 */
+	public Command shoot(boolean autoAlign) {
+		Command aim = autoAlign
+				? DriveCommands.autoAlignAngle(Drive.mInstance, () -> Rotation2d.fromDegrees(RobotState.mInstance.getShootInfo().get(2)))
+				: Commands.none();
 		return Commands.parallel(
-						// Cameras.mInstance.setStdDevCommand(CamerasConstants.ALIGN_STD_DEVATION),
 						Commands.runOnce(() -> {
 							Feeder.mInstance.applySetpoint(Feeder.IDLE);
 						}),
 						Shooter.mInstance.followSetpointCommand(
-								() -> Setpoint.withVelocitySetpoint(
+								() -> Setpoint.withMotionMagicVelocitySetpoint(
 									Units.RotationsPerSecond.of(RobotState.mInstance.getShootInfo().get(1)))),
-						Hood.mInstance.followSetpointCommand(() -> 
+						Hood.mInstance.followSetpointCommand(() ->
 							Setpoint.withMotionMagicSetpoint(
-												// positionInputs.getHoodSetpoint()
 												Units.Degrees.of(RobotState.mInstance.getShootInfo().get(0)))),
-						DriveCommands.autoAlignAngle(Drive.mInstance, () -> Rotation2d.fromDegrees(RobotState.mInstance.getShootInfo().get(2))),
+						aim,
 						Commands.sequence(
 								Commands.waitUntil(() -> {
-									boolean driveReady = RobotState.mInstance.atAngle(Rotation2d.fromDegrees(RobotState.mInstance.getShootInfo().get(2)), Degrees.of(1));
-									
+									boolean driveReady = !autoAlign
+											|| RobotState.mInstance.atAngle(Rotation2d.fromDegrees(RobotState.mInstance.getShootInfo().get(2)), Degrees.of(1));
+
 									boolean spunUp =
-											!RobotState.mInstance.getShootType() ? shooterAndHoodSpunUp(Units.RPM.of(150)) : shooterAndHoodSpunUp();
+											!RobotState.mInstance.isShootingAtHub() ? shooterAndHoodSpunUp(Units.RPM.of(150)) : shooterAndHoodSpunUp();
 									return driveReady
-											&& spunUp;
+											&& spunUp
+											&& hubReady();
 								}
 								),
 								Commands.parallel(
-									Feeder.mInstance.setpointCommand(Feeder.FEED_VOLTAGE)
+									Feeder.mInstance.followSetpointCommand(Feeder.mInstance::getFeedVoltageSetpoint)
 									// Drive x pose
 
 								)))
@@ -161,6 +177,26 @@ public Command stopCloseIntakeCommand() {
 				})
 				// .finallyDo(() -> Cameras.mInstance.setSTDDeviations(CamerasConstants.DEFAULT_STD_DEVIATION))
 				.withName("Shoot");
+	}
+
+	/**
+	 * Spins the shooter and moves the hood for the current shot without feeding or turning the robot, so
+	 * it can run while driving to a shooting spot.
+	 */
+	public Command spinUpCommand() {
+		return Commands.parallel(
+				Shooter.mInstance.followSetpointCommand(
+						() -> Setpoint.withVelocitySetpoint(
+								Units.RotationsPerSecond.of(RobotState.mInstance.getShootInfo().get(1)))),
+				Hood.mInstance.followSetpointCommand(
+						() -> Setpoint.withMotionMagicSetpoint(
+								Units.Degrees.of(RobotState.mInstance.getShootInfo().get(0)))))
+			.withName("Spin Up");
+	}
+
+	/** Ferrying is always allowed; hub shots wait for our hub (or the Hub Always Active override). */
+	private static boolean hubReady() {
+		return !RobotState.mInstance.isShootingAtHub() || HubShiftTracker.mInstance.canScore();
 	}
 
 	public Command stopShooting() {
