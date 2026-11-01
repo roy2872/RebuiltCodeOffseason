@@ -75,8 +75,13 @@ public class MotorIOSparkMaxSim extends MotorIOSparkMax {
                 sim.mechanismToRotor(sim.getVelocity()).in(Units.RotationsPerSecond)
                         * main.configAccessor.encoder.getVelocityConversionFactor());
         inputsToUpdate.statorCurrent = sim.getStatorCurrent();
-        inputsToUpdate.supplyCurrent = Units.Amps.of(mainSim.getMotorCurrent());
-        inputsToUpdate.motorVoltage = Units.Volts.of(mainSim.getAppliedOutput() * mainSim.getBusVoltage());
+        
+        // Feed the calculated simulation values back into the inputs tracking structure
+        // Same motor current * duty cycle estimate as the real robot
+        inputsToUpdate.supplyCurrent =
+                Units.Amps.of(Math.abs(mainSim.getMotorCurrent() * mainSim.getAppliedOutput()));
+        inputsToUpdate.motorVoltage = 
+                Units.Volts.of(mainSim.getAppliedOutput() * mainSim.getBusVoltage()).times(getMotorInvertMultiplier());
     }
 
     /** Moves the simulated mechanism to the given position, so the physics and the Spark agree. */

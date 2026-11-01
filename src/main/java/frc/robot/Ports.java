@@ -13,7 +13,7 @@ public enum Ports {
 	SHOOTER_FOLLOWER_1(58, Constants.rio),
 	SHOOTER_FOLLOWER_2(59, Constants.rio),
 	SHOOTER_FOLLOWER_3(60, Constants.rio),
-	HOOD(14, Constants.rio);
+	HOOD(62, Constants.rio);
 
 	public final int id;
 	public final CANBus bus;

@@ -40,7 +40,9 @@ public class TunableNumber implements DoubleSupplier {
 	 */
 	public void publish(double valueToSet) {
 		defaultValue = valueToSet;
-		SmartDashboard.putNumber(key, SmartDashboard.getNumber(key, valueToSet));
+		// The code value always wins on boot. Keeping an old dashboard value here made tunables
+		// start at whatever was left over (often 0) instead of the real value
+		SmartDashboard.putNumber(key, valueToSet);
 	}
 	/**
 	 * Gets the current value on smartdashboard
