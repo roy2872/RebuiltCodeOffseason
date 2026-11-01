@@ -13,6 +13,10 @@ import edu.wpi.first.wpilibj.Alert;
 import edu.wpi.first.wpilibj.Alert.AlertType;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import frc.lib.accelLimitsLib;
+import frc.lib.util.power.PowerConfig;
+import frc.lib.util.power.PowerConsumer;
+import frc.lib.util.power.PowerManager;
+import frc.lib.util.power.PowerPriority;
 import frc.robot.Constants;
 import frc.robot.Constants.Mode;
 import frc.robot.RobotState;
@@ -33,6 +37,7 @@ import org.ironmaple.simulation.SimulatedArena;
 import org.ironmaple.simulation.seasonspecific.rebuilt2026.Arena2026Rebuilt;
 import org.ironmaple.simulation.drivesims.SwerveDriveSimulation;
 import org.littletonrobotics.junction.AutoLogOutput;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import org.littletonrobotics.junction.Logger;
 
 import com.pathplanner.lib.auto.AutoBuilder;
@@ -48,7 +53,7 @@ import com.pathplanner.lib.util.DriveFeedforwards;
 import com.pathplanner.lib.util.swerve.SwerveSetpoint;
 import com.pathplanner.lib.util.swerve.SwerveSetpointGenerator;
 
-public class Drive extends SubsystemBase {
+public class Drive extends SubsystemBase implements PowerConsumer {
 
   public SwerveDriveSimulation driveSimulation = null;
   static final Lock odometryLock = new ReentrantLock();
@@ -58,9 +63,11 @@ public class Drive extends SubsystemBase {
   private final Alert gyroDisconnectedAlert = new Alert("Disconnected gyro, using backup gyro as fallback.",
       AlertType.kError);
   private final SwerveSetpointGenerator setpointGenerator;
-  // Physical constants come from DriveConstants so the setpoint generator, PathPlanner and
-  // maple-sim all agree. Keep deploy/pathplanner/settings.json in sync when changing them.
-  public static final RobotConfig PP_CONFIG =
+  private static final double ROBOT_MASS_KG = 55;
+  private static final double ROBOT_MOI = 1.2;
+  private static final String DEFENSE_MODE_KEY = "Defense Mode";
+  private static final double WHEEL_COF = 1.5;
+  private static final RobotConfig PP_CONFIG =
       new RobotConfig(
           DriveConstants.robotMassKg,
           DriveConstants.robotMOI,
@@ -145,6 +152,20 @@ public class Drive extends SubsystemBase {
     }
     // Starts only if real hardware registered signals with it
     PhoenixOdometryThread.getInstance().start();
+    PowerManager.mInstance.register(
+        this,
+        new PowerConfig(
+            getPowerName(),
+            PowerPriority.LOW,
+            DriveConstants.DRIVE_POWER_MIN_AMPS,
+            modules.length * DriveConstants.DRIVE_SUPPLY_CURRENT_LIMIT,
+            modules.length * DriveConstants.DRIVE_AUTO_SUPPLY_CURRENT_LIMIT)
+            // Defense mode: drive goes back to full current and is protected before the shooter
+            .withOverride(
+                this::isDefenseMode,
+                PowerPriority.CRITICAL,
+                modules.length * DriveConstants.DRIVE_DEFENSE_SUPPLY_CURRENT_LIMIT));
+    SmartDashboard.putBoolean(DEFENSE_MODE_KEY, false);
     setpointGenerator =
         new SwerveSetpointGenerator(
             PP_CONFIG, // The robot configuration. This is the same config used for generating
@@ -181,6 +202,7 @@ public class Drive extends SubsystemBase {
 
   @Override
   public void periodic() {
+    Logger.recordOutput("Drive/DefenseMode", isDefenseMode());
     odometryLock.lock(); // Prevents odometry updates while reading data
     gyroIO.updateInputs(gyroInputs);
     Logger.processInputs("Drive/Gyro", gyroInputs);
@@ -456,5 +478,32 @@ public class Drive extends SubsystemBase {
       output += modules[i].getFFCharacterizationVelocity() / 4.0;
     }
     return output;
+  }
+
+  /** Dashboard switch for playing defense: full drive current, and the drive keeps it over the shooter. */
+  public boolean isDefenseMode() {
+    return SmartDashboard.getBoolean(DEFENSE_MODE_KEY, false);
+  }
+
+  @Override
+  public String getPowerName() {
+    return "Drive";
+  }
+
+  /** Battery current of the drive motors. Steer motors are left unmanaged on their static limit. */
+  @Override
+  public double getSupplyCurrentAmps() {
+    double amps = 0.0;
+    for (var module : modules) {
+      amps += Math.abs(module.getDriveSupplyCurrentAmps());
+    }
+    return amps;
+  }
+
+  @Override
+  public void setSupplyCurrentLimitAmps(double totalAmps) {
+    for (var module : modules) {
+      module.setDriveSupplyCurrentLimit(totalAmps / modules.length);
+    }
   }
 }

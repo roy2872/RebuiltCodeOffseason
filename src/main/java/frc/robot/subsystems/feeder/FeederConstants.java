@@ -22,7 +22,9 @@ public class FeederConstants {
 
     public static final double GEARING = 1.0/4;
     // Voltage Setpoints
-    public static final Voltage FEED_VOLTAGE = Volts.of(6.0);
+    public static final Voltage FEED_VOLTAGE = Volts.of(6.0); // default for the dashboard slider
+    public static final Voltage MIN_FEED_VOLTAGE = Volts.of(4.0);
+    public static final Voltage MAX_FEED_VOLTAGE = Volts.of(8.0);
     public static final Voltage SLOW_FEED_VOLTAGE = Volts.of(4.0); // TODO: Adjust as needed
     public static final Voltage SLOW_REVERSE_VOLTAGE = Volts.of(-4.0); // TODO: Adjust as needed
 
