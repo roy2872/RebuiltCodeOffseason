@@ -24,9 +24,11 @@ public final class RobotVisualization {
    */
   private static final boolean CALIBRATION = false;
 
-  // Hood position at which the model is drawn in its CAD pose. Lowering it turns the model down.
+  // Hood position at which the model is drawn in its CAD pose. Raising it turns the model down.
   private static final Angle HOOD_MODEL_ZERO =
-      HoodConstants.HOOD_STARTING_ANGLE.minus(HoodConstants.VISUALIZATION_ZERO_OFFSET);
+      HoodConstants.HOOD_STARTING_ANGLE.plus(HoodConstants.VISUALIZATION_ZERO_OFFSET);
+  // A larger hood angle is a flatter shot, which turns the model the opposite way from the joint axis
+  private static final double HOOD_MODEL_SCALE = -1.0;
 
   private RobotVisualization() {}
 
@@ -68,9 +70,9 @@ public final class RobotVisualization {
             HoodConstants.VISUALIZATION_PIVOT,
             HoodConstants.VISUALIZATION_AXIS,
             MotorSubsystemJoints.angle(
-                MotorSubsystemJoints.measured(Hood.mInstance), HOOD_MODEL_ZERO, 1.0))
+                MotorSubsystemJoints.measured(Hood.mInstance), HOOD_MODEL_ZERO, HOOD_MODEL_SCALE))
         .withSetpoint(MotorSubsystemJoints.angle(
-            MotorSubsystemJoints.setpoint(Hood.mInstance), HOOD_MODEL_ZERO, 1.0));
+            MotorSubsystemJoints.setpoint(Hood.mInstance), HOOD_MODEL_ZERO, HOOD_MODEL_SCALE));
     if (drawSideView) {
       hood.withSideViewLine(HoodConstants.VISUALIZATION_TIP, new Color8Bit(255, 170, 0));
     }

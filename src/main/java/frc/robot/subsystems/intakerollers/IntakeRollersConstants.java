@@ -14,7 +14,7 @@ import frc.lib.io.MotorIOTalonSRX.MotorIOTalonSRXConfig;
 import frc.lib.sim.RollerSim;
 import frc.lib.sim.RollerSim.RollerSimConstants;
 import frc.robot.Ports;
-import frc.robot.Robot;
+import frc.robot.Constants;
 
 public class IntakeRollersConstants {
     public static final double GEARING = 1.0;
@@ -46,7 +46,8 @@ public class IntakeRollersConstants {
     }
 
     public static MotorIOSparkMax getMotorIO() {
-        if(Robot.isReal())
+        // Replay uses the real IO too: its inputs are overwritten from the log
+        if (Constants.currentMode != Constants.Mode.SIM)
             return new MotorIOSparkMax(getIOConfig());
         else
             return new MotorIOSparkMaxSim(getIOConfig(), new RollerSim(getSimConstants()));

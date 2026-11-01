@@ -32,19 +32,19 @@ import frc.lib.visualization.VisualizedJoint;
 import frc.lib.util.ControlGains.PidGains;
 import frc.robot.Constants;
 import frc.robot.Ports;
-import frc.robot.Robot;
 
 public class HoodConstants {
 
-  // Strong-typed angle, voltage, and time units
-  public static final Angle HOOD_STARTING_ANGLE = Degrees.of(84.0);
+  // Hood angles are measured from vertical: the ball leaves at 90 degrees minus the hood angle.
+  // Stowed is the steepest shot (84 degree launch); the hood travels 30 degrees from there.
+  public static final Angle HOOD_STARTING_ANGLE = Degrees.of(6.0);
   public static final Angle HOOD_MIN_ANGLE = HOOD_STARTING_ANGLE;
-  public static final Angle HOOD_MAX_ANGLE = HOOD_STARTING_ANGLE.minus(Degrees.of(30.0));
-  public static final Angle HOOD_CLOSE_ANGLE = Degrees.of(82.0);
+  public static final Angle HOOD_MAX_ANGLE = HOOD_STARTING_ANGLE.plus(Degrees.of(30.0));
+  public static final Angle HOOD_CLOSE_ANGLE = Degrees.of(8.0);
   public static final Angle HOOD_ANGLE_TOLERANCE = Degrees.of(0.3);
 
   // Motion profile. A NEO 550 (~11000 RPM free) through the gearing tops out near 245 deg/s at the
-  // hood, so cruise at ~70% of that and reach it in 0.1 s. A full 54-84 deg move takes ~0.28 s.
+  // hood, so cruise at ~70% of that and reach it in 0.1 s. A full 6-36 deg move takes ~0.28 s.
   public static final AngularVelocity HOOD_CRUISE_VELOCITY = DegreesPerSecond.of(170.0);
   public static final AngularAcceleration HOOD_MAX_ACCELERATION = DegreesPerSecondPerSecond.of(1700.0);
 
@@ -67,16 +67,14 @@ public class HoodConstants {
 
   public static final ArmFeedforward HOOD_FF =
       switch (Constants.currentMode) {
-        case REAL -> new ArmFeedforward(0.0, 0.0, 0.0);
+        case REAL, REPLAY -> new ArmFeedforward(0.0, 0.0, 0.0);
         case SIM -> new ArmFeedforward(0.0, 0.0, 0.0);
-        default -> new ArmFeedforward(0.0, 0.0, 0.0);
       };
 
   protected static final PidGains HOOD_PID =
       switch (Constants.currentMode) {
-        case REAL -> new PidGains(1.5, 0.0, 0.2);
+        case REAL, REPLAY -> new PidGains(1.5, 0.0, 0.2);
         case SIM -> new PidGains(30.0, 0.0, 0.0); // Error is in hood rotations, so this needs to be large
-        default -> new PidGains(0.1, 0.0, 0.0);
       };
 
   /**
@@ -129,7 +127,8 @@ public class HoodConstants {
    * Factory method to instantiate the motor IO instance used directly by Hood.java.
    */
   public static MotorIOSparkMax getMotorIO() {
-    if(Robot.isReal())
+    // Replay uses the real IO too: its inputs are overwritten from the log
+    if (Constants.currentMode != Constants.Mode.SIM)
       return new MotorIOSparkMax(getIOConfig());
     else
       return new MotorIOSparkMaxSim(getIOConfig(), new ServoMechanismSim(getSimConstants()));

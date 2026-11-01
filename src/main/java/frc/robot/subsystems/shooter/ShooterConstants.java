@@ -1,5 +1,6 @@
 package frc.robot.subsystems.shooter;
 
+import static edu.wpi.first.units.Units.Inches;
 import static edu.wpi.first.units.Units.RPM;
 import static edu.wpi.first.units.Units.Seconds;
 
@@ -7,9 +8,11 @@ import com.ctre.phoenix6.signals.MotorAlignmentValue;
 import com.revrobotics.spark.ClosedLoopSlot;
 import com.revrobotics.spark.config.SparkMaxConfig;
 import com.revrobotics.spark.config.SparkBaseConfig.IdleMode;
+import edu.wpi.first.math.geometry.Translation3d;
 import edu.wpi.first.math.system.plant.DCMotor;
 import edu.wpi.first.units.Units;
 import edu.wpi.first.units.measure.AngularVelocity;
+import edu.wpi.first.units.measure.Distance;
 import edu.wpi.first.units.measure.Time;
 import frc.lib.io.MotorIO.Gains;
 import frc.lib.io.MotorIOSparkMax;
@@ -17,8 +20,9 @@ import frc.lib.io.MotorIOSparkMax.MotorIOSparkMaxConfig; // Assuming this wrappe
 import frc.lib.io.MotorIOSparkMaxSim; // Assuming your simulator interface exists for Spark Max
 import frc.lib.sim.RollerSim;
 import frc.lib.sim.RollerSim.RollerSimConstants;
+import frc.lib.util.TunableNumber;
 import frc.robot.Ports;
-import frc.robot.Robot;
+import frc.robot.Constants;
 
 public class ShooterConstants {
 
@@ -32,6 +36,31 @@ public class ShooterConstants {
     public static final AngularVelocity kFerry = RPM.of(1000.0);
     public static final AngularVelocity kSlow = RPM.of(2100.0);
 
+    // Ball launch model, the same as the shooting table generator (BallSimWithMagnusAverageWheels.cpp).
+    // RobotState converts table speeds to flywheel RPS with this diameter.
+    public static final Distance FLYWHEEL_DIAMETER = Inches.of(4.0);
+    // The back (hood) wheel runs slower than the main wheel, which puts backspin on the ball
+    public static final double HOOD_WHEEL_SPEED_RATIO = 0.5;
+    // Ball speed out of the shooter / average surface speed of the two wheels (slip and compression loss).
+    // 1.0 is no slip. Teams report real shooters at about 0.7-0.9 of that; nobody has measured it for fuel.
+    // Tune it until the real shots match the table: shooting short means it is lower than this.
+    public static final TunableNumber BALL_SPEED_FRACTION = new TunableNumber("Shooter/BallSpeedFraction", 0.85);
+    // Where the ball leaves the shooter, in the robot frame. The shooter faces -x.
+    public static final Translation3d LAUNCH_POSITION_ON_ROBOT = new Translation3d(-0.14, 0.0, 0.66);
+
+    /** @return the main wheel surface speed (m/s) that launches the ball at ballSpeed (m/s) */
+    public static double mainWheelSpeedForBallSpeed(double ballSpeed) {
+        return ballSpeed / ballSpeedPerMainWheelSpeed();
+    }
+
+    /** @return the speed (m/s) the ball leaves at when the main wheel surface moves at mainWheelSpeed (m/s) */
+    public static double ballSpeedForMainWheelSpeed(double mainWheelSpeed) {
+        return mainWheelSpeed * ballSpeedPerMainWheelSpeed();
+    }
+
+    private static double ballSpeedPerMainWheelSpeed() {
+        return (1.0 + HOOD_WHEEL_SPEED_RATIO) / 2.0 * BALL_SPEED_FRACTION.getAsDouble();
+    }
     // MAXMotion velocity profile, in motor RPM and RPM per second. 4 NEOs at 30A on this flywheel
     // can reach roughly 4000 RPM/s, so the profile asks a bit less than that to stay trackable
     // Slot 1 = velocity, used by every shooter setpoint. Shows up as TunableNumbers/Shooter/Slot1/
@@ -101,7 +130,8 @@ public class ShooterConstants {
     }
 
     public static MotorIOSparkMax getMotorIO() {
-        if (Robot.isReal()) {
+        // Replay uses the real IO too: its inputs are overwritten from the log
+        if (Constants.currentMode != Constants.Mode.SIM) {
             return new MotorIOSparkMax(getIOconfig());
         } else {
             return new MotorIOSparkMaxSim(getIOconfig(), new RollerSim(getSimConstants()));

@@ -547,25 +547,6 @@ public class Util {
 		return fieldRelativeDesiredAngle;
 	}
 
-	public static double calculateDistanceToStartDeccel(
-			double currentVel, double stowedAccel, double raisedAccel, double timeToRaise) {
-		double distToRaiseElev = calculatDistanceToRaiseElevator(raisedAccel, timeToRaise);
-		double velAtDistToRaiseElev = raisedAccel * timeToRaise;
-		double deltaVel = currentVel - velAtDistToRaiseElev;
-		double timeToDeccelDelta = deltaVel / stowedAccel;
-		double distToDeccelDelta = 0.5 * stowedAccel * timeToDeccelDelta * timeToDeccelDelta;
-		double totalDist = distToDeccelDelta + distToRaiseElev;
-		return totalDist;
-
-		// return (currentVel * currentVel) / (2.0 * stowedAccel) + ((timeToRaise *
-		// timeToRaise * raisedAccel * 0.5) *
-		// (1 - (raisedAccel / stowedAccel)));
-	}
-
-	public static double calculatDistanceToRaiseElevator(double raisedAccel, double timeToRaise) {
-		return 0.5 * raisedAccel * timeToRaise * timeToRaise;
-	}
-
 	// public static Translation3d addToTranslation3d(Translation3d translation, TranslationAxis3d axis, Distance offset) {
 	// 	return switch (axis) {
 	// 		case X -> translation.plus(new Translation3d(offset.in(Meters), 0.0, 0.0));
