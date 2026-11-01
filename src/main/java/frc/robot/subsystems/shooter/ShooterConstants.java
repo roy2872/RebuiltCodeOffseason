@@ -72,6 +72,8 @@ public class ShooterConstants {
             0.00232, // kV: volts per motor RPM. A NEO's back-EMF constant is 473 RPM/V
             0.0, // kS: volts to overcome friction
             0.0); // kG: no gravity on a flywheel
+    // Sim only. REV's sim ignores kV, so kP has to do all the work, and the real kD makes it oscillate
+    public static final Gains kSimVelocityGains = new Gains(0.002, 0.0, 0.0, 0.00232, 0.0, 0.0);
 
     public static final double kMaxMotionCruiseVelocity = 5676.0;
     public static final double kMaxMotionMaxAcceleration = 3000.0;
@@ -111,7 +113,8 @@ public class ShooterConstants {
         config.unit = Units.Rotations;
         config.mainID = Ports.SHOOTER_MAIN.id;
         config.gains[0] = Gains.ZERO; // Slot 0 (MAXMotion position) is unused
-        config.gains[kVelocitySlot] = kVelocityGains;
+        config.gains[kVelocitySlot] =
+                Constants.currentMode == Constants.Mode.SIM ? kSimVelocityGains : kVelocityGains;
         
         // SparkMax followers require explicit IDs. 
         // We look at your original alignment array (Aligned, Opposed, Opposed) to map inversions
