@@ -18,12 +18,14 @@ import org.littletonrobotics.junction.Logger;
 import org.littletonrobotics.junction.networktables.LoggedDashboardChooser;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import edu.wpi.first.wpilibj2.command.Commands;
 import frc.lib.util.AllianceFlipping;
 import frc.lib.util.TableLoader;
+import frc.lib.visualization.RobotVisualizer;
 import frc.robot.commands.DriveCommands;
 import frc.robot.controllers.ControllerInterface;
 import frc.robot.controllers.DummyController;
@@ -38,6 +40,7 @@ import frc.robot.subsystems.vision.VisionIO;
 import frc.robot.subsystems.vision.VisionIOLimelight;
 import frc.robot.subsystems.vision.VisionIOPhoton;
 import frc.robot.subsystems.vision.VisionIOPhotonSim;
+import frc.robot.subsystems.vision.VisionRoiController.RobotMotion;
 
 /**
  * This class is where the bulk of the robot should be declared. Since Command-based is a
@@ -56,6 +59,7 @@ public class RobotContainer {
   public RobotContainer() {
     Constants.RobotState.shooterTableData = TableLoader.loadFromCSV("shootingSolutions.csv");
     Constants.RobotState.fetchingTableData = TableLoader.loadDoubleMapFromCSV("fetchingSolutions.csv");
+    RobotVisualization.configure();
     switch (Constants.currentMode) {
       case REAL:
         // Real robot, instantiate hardware IO implementations
@@ -65,8 +69,12 @@ public class RobotContainer {
             new Vision(
                 RobotState.mInstance::addVisionObservation,
                 new VisionIO[] {
-                  new VisionIOLimelight("limelight-tsachi", RobotState.mInstance::getRotation)
-                });        
+                  new VisionIOLimelight(
+                      VisionConstants.tsachiCamera,
+                      VisionIOLimelight.Options.DEFAULT,
+                      RobotState.mInstance::getRotation,
+                      RobotContainer::getRobotMotion)
+                });
                 break;
       case SIM:
         controller = new SimulationController(0);
@@ -100,6 +108,15 @@ public class RobotContainer {
     autoChooser = new LoggedDashboardChooser<>("Auto Choices");
     autoChooser.addDefaultOption("Do Nothing", Commands.print("Doing nothing"));
     configureButtonBindings();
+  }
+
+  private static RobotMotion getRobotMotion() {
+    ChassisSpeeds speeds = RobotState.mInstance.getRobotVelocity();
+    return new RobotMotion(
+        speeds.vxMetersPerSecond,
+        speeds.vyMetersPerSecond,
+        RobotState.mInstance.getGyroYawRateRadPerSec(),
+        speeds.omegaRadiansPerSecond);
   }
 
   private void configureButtonBindings() {
@@ -153,6 +170,7 @@ public class RobotContainer {
   public void periodic() {
     SmartDashboard.putData("Command Scheduler", CommandScheduler.getInstance());
     RobotState.mInstance.periodic();
+    RobotVisualizer.mInstance.periodic();
   }
 
   public void resetSimulation() {

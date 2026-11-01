@@ -62,6 +62,9 @@ public class RobotState {
   @AutoLogOutput(key = "RobotState/RobotVelocity")
   @Getter @Setter private ChassisSpeeds robotVelocity = new ChassisSpeeds();
   @Getter @Setter private ChassisSpeeds robotSetpointVelocity = new ChassisSpeeds();
+  // From the gyro, unlike robotVelocity which comes from the wheels and lies when pushed
+  @AutoLogOutput(key = "RobotState/GyroYawRateRadPerSec")
+  @Getter @Setter private double gyroYawRateRadPerSec = 0.0;
 
   private final TimeInterpolatableBuffer<Pose2d> poseBuffer =
       TimeInterpolatableBuffer.createBuffer(POSE_BUFFER_SIZE);

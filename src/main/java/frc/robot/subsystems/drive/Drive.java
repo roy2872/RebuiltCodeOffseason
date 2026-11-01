@@ -219,7 +219,12 @@ public class Drive extends SubsystemBase implements PowerConsumer {
     // Update gyro alert
     gyroDisconnectedAlert.set(!gyroInputs.connected && Constants.currentMode != Mode.SIM);
 
-    RobotState.mInstance.setRobotVelocity(getChassisSpeeds());
+    ChassisSpeeds measuredSpeeds = getChassisSpeeds();
+    RobotState.mInstance.setRobotVelocity(measuredSpeeds);
+    RobotState.mInstance.setGyroYawRateRadPerSec(
+        gyroInputs.connected
+            ? gyroInputs.yawVelocityRadPerSec
+            : measuredSpeeds.omegaRadiansPerSecond);
 
     if (DriverStation.isEnabled() && !lastEnabled) {
       coastRequest = CoastRequest.AUTOMATIC;

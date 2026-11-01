@@ -9,6 +9,7 @@ public class VisionConstants {
   public static AprilTagFieldLayout aprilTagLayout =
       AprilTagFieldLayout.loadField(AprilTagFields.kDefaultField);
 
+  // PhotonVision pipeline switching (VisionIOPhoton only)
   public static final short lowResPipeline = 1;
   public static final short highResPipeline = 0;
 
@@ -23,9 +24,10 @@ public class VisionConstants {
   public static Transform3d robotToBRcamera =
       new Transform3d(-0.285, -0.32, 0.2, new Rotation3d(0.0, -25 * Math.PI / 180, 60 * Math.PI / 180 + Math.PI));
 
-      public static Transform3d robotToTsachiCamera = 
-      new Transform3d(
-        1, 1, 1, new Rotation3d());
+  // TODO: measure. From the note below: 0.266 m back, 0.47 m up, centered. Pitch assumed to be
+  // 25 deg up (65 deg from vertical) and facing forward; must match the Limelight web UI.
+  public static final Transform3d robotToTsachiCamera =
+      new Transform3d(-0.266, 0.0, 0.47, new Rotation3d(0.0, Math.toRadians(25.0), Math.PI));
 
   public static Transform3d[] robotToCameras = {robotToBLcamera, robotToBRcamera, new Transform3d()};
 
@@ -51,4 +53,34 @@ public class VisionConstants {
   public static double linearStdDevMegatag2Factor = 0.5; // More stable than full 3D solve
   public static double angularStdDevMegatag2Factor =
       Double.POSITIVE_INFINITY; // No rotation data available
+
+  // Crop / downscale tuning. Robot-specific: acceleration limits should match what the
+  // drivetrain can do; anything beyond that (getting hit) is caught by the disturbance logic.
+  public static final VisionRoiController.Tuning roiTuning =
+      new VisionRoiController.Tuning(
+          0.1651, // tagSizeMeters (6.5 in)
+          0.5, // tagPadFraction
+          0.12, // minCropHalfSize
+          0.6, // maxCropAreaFraction
+          0.03, // commandLatencySec
+          10.0, // maxLinearAccel m/s^2
+          20.0, // maxAngularAccel rad/s^2
+          0.3, // linearVelocityNoise m/s
+          0.1, // angularVelocityNoise rad/s
+          Math.toRadians(2.0), // tiltNoiseRad
+          0.35, // missGrowthPerFrame
+          0.3, // trackTimeoutSec
+          1.0, // refreshPeriodSec
+          20.0, // minTagPixels
+          1.3, // downscaleHysteresis
+          1.0, // searchDownscale
+          4.0, // maxAdaptiveScale
+          0.97, // adaptiveScaleDecay
+          4.0, // disturbanceInnovationRatio
+          1.5, // wheelSlipOmegaThreshold rad/s
+          0.5); // disturbanceHoldSec
+
+  public static final CameraConfig tsachiCamera =
+      new CameraConfig(
+          "limelight-tsachi", CameraModel.LIMELIGHT_3G, robotToTsachiCamera, roiTuning);
 }
